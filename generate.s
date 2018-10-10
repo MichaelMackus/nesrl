@@ -23,22 +23,61 @@ clear_loop:
     bne clear_loop
 
 generate_cells:
-    ; set sample cell at 0, 1 for now
+    ; set sample cells for now
     ldx #0
     ldy #1
     jsr set_cell
-    ; set sample cell at 1, 1 for now
     ldx #1
     ldy #1
     jsr set_cell
-    ; set sample cell at 5, 1 for now
-    ;ldx #5
-    ;ldy #1
-    ;jsr set_cell
-    ;; set sample cell at 9, 1 for now
-    ;ldx #9
-    ;ldy #1
-    ;jsr set_cell
+    ldx #9
+    ldy #1
+    jsr set_cell
+    ldx #16
+    ldy #1
+    jsr set_cell
+    ldx #23
+    ldy #1
+    jsr set_cell
+    ldx #0
+    ldy #2
+    jsr set_cell
+    ldx #1
+    ldy #2
+    jsr set_cell
+    ldx #9
+    ldy #2
+    jsr set_cell
+    ldx #16
+    ldy #2
+    jsr set_cell
+    ldx #23
+    ldy #2
+    jsr set_cell
+    ldx #16
+    ldy #3
+    jsr set_cell
+    ldx #17
+    ldy #3
+    jsr set_cell
+    ldx #18
+    ldy #3
+    jsr set_cell
+    ldx #19
+    ldy #3
+    jsr set_cell
+    ldx #20
+    ldy #3
+    jsr set_cell
+    ldx #21
+    ldy #3
+    jsr set_cell
+    ldx #22
+    ldy #3
+    jsr set_cell
+    ldx #23
+    ldy #3
+    jsr set_cell
 
 
     ; todo generate random cells
@@ -79,45 +118,42 @@ set_bit:
 ; get byte offset for x & y
 ; out: y * 4 + x
 ; clobbers: tmp and all registers
-; todo fixme x isn't working properly
 get_byte_offset:
 get_byte_y_offset:
     ; use tmp var for y comparisons
     sty tmp
-    inc tmp ; increment by 1 for loop end scenario
     lda #00
     tay
 get_byte_y_loop:
+    cpy tmp
+    beq get_byte_x_offset
     iny
     clc
     adc #$04 ; add 4 for every y value
-    cpy tmp
-    bne get_byte_y_loop
-    ; now we have y offset, subtract 4 from result for target byte
-    sec
-    sbc #$04
+    jmp get_byte_y_loop
     ; now we need to add x to result
 get_byte_x_offset:
     ; remember result
     pha
     ; use tmp var for x comparisons
     txa
-    clc
-    adc #$08 ; increment by 8 for loop end scenario
     sta tmp
     ; get result from stack, and put result in x for incrementing
     pla
     tax
     lda #00
 get_byte_x_loop:
-    ; x is used for result, accum is for iteration
-    inx
+    ; check if x is within next +8 bits
     clc
-    adc #$08 ; add 8 for every x value
+    adc #$08
     cmp tmp
-    bcc get_byte_x_loop ; continue loop if less than target
-    ; now we're done, decrement result & transfer to accum
-    dex
+    beq get_byte_continue_x_loop
+    bcs get_byte_offset_done
+get_byte_continue_x_loop:
+    inx
+    jmp get_byte_x_loop ; continue loop if less than target
+get_byte_offset_done:
+    ; now we're done, transfer result to accum
     txa
     rts
 
