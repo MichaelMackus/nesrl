@@ -1,4 +1,4 @@
-objs = generate.o main.o
+objs = generate.o random.o render.o input.o main.o
 
 run: simplerl
 	fceux simplerl.nes

@@ -2,17 +2,17 @@
 
 .segment "ZEROPAGE"
 
-gamestate:   .res 1
-controller1: .res 1
-controller1release: .res 1
-
 ; constants
 maxtiles     = (256 * 240) / 8 / 8
 maxtilebytes = maxtiles / 8
 
 ; variables
+gamestate:   .res 1
+controller1: .res 1
+controller1release: .res 1
 level:       .res 1            ; level integer
 tiles:       .res maxtilebytes ; represents a 256x240 walkable grid in bits, 1 = walkable; 0 = impassable
+nmis:        .res 1            ; how many nmis have passed
 
 .segment "HEADER"
 
@@ -41,12 +41,20 @@ clear_oam:
     ldx #$00
 oamloop:
     ; reset all sprites via loop
-    sta $0200, X
+    sta $0200, x
     inx
     cpx #$00
     bne oamloop
 
 init:
+init_memory:
+    ; initialize first page of zp to 0, todo we can use up to 8 pages of zp
+    lda #0
+    sta $0000, x
+    inx
+    cpx #$00
+    bne init_memory
+
 init_palettes:
     ; initialize background palettes
     lda #$3F
@@ -63,17 +71,10 @@ paletteloop:
     ldx #$FF      ; reset stack to $FF
     txs
 
+init_ppu:
     ; wait for ppu to be ready one last time
     ; at this point, about 57165 cycles have passed
     jsr waitforppu
-
-    ; generate first level
-    lda #01
-    sta level
-    jsr generate
-
-    ; show our sprites (& bg)
-    jsr render
 
     ; initialize ppu vblank NMI
     lda #%10000000
@@ -83,52 +84,12 @@ paletteloop:
     jmp main
 
 nmi:
+    inc nmis
     rti
 irq:
     rti
 
 .segment "CODE"
-
-render:
-generate_ppu:
-    ; prep ppu for first nametable write
-    lda #$20
-    sta $2006
-    lda #$00
-    sta $2006
-    ldx #$00 ; counter for background sprite position
-bg_repeat:
-    ldy #$00 ; counter for background bit index
-    lda tiles, x
-bg_bits:
-    cpy #8
-    beq next_bg
-    iny
-    asl
-    bcs wall
-    ; push accumulator to stack, draw floor, then pull from stack
-    pha
-    lda #$00
-    sta $2007
-    pla
-    jmp bg_bits
-wall:
-    ; push accumulator to stack, draw wall, then pull from stack
-    pha
-    lda #$60
-    sta $2007
-    pla
-    jmp bg_bits
-next_bg:
-    inx
-    ; repeat until desired amount (first byte of sprite-set)
-    cpx #$78
-    bne bg_repeat
-bgdone:
-    ; tell PPU to render BG & sprites
-    lda #%00011010 ; note: need second bit in order to show background on left side of screen
-    sta $2001
-    rts
 
 waitforppu:
     bit $2002
@@ -136,16 +97,27 @@ waitforppu:
     rts
 
 main:
+    jsr readcontroller
+
     lda gamestate
     cmp #$01
-    bne playgame ; check if we're pausing game
+    beq playgame ; if gamestate = 1 then we're playing
 
-pause:
+start_screen:
     lda controller1release
     and #%00010000 ; start
     beq main
     ; start is pressed, reset gamestate
-    lsr gamestate ; shift byte to 0
+    lda #1
+    sta gamestate ; set gamestate to playing
+
+    ; generate first level
+    lda nmis
+    sta seed
+    jsr generate
+    ; show our sprites (& bg)
+    jsr render
+
     jmp main      ; re-read controllers & continue game
 
 playgame:
