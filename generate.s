@@ -4,7 +4,6 @@
 
 .segment "ZEROPAGE"
 
-max_generate = 10
 tmp:         .res 1 ; temporary variable for generation code
 cell_width:  .res 1
 cell_height: .res 1
@@ -13,6 +12,9 @@ cell_height: .res 1
 
 ; generate level
 .proc generate
+
+; todo why is this numeric constant not working for comparisons?
+max_cells = 12
 
 clear_tiles:
     ldx #$00 ; counter for background sprite position
@@ -24,40 +26,49 @@ clear_loop:
     cpx maxtilebytes
     bne clear_loop
 
-generate_cells:
+    ; todo generate random cell dimensions
     lda #4
     sta cell_width
     sta cell_height
-    ; set sample cells for now
-    ldx #0
-    ldy #1
-    jsr set_cell
-    ldx #8
-    ldy #8
-    jsr set_cell
-    ldx #16
-    ldy #8
-    jsr set_cell
+    ; loop through max cells 
+    ldy #0
+generate_cells:
+    cpy #12
+    beq generate_corridors
+    ; coin flip
+    jsr d2
+    cmp #1
+    bne skip_cell
+    ; success
+    tya
+    pha
+    jsr generate_cell
+    pla
+    tay
+skip_cell:
+    iny
+    jmp generate_cells
 
-
-    ; todo generate random cells
+generate_corridors:
     ; todo connect random cells via corridors
 done:
     rts
 
-; make cell at x,y with size in accumulator
+.endproc
+
+; generate cell within quadrant
+; in: quadrant index
 ; clobbers: tmp and all registers
-set_cell:
-    ; remember x value
-    txa
-    pha
+; todo not generating in quadrant
+generate_cell:
+    ; todo increment x & y value
+
     ; get byte offset & transfer to y
     jsr get_byte_offset
     tay
 
     ; get byte mask & set wall
-    pla
-    tax
+    ldx #0
     jsr get_byte_mask
     sta tmp
 
@@ -85,46 +96,34 @@ set_cell_loop:
 set_bit:
     jsr get_byte_offset
 
-; get byte offset for x & y
-; out: y * 4 + x
+; get byte offset for quadrant
+; in: quadrant
+; out: offset to first byte in quadrant
 ; clobbers: tmp and all registers
 get_byte_offset:
-get_byte_y_offset:
-    ; use tmp var for y comparisons
-    sty tmp
-    lda #00
-    tay
-get_byte_y_loop:
-    cpy tmp
-    beq get_byte_x_offset
-    iny
-    clc
-    adc #$04 ; add 4 for every y value
-    jmp get_byte_y_loop
-    ; now we need to add x to result
-get_byte_x_offset:
-    ; remember result
-    pha
-    ; use tmp var for x comparisons
-    txa
-    sta tmp
-    ; get result from stack, and put result in x for incrementing
-    pla
+    ; todo fixme
     tax
-    lda #00
-get_byte_x_loop:
-    ; check if x is within next +8 bits
-    clc
-    adc #$08
-    cmp tmp
-    beq get_byte_continue_x_loop
-    bcs get_byte_offset_done
-get_byte_continue_x_loop:
+    stx tmp
+    lda #0
+    tax
+    tay
+get_byte_offset_loop:
+    cpy tmp
+    beq get_byte_offset_done
+    iny
     inx
-    jmp get_byte_x_loop ; continue loop if less than target
+    cpx #4
+    beq get_byte_offset_incy
+    clc
+    adc #1   ; add 1 to offset (increasing in x quadrant)
+    jmp get_byte_offset_loop
+get_byte_offset_incy:
+    ; increase y quadrant and clear x
+    ldx #0
+    clc
+    adc #29  ; add 29 to offset (increasing in y quadrant)
+    jmp get_byte_offset_loop
 get_byte_offset_done:
-    ; now we're done, transfer result to accum
-    txa
     rts
 
 ; get byte mask for x
@@ -168,18 +167,43 @@ get_byte_mask_shift_sec:
     sec
     jmp get_byte_mask_shift
 
-; the tiles bytes are arranged like so (by x & y):
+; the tiles quadrants are arranged like so:
 ;
-; 0     00000000 00000000 00000000 00000000
-; 32    01000000 00000000 00000000 00000000
-; 64    00000000 00000000 00000000 00000000
-; 96    00000100 10000000 00000000 00000000
-; 128   00000000 00000000 00000000 00000000
+;    0        1        2        3
 ;
-; bit at x,y of 1,1 would be at position 33
-; bit at x,y of 5,3 would be at position 101
-;
-; to get to position, add 32 for every y then 1 for every x
+; 00000000 00000000 00000000 00000000
+; 01000000 00000000 00000000 00000000
+; 00000000 00000000 00000000 00000000
+; 00000100 10000000 00000000 00000000
+; 00000000 00000000 00000000 00000000
+; 00000000 00000000 00000000 00000000
+; 00000000 00000000 00000000 00000000
+; 00000000 00000000 00000000 00000000
 
-.endproc
+;    4        5        6        7
+;
+; 00000000 00000000 00000000 00000000
+; 01000000 00000000 00000000 00000000
+; 00000000 00000000 00000000 00000000
+; 00000100 10000000 00000000 00000000
+; 00000000 00000000 00000000 00000000
+; 00000000 00000000 00000000 00000000
+; 00000000 00000000 00000000 00000000
+; 00000000 00000000 00000000 00000000
+
+;    8        9        10       11
+;
+; 00000000 00000000 00000000 00000000
+; 01000000 00000000 00000000 00000000
+; 00000000 00000000 00000000 00000000
+; 00000100 10000000 00000000 00000000
+; 00000000 00000000 00000000 00000000
+; 00000000 00000000 00000000 00000000
+; 00000000 00000000 00000000 00000000
+; 00000000 00000000 00000000 00000000
+;
+; bit at x,y of 1,1 would be in quadrant 0 with offset 0
+; bit at x,y of 8,3 would be in quadrant 1 with offset 1
+; bit at x,y of 1,9 would be in quadrant 4 with offset 32
+; bit at x,y of 8,11 would be in quadrant 5 with offset 33
 
