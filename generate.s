@@ -6,6 +6,8 @@
 
 max_generate = 10
 tmp:         .res 1 ; temporary variable for generation code
+cell_width:  .res 1
+cell_height: .res 1
 
 .segment "CODE"
 
@@ -23,60 +25,18 @@ clear_loop:
     bne clear_loop
 
 generate_cells:
+    lda #4
+    sta cell_width
+    sta cell_height
     ; set sample cells for now
     ldx #0
     ldy #1
     jsr set_cell
-    ldx #1
-    ldy #1
-    jsr set_cell
-    ldx #9
-    ldy #1
+    ldx #8
+    ldy #8
     jsr set_cell
     ldx #16
-    ldy #1
-    jsr set_cell
-    ldx #23
-    ldy #1
-    jsr set_cell
-    ldx #0
-    ldy #2
-    jsr set_cell
-    ldx #1
-    ldy #2
-    jsr set_cell
-    ldx #9
-    ldy #2
-    jsr set_cell
-    ldx #16
-    ldy #2
-    jsr set_cell
-    ldx #23
-    ldy #2
-    jsr set_cell
-    ldx #16
-    ldy #3
-    jsr set_cell
-    ldx #17
-    ldy #3
-    jsr set_cell
-    ldx #18
-    ldy #3
-    jsr set_cell
-    ldx #19
-    ldy #3
-    jsr set_cell
-    ldx #20
-    ldy #3
-    jsr set_cell
-    ldx #21
-    ldy #3
-    jsr set_cell
-    ldx #22
-    ldy #3
-    jsr set_cell
-    ldx #23
-    ldy #3
+    ldy #8
     jsr set_cell
 
 
@@ -88,25 +48,35 @@ done:
 ; make cell at x,y with size in accumulator
 ; clobbers: tmp and all registers
 set_cell:
-    ; remember cell size & x value
-    pha
+    ; remember x value
     txa
     pha
     ; get byte offset & transfer to y
     jsr get_byte_offset
     tay
-    ; get byte mask
+
+    ; get byte mask & set wall
     pla
     tax
     jsr get_byte_mask
+    sta tmp
+
+    ; todo need to handle empty space in middle
+
+    ; loop until cell height reached
+    ldx #0
+set_cell_loop:
+    inx
+    tya
+    clc
+    adc #$04 ; increment byte offset for y
+    tay
+    lda tmp
     ora tiles, y
     sta tiles, y
 
-    ; set tmp to cell size
-    pla
-    sta tmp
-    ; todo generate cell y
-    ; todo generate cell x
+    cpx cell_height
+    bne set_cell_loop
 
     rts
 
@@ -159,9 +129,10 @@ get_byte_offset_done:
 
 ; get byte mask for x
 ; out: byte mask
-; clobbers: x
+; clobbers: accum
 get_byte_mask:
     txa
+    pha ; remember x
     ; subtract 8 from x until we get < 8 (representing a bit from 0-7)
 get_byte_mask_loop:
     cmp #$08
@@ -181,9 +152,21 @@ get_byte_mask_shift:
     ; rotate byte mask until tmp is reached
     ror
     inx
+    cpx cell_width
+    bcc get_byte_mask_shift_sec
+get_byte_mask_shift_continue:
     cpx tmp
     bcc get_byte_mask_shift
+    ; restore registers
+    sta tmp ; remember result
+    pla
+    tax
+    lda tmp
     rts
+get_byte_mask_shift_sec:
+    ; set carry since we're not at width yet
+    sec
+    jmp get_byte_mask_shift
 
 ; the tiles bytes are arranged like so (by x & y):
 ;
