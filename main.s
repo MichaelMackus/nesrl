@@ -34,7 +34,18 @@ nmis:        .res 1            ; how many nmis have passed
 start:
     ; wait for PPU, see: https://wiki.nesdev.com/w/index.php/PPU_power_up_state
     bit $2002     ; clear the VBL flag if it was set at reset time
-    jsr waitforppu
+waitforppu:
+    bit $2002
+    bpl waitforppu ; at this point, about 27384 cycles have passed
+
+init:
+init_memory:
+    ; initialize first page of zp to 0, todo we can use up to 8 pages of zp
+    lda #0
+    sta $0000, x
+    inx
+    cpx #$00
+    bne init_memory
 
 clear_oam:
     lda #$FF
@@ -45,15 +56,6 @@ oamloop:
     inx
     cpx #$00
     bne oamloop
-
-init:
-init_memory:
-    ; initialize first page of zp to 0, todo we can use up to 8 pages of zp
-    lda #0
-    sta $0000, x
-    inx
-    cpx #$00
-    bne init_memory
 
 init_palettes:
     ; initialize background palettes
@@ -73,8 +75,9 @@ paletteloop:
 
 init_ppu:
     ; wait for ppu to be ready one last time
+    bit $2002
+    bpl init_ppu
     ; at this point, about 57165 cycles have passed
-    jsr waitforppu
 
     ; initialize ppu vblank NMI
     lda #%10000000
@@ -85,52 +88,43 @@ init_ppu:
 
 nmi:
     inc nmis
+
+    lda #$00
+    sta $2003
+    ; draw OAM data via DMA
+    lda #$02
+    sta $4014
+
     rti
 irq:
     rti
 
 .segment "CODE"
 
-waitforppu:
-    bit $2002
-    bpl waitforppu ; at this point, about 27384 cycles have passed
-    rts
-
 main:
     jsr readcontroller
 
-    lda gamestate
-    cmp #$01
-    beq playgame ; if gamestate = 1 then we're playing
-
-start_screen:
+regenerate:
     lda controller1release
     and #%00010000 ; start
-    beq main
-    ; start is pressed, reset gamestate
-    lda #1
-    sta gamestate ; set gamestate to playing
+    beq playgame
 
-    ; generate first level
+    ; re-generate dungeon level
     lda nmis
     sta seed
     jsr generate
-    ; show our sprites (& bg)
+    ; render the dungeon
     jsr render
 
-    jmp main      ; re-read controllers & continue game
+    jmp playgame    ; re-read controllers & continue game
 
 playgame:
     ; todo input & logic
-draw:
-    ; wait for vblank nmi to happen before drawing
-    jsr waitforppu
 
-    ; todo update sprite x & y from player
-
-    ; draw OAM data via DMA
-    lda #$02
-    sta $4014
+done:
+    lda nmis
+    cmp nmis
+    beq done
 
     ; endless game loop
     jmp main
