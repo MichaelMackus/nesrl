@@ -1,7 +1,6 @@
 ; main.s
 .global tiles
 .global maxtiles
-.global maxtilebytes
 .global controller1
 .global controller1release
 
@@ -11,6 +10,8 @@
 ; random.s
 .global seed
 .global d2
+.global d4
+.global d12
 
 ; render.s
 .global render

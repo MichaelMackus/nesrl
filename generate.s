@@ -23,7 +23,8 @@ clear_tiles:
 clear_loop:
     sta tiles, x
     inx
-    cpx maxtilebytes
+    ; todo figure out why I can't use constants
+    cpx #96
     bne clear_loop
 
     ; todo generate random cell dimensions
@@ -32,6 +33,8 @@ clear_loop:
     sta cell_height
     ; loop through max cells 
     ldy #0
+
+; generate 12 dungeon cells (rooms)
 generate_cells:
     cpy #12
     beq generate_corridors
@@ -49,8 +52,27 @@ skip_cell:
     iny
     jmp generate_cells
 
+; todo connect random cells via corridors
+; todo perhaps look into random maze generator (with length limits & no repeats) as way to make more interesting
 generate_corridors:
-    ; todo connect random cells via corridors
+    ; pick start cell at random
+    jsr d12
+    sec
+    sbc #$01
+    jsr get_byte_offset
+    ; increase offset to center of cell todo figure out a more random way
+    clc
+    adc #$0B
+    tay
+    ; todo get byte mask for center
+    ; todo pick random direction
+    ;jsr d4
+    ; todo fill byte mask in direction
+    lda #%11111111
+    ora tiles, y
+    sta tiles, y
+    ; todo keep filling until center of next cell
+    ; todo keep going until all cells visited
 done:
     rts
 
@@ -72,8 +94,6 @@ generate_cell:
     jsr get_byte_mask
     sta tmp
 
-    ; todo need to handle empty space in middle
-
     ; loop until cell height reached
     ldx #0
 set_cell_loop:
@@ -90,11 +110,6 @@ set_cell_loop:
     bne set_cell_loop
 
     rts
-
-; set bit at x, y
-; clobbers: tmp and all registers
-set_bit:
-    jsr get_byte_offset
 
 ; get byte offset for quadrant
 ; in: quadrant

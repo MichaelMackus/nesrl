@@ -34,7 +34,7 @@ prng:
 	cmp #0     ; reload flags
 	rts
 
-; generate random value from 0-1
+; generate random value from 1-2
 d2:
     jsr prng
     and #%00000001
@@ -43,4 +43,23 @@ d2:
     rts
 d2_eq:
     lda #$02
+    rts
+
+; generate random value from 1-4
+d4:
+    jsr prng
+    and #%00000011
+    clc
+    adc #$01
+    rts
+
+; generate random value from 1-12
+d12:
+    jsr prng
+    and #%00001111
+    cmp #12
+    bcs d12 ; try again since we have a number >= 12
+    ; all good, increment by 1 for result
+    clc
+    adc #$01
     rts
