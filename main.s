@@ -3,15 +3,14 @@
 .segment "ZEROPAGE"
 
 ; constants
-maxtiles     = (256 * 240) / 8 / 8
-maxtilebytes = maxtiles / 8
+maxtiles     = 96
 
 ; variables
 gamestate:   .res 1
 controller1: .res 1
 controller1release: .res 1
 level:       .res 1            ; level integer
-tiles:       .res maxtilebytes ; represents a 256x240 walkable grid in bits, 1 = walkable; 0 = impassable
+tiles:       .res maxtiles     ; represents a 256x240 walkable grid in bits, 1 = walkable; 0 = impassable
 nmis:        .res 1            ; how many nmis have passed
 
 .segment "HEADER"
@@ -87,7 +86,7 @@ init_ppu:
     jmp main
 
 nmi:
-    inc nmis
+    pha
 
     lda #$00
     sta $2003
@@ -95,6 +94,9 @@ nmi:
     lda #$02
     sta $4014
 
+    pla
+
+    inc nmis
     rti
 irq:
     rti
@@ -120,9 +122,8 @@ regenerate:
 
 playgame:
     ; todo input & logic
-
-done:
     lda nmis
+done:
     cmp nmis
     beq done
 
