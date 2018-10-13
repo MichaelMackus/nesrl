@@ -45,12 +45,26 @@ d2_eq:
     lda #$02
     rts
 
+; generate random value from 1-3
+d3:
+    jsr prng
+    and #%00000011
+    beq d3 ; don't accept zero
+    rts
+
 ; generate random value from 1-4
 d4:
     jsr prng
     and #%00000011
     clc
     adc #$01
+    rts
+
+; generate random value from 1-6
+d6:
+    jsr prng
+    and #%00000111
+    beq d6 ; don't generate zero
     rts
 
 ; generate random value from 1-12

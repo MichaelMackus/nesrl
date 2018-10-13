@@ -1,4 +1,8 @@
+; constants
+maxtiles = 96
+
 ; main.s
+.global tmp
 .global tiles
 .global maxtiles
 .global controller1
@@ -6,11 +10,16 @@
 
 ; generate.s
 .global generate
+.global xpos
+.global ypos
 
 ; random.s
 .global seed
+.global prng
 .global d2
+.global d3
 .global d4
+.global d6
 .global d12
 
 ; render.s

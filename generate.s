@@ -4,18 +4,22 @@
 
 .segment "ZEROPAGE"
 
-tmp:         .res 1 ; temporary variable for generation code
-visited:     .res 1 ; visited number of cells for generation
-cell_width:  .res 1
-cell_height: .res 1
+xpos:        .res 1
+ypos:        .res 1
+tunnels:     .res 1
+tunnel_len:  .res 1
+direction:   .res 1 ; represents last direction
+
+max_width = 32
+max_height = 24
+max_tunnels = 90 ; maximum tunnels
+max_length = 6 ; maximum length for tunnel
+min_bound = 1 ; minimum number of spaces from edge
 
 .segment "CODE"
 
 ; generate level
 .proc generate
-
-; todo why is this numeric constant not working for comparisons?
-max_cells = 12
 
 clear_tiles:
     ldx #$00 ; counter for background sprite position
@@ -24,356 +28,239 @@ clear_tiles:
 clear_loop:
     sta tiles, x
     inx
-    ; todo figure out why I can't use constants
-    cpx #96
+    cpx #maxtiles
     bne clear_loop
 
-; todo connect random cells via corridors
-; todo perhaps look into random maze generator (with length limits & no repeats) as way to make more interesting
+; random maze generator (with length limits & no repeats) as way to make more interesting
 generate_corridors:
-    ; pick start cell at random
-    jsr d12
-    sec
-    sbc #$01
-    jsr get_byte_offset
+    sta direction
+    lda #0
+    sta tunnels
 
-    ; increase offset to center y of cell todo figure out a more random way
-    clc
-    adc #$0C
-    tay
-    ; x offset is used to count increase in y offset
-    ldx #$0
-    stx visited
+; pick random start x from 0-31
+randx:
+    jsr prng
+    lsr
+    lsr
+    lsr
+    cmp #max_width
+    bcs randx
+    sta xpos
+; pick random start y from 0-23
+randy:
+    jsr prng
+    lsr
+    lsr
+    lsr
+    cmp #max_height
+    bcs randy
+    sta ypos
 
-    ; push y to stack for loop
-    tya
+    ; ensure rand x & y are within max_length of edges
+    jsr within_bounds
+    bne randx
+
+    ; initialize vars
+    lda #$00
+    sta tunnels
+
+    ; push xpos & ypos to stack
+    lda xpos
+    pha
+    lda ypos
     pha
 
-generate_corridors_loop:
+random_dir:
+    ; restore xpos and ypos from stack (for check function)
     pla
-    tay
-    jsr generate_corridor
-    tya
+    sta ypos
+    pla
+    sta xpos
+random_dir_loop:
+    ; pick random direction
+    jsr d4
+    sta tmp
+    ; prevent picking same direction as previous loop
+    cmp direction
+    beq random_dir_loop
+    ; prevent picking opposite direction
+    jsr is_opposite_dir
+    beq random_dir_loop
+    ; push xpos and ypos to stack to restore after check
+    lda xpos
     pha
-    jsr update_visited
-    ; keep going until all cells visited
-    cmp #12
-    bne generate_corridors_loop
-    pla
+    lda ypos
+    pha
+    ; update direction
+    lda tmp
+    sta direction
+    ldx #$00
 
-; generate 12 dungeon cells (rooms)
-generate_cells:
-    ; todo generate random cell dimensions
-    lda #4
-    sta cell_width
-    sta cell_height
-    ; loop through max cells 
-    ldy #0
-generate_cells_loop:
-    cpy #12
+; pick random length
+random_length:
+    jsr d6 ; todo don't hardcode random value
+    cmp #max_length
+    beq length_done
+    bcs random_length ; greater than max_length
+length_done:
+    sta tunnel_len
+
+check_dir:
+    lda direction
+    jsr update_pos
+    jsr within_bounds
+    bne random_dir
+    inx
+    cpx tunnel_len
+    bne check_dir
+    ; restore xpos and ypos from stack (for check function)
+    pla
+    sta ypos
+    pla
+    sta xpos
+    ; update xpos and ypos
+    ldx #$00
+
+; todo inc tunnels
+update_tile:
+    inc tunnels
+    lda tunnels
+    cmp #max_tunnels
     beq done_generating
-    ; coin flip
-    jsr d2
-    cmp #1
-    bne skip_cell
-    ; success
-    tya
-    pha
-    jsr generate_cell
-    pla
+update_tile_loop:
+    lda direction
+    jsr update_pos
+    ; update tile
+    jsr get_byte_offset
     tay
-skip_cell:
-    iny
-    jmp generate_cells_loop
+    txa
+    pha
+    jsr get_byte_mask
+    ora tiles, y
+    sta tiles, y
+    pla
+    tax
+    ; keep updating until tunnel length
+    inx
+    cpx tunnel_len
+    bne update_tile_loop
+
+    ; done, pick a new direction
+    jmp random_dir_loop
+
+    ; todo use random walk algorithm
+    ; todo see https://medium.freecodecamp.org/how-to-make-your-own-procedural-dungeon-map-generator-using-the-random-walk-algorithm-e0085c8aa9a?gi=74f51f176996
+
+;generate_corridors_loop:
+;    pla
+;    tay
+;    jsr generate_corridor
+;    tya
+;    pha
+;    jsr update_visited
+;    ; keep going until all cells visited
+;    cmp #12
+;    bne generate_corridors_loop
+;    pla
 
 done_generating:
     rts
 
 .endproc
 
-generate_corridor:
-    ; pick random direction
-    jsr d4
-    sta tmp ; save direction to tmp
+; check if direction is opposite of previous "direction" var
+; in: current dir
+; out: 0 if true (invalid current dir)
+is_opposite_dir:
     cmp #1
-    beq fill_center
+    beq cmp_dir_3
     cmp #2
-    beq fill_right
+    beq cmp_dir_4
     cmp #3
-    beq fill_center
-fill_left:
-    lda #%11110000
-    jmp fill_corridor
-fill_right:
-    lda #%00011111
-    jmp fill_corridor
-fill_center:
-    lda #%00010000 ; center byte mask
-fill_corridor:
-    ; fill byte mask in direction
-    ora tiles, y
-    sta tiles, y
-    ; move in direction
-    lda tmp
+    beq cmp_dir_1
+    cmp #4
+    beq cmp_dir_2
+cmp_dir_1:
+    lda direction
     cmp #1
-    beq move_up
+    beq is_opposite
+    jmp isnt_opposite
+cmp_dir_2:
+    lda direction
     cmp #2
-    beq move_right
+    beq is_opposite
+    jmp isnt_opposite
+cmp_dir_3:
+    lda direction
     cmp #3
-    beq move_down
-move_left:
-    ; get quadrant and store in tmp
-    tya
-    jsr get_x
-    sta tmp
-    ; divide x by 4 (ensure we're not at left edge)
-    lda #%00000000
-    lsr tmp
-    ror
-    lsr tmp
-    ror
-    ; if remainder of division is zero, skip moving
-    beq move_done
-    ; now we know it is not zero, move to left
-    dey ; decrement byte offset
-    lda #%00011111
-    ora tiles, y
-    sta tiles, y
-    jmp move_done
-move_right:
-    ; get quadrant and store in tmp
-    tya
-    jsr get_x
-    sta tmp
-    ; divide x by 4 (ensure we're not at left edge)
-    lda #%00000000
-    lsr tmp
-    ror
-    lsr tmp
-    ror
-    ror
-    ror
-    ror
-    ror
-    ror
-    ror
-    ; if remainder of division is 3, skip moving
-    cmp #3
-    beq move_done
-    ; now we know it is not zero, move to right
-    iny ; increment byte offset
-    lda #%11110000
-    ora tiles, y
-    sta tiles, y
-    jmp move_done
-move_up:
-    ; initialize counter for loop
-    ldx #$00
-move_up_loop:
-    ; compare increment to see if we're done
-    cpx #$08
-    beq move_done
-    ; fill center for current offset
-    lda #%00010000 ; center byte mask
-    ora tiles, y
-    sta tiles, y
-    ; compare y to ensure we're not at edge
-    tya
-    jsr get_y
-    cmp #$00
-    beq move_up_reset
-    ; we're not at edge, so decrement offset, counter, and continue loop
-    tya
-    sec
-    sbc #$04
-    tay
-    inx
-    jmp move_up_loop
-move_up_reset:
-    ; reset y to +12
-    tya
-    clc
-    adc #$0C
-    tay
-    jmp move_done
-move_down:
-    ; initialize counter for loop
-    ldx #$00
-move_down_loop:
-    ; compare increment to see if we're done
-    cpx #08
-    beq move_done
-    ; fill center for current offset
-    lda #%00010000 ; center byte mask
-    ora tiles, y
-    sta tiles, y
-    ; compare y to ensure we're not at edge
-    tya
-    jsr get_y
-    cmp #23
-    beq move_down_reset
-    ; we're not at edge, so increment offset, counter, and continue loop
-    tya
-    clc
-    adc #$04
-    tay
-    inx
-    jmp move_down_loop
-move_down_reset:
-    ; reset y to -16
-    tya
-    sec
-    sbc #$10
-    tay
-move_done:
+    beq is_opposite
+    jmp isnt_opposite
+cmp_dir_4:
+    lda direction
+    cmp #4
+    beq is_opposite
+    jmp isnt_opposite
+is_opposite:
+    lda #0
     rts
-
-
-; generate cell within quadrant
-; in: quadrant index
-; clobbers: tmp and all registers
-; todo not generating in quadrant
-generate_cell:
-    ; todo increment x & y value
-
-    ; get byte offset & transfer to y
-    jsr get_byte_offset
-    tay
-
-    ; todo fixme get byte mask & set wall
-    ;ldx #4
-    ;jsr get_byte_mask
-    lda #%01111000
-    sta tmp
-
-    ; loop until cell height reached
-    ldx #0
-set_cell_loop:
-    inx
-    tya
-    clc
-    adc #$04 ; increment byte offset for y
-    tay
-    lda tmp
-    ora tiles, y
-    sta tiles, y
-
-    cpx cell_height
-    bne set_cell_loop
-
-    rts
-
-; get visited cell count
-; out: visited cells
-; clobbers: tmp and all registers
-update_visited:
-    lda #$00
-    sta visited
-    tax
-update_visited_loop:
-    txa
-    pha
-    jsr quadrant_visited
-    bne next_visited
-    ; the quadrant was visited, increment visited
-    inc visited
-next_visited:
-    pla
-    tax
-    inx
-    cpx #12
-    bne update_visited_loop
-    lda visited
-    rts
-
-; check if quadrant visited
-; in: quadrant
-; out: 0 if visited
-; clobbers: tmp and all registers
-quadrant_visited:
-    jsr get_byte_offset
-    tay
-    lda #$00
-    tax
-quadrant_visited_loop:
-    ; and byte at offset with mask
-    lda tiles, y
-    and #%11111111
-    bne quadrant_visited_success
-    ; now we increment offset by 4 (get next y)
-    tya
-    clc
-    adc #4
-    tay
-    inx
-    ; end condition
-    cpx #8
-    bne quadrant_visited_loop
-
-    ; failure
+isnt_opposite:
     lda #1
     rts
-quadrant_visited_success:
-    lda #0
-    rts
 
-; get byte offset for quadrant
-; in: quadrant
-; out: offset to first byte in quadrant
-; clobbers: tmp and all registers
-get_byte_offset:
-    ; todo fixme
-    tax
-    stx tmp
-    lda #0
-    tax
-    tay
-get_byte_offset_loop:
-    cpy tmp
-    beq get_byte_offset_done
-    iny
-    inx
-    cpx #4
-    beq get_byte_offset_incy
-    clc
-    adc #1   ; add 1 to offset (increasing in x quadrant)
-    jmp get_byte_offset_loop
-get_byte_offset_incy:
-    ; increase y quadrant and clear x
-    ldx #0
-    clc
-    adc #29  ; add 29 to offset (increasing in y quadrant)
-    jmp get_byte_offset_loop
-get_byte_offset_done:
-    rts
-
-; get x pos for offset
-; in: offset
-; out: x pos
-; clobbers: tmp
-get_x:
+; is xpos & ypos within bounds?
+; out: 0 if within bounds of map
+; clobbers: tmp and y
+within_bounds:
+    ldy xpos
+    ; ensure not within 3 pixels of left or right
+    cpy #min_bound
+    bcc within_bounds_fail
+    lda #max_width
+    sec
+    sbc #min_bound
     sta tmp
-    lda #%00000000
-    lsr tmp
-    ror
-    lsr tmp
-    ror
-    ; fill in rest of zeroes
-    ror
-    ror
-    ror
-    ror
-    ror
-    ror
+    cpy tmp
+    bcs within_bounds_fail
+    ; ensure not within 3 pixels of top or bottom
+    ldy ypos
+    cpy #min_bound
+    bcc within_bounds_fail
+    lda #max_height
+    sec
+    sbc #min_bound
+    sta tmp
+    cpy tmp
+    bcs within_bounds_fail
+within_bounds_success:
+    lda #0
+    rts
+within_bounds_fail:
+    lda #1
     rts
 
-; get y pos for offset
-; in: offset
-; out: y pos
-get_y:
-    ; divide by 4 to get y pos
-    lsr
-    lsr
+; update xpos and ypos
+; in: direction (1-4)
+; affects: xpos and ypos
+update_pos:
+    cmp #1
+    beq dec_ypos
+    cmp #2
+    beq inc_xpos
+    cmp #3
+    beq inc_ypos
+    cmp #4
+    beq dec_xpos
+dec_ypos:
+    dec ypos
+    rts
+inc_xpos:
+    inc xpos
+    rts
+inc_ypos:
+    inc ypos
+    rts
+dec_xpos:
+    dec xpos
     rts
 
 ; get quadrant for offset y
@@ -419,46 +306,54 @@ get_quadrant:
     clc
     adc tmp
 
+; get byte offset for x,y
+; out: offset to first byte in tiles (x/8 + y*4)
+; clobbers: tmp
+get_byte_offset:
+    lda xpos
+    lsr
+    lsr
+    lsr
+    sta tmp
+    lda ypos
+    asl
+    asl
+    clc
+    adc tmp
+    rts
+
 ; get byte mask for x
 ; out: byte mask
-; clobbers: accum
+; clobbers: tmp and x
 get_byte_mask:
-    txa
-    pha ; remember x
-    ; subtract 8 from x until we get < 8 (representing a bit from 0-7)
-get_byte_mask_loop:
-    cmp #$08
-    bcc get_byte_mask_done
+    lda xpos
+    sta tmp
+    lda #0
+    lsr tmp
+    ror
+    lsr tmp
+    ror
+    lsr tmp
+    ror
+    ; now fill in zeroes
+    ror
+    ror
+    ror
+    ror
+    ror
+    ; now, we have the remainder (bit 0-7)
+    sta tmp
+    lda #0
+    tax
     sec
-    sbc #$08
+get_byte_mask_loop:
+    ror
+    cpx tmp
+    beq get_byte_mask_done
+    inx
     jmp get_byte_mask_loop
 get_byte_mask_done:
-    ; accum is a bit from 0-7, put in tmp for comparison
-    sta tmp
-    ; increment tmp for comparison
-    inc tmp
-    lda #$00 ; byte mask
-    tax      ; counter
-    sec      ; for shift operation
-get_byte_mask_shift:
-    ; rotate byte mask until tmp is reached
-    ror
-    inx
-    cpx cell_width
-    bcc get_byte_mask_shift_sec
-get_byte_mask_shift_continue:
-    cpx tmp
-    bcc get_byte_mask_shift
-    ; restore registers
-    sta tmp ; remember result
-    pla
-    tax
-    lda tmp
     rts
-get_byte_mask_shift_sec:
-    ; set carry since we're not at width yet
-    sec
-    jmp get_byte_mask_shift
 
 ; the tiles quadrants are arranged like so:
 ;
