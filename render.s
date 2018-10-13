@@ -6,6 +6,9 @@
 
 .proc render
 
+max_width  = 32
+max_height = 24
+
 generate_ppu:
     ; turn off rendering
     lda #%00000000 ; note: need second bit in order to show background on left side of screen
@@ -23,47 +26,65 @@ clear_line:
     inx
     cpx #$20
     bne clear_line
-    ldx #$00
-bg_repeat:
-    ldy #$00 ; counter for background bit index
-    lda tiles, x
-bg_bits:
-    cpy #8
-    beq next_bg
-    iny
-    asl
-    bcs floor
-    ; push accumulator to stack, draw bg, then pull from stack
-    pha
-    lda #$00
-    sta $2007
-    pla
-    jmp bg_bits
-floor:
-    ; push accumulator to stack, draw floor, then pull from stack
-    pha
-    lda #$82
-    sta $2007
-    pla
-    jmp bg_bits
-next_bg:
-    inx
-    ; repeat until desired amount (first byte of sprite-set)
-    cpx #96
-    bne bg_repeat
-    ; fill the rest of the tiles to BG for now
-    ldy #0
-
     lda #$00
     tax
     tay
+; loop through x and y
+y_repeat:
+    cpy #max_height
+    beq bgdone
+x_repeat:
+    stx xpos
+    sty ypos
+    jsr get_tile
     sta $2007
-
+    ldx xpos
+    ldy ypos
+    inx
+    cpx #max_width
+    bne x_repeat
+    iny
+    ldx #$00
+    jmp y_repeat
 bgdone:
     ; tell PPU to render BG & sprites
     lda #%00011010 ; note: need second bit in order to show background on left side of screen
     sta $2001
     rts
 
+; get tile index for x,y
+; out: index in sprite sheet
+get_tile:
+    ; todo first check mob
+    ; todo then check item
+    ; then check stair
+    cpx up_x
+    bne check_downstair
+    cpy up_y
+    beq up
+check_downstair:
+    cpx down_x
+    bne tile
+    cpy down_y
+    beq down
+tile:
+    ; finally, display tile
+    jsr get_byte_offset
+    tay
+    jsr get_byte_mask
+    and tiles, y
+    bne floor
+bg:
+    lda #$00
+    rts
+floor:
+    lda #$82
+    rts
+up:
+    lda #$3E
+    rts
+down:
+    lda #$3F
+    rts
 
 .endproc
