@@ -7,13 +7,25 @@ max_width  = 32
 max_height = 24
 min_bound  = 1  ; minimum number of spaces from edge
 
-tiles:       .res maxtiles     ; represents a 256x240 walkable grid in bits, 1 = walkable; 0 = impassable
+tiles:       .res maxtiles ; represents a 256x240 walkable grid in bits, 1 = walkable; 0 = impassable
 xpos:        .res 1
 ypos:        .res 1
+down_x:      .res 1
+down_y:      .res 1
+up_x:        .res 1
+up_y:        .res 1
 
 .segment "CODE"
 
-; todo rand passable xy
+; rand passable xy
+rand_passable:
+    jsr randxy
+    jsr get_byte_offset
+    tay
+    jsr get_byte_mask
+    and tiles, y
+    beq rand_passable
+    rts
 
 ; pick start x from 0-31 and y from 0-23
 ; updates xpos and ypos with coordinates

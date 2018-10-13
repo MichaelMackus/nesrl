@@ -6,7 +6,12 @@
 ; dungeon.s
 .global xpos
 .global ypos
+.global up_x
+.global up_y
+.global down_x
+.global down_y
 .global tiles
+.global rand_passable
 .global randxy
 .global within_bounds
 .global get_byte_mask

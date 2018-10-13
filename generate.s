@@ -103,7 +103,7 @@ update_tile:
     inc tunnels
     lda tunnels
     cmp #max_tunnels
-    beq done_generating
+    beq tiles_done
 update_tile_loop:
     lda direction
     jsr update_pos
@@ -125,7 +125,18 @@ update_tile_loop:
     ; done, pick a new direction
     jmp random_dir_loop
 
-done_generating:
+tiles_done:
+    ; generate up & down stair
+    jsr rand_passable
+    lda xpos
+    sta down_x
+    lda ypos
+    sta down_y
+    jsr rand_passable
+    lda xpos
+    sta up_x
+    lda ypos
+    sta up_y
     rts
 
 .endproc
