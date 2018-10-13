@@ -36,12 +36,12 @@ waitforppu:
 
 init:
 init_memory:
-    ; initialize first page of zp to 0, todo we can use up to 8 pages of zp
+    ; initialize vars to zero
     lda #0
-    sta $0000, x
-    inx
-    cpx #$00
-    bne init_memory
+    sta gamestate
+    sta controller1
+    sta controller1release
+    sta level
 
 clear_oam:
     lda #$FF
