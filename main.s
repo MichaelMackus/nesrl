@@ -104,19 +104,9 @@ irq:
 main:
     jsr readcontroller
 
-regenerate:
     lda controller1release
     and #%00010000 ; start
-    beq playgame
-
-    ; re-generate dungeon level
-    lda nmis
-    sta seed
-    jsr generate
-    ; render the dungeon
-    jsr render
-
-    jmp playgame    ; re-read controllers & continue game
+    bne regenerate
 
 playgame:
     ; todo input & logic
@@ -127,6 +117,17 @@ done:
 
     ; endless game loop
     jmp main
+
+
+; re-generate dungeon level
+regenerate:
+    lda nmis
+    sta seed
+    jsr generate
+    ; render the dungeon
+    jsr render
+
+    jmp done
 
 .segment "RODATA"
 
