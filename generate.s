@@ -132,11 +132,18 @@ tiles_done:
     sta down_x
     lda ypos
     sta down_y
+generate_up:
     jsr rand_passable
-    lda xpos
-    sta up_x
-    lda ypos
-    sta up_y
+    ldx xpos
+    ldy ypos
+    cpx down_x
+    bne finish_up
+    cpy down_y
+    bne finish_up
+    jmp generate_up
+finish_up:
+    stx up_x
+    sty up_y
     rts
 
 .endproc
