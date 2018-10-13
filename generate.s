@@ -144,6 +144,12 @@ generate_up:
 finish_up:
     stx up_x
     sty up_y
+; todo generate mobs
+; update player x & y to upstair
+update_player:
+    stx xpos
+    sty ypos
+    jsr update_player_pos
     rts
 
 .endproc

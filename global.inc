@@ -17,6 +17,14 @@
 .global get_byte_mask
 .global get_byte_offset
 
+; mob.s
+.global player
+.global playerx
+.global playery
+.global playerlvl
+.global enemies
+.global update_player_pos
+
 ; generate.s
 .global generate
 

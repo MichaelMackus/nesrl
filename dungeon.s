@@ -10,10 +10,10 @@ min_bound  = 1  ; minimum number of spaces from edge
 tiles:       .res maxtiles ; represents a 256x240 walkable grid in bits, 1 = walkable; 0 = impassable
 xpos:        .res 1
 ypos:        .res 1
-down_x:      .res 1
-down_y:      .res 1
-up_x:        .res 1
-up_y:        .res 1
+down_x:      .res 1 ; down stair x
+down_y:      .res 1 ; down stair y
+up_x:        .res 1 ; up stair x
+up_y:        .res 1 ; up stair y
 
 .segment "CODE"
 

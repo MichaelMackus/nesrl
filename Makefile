@@ -1,4 +1,4 @@
-objs = dungeon.o generate.o random.o render.o input.o main.o
+objs = mob.o dungeon.o generate.o random.o render.o input.o main.o
 
 run: simplerl
 	fceux simplerl.nes

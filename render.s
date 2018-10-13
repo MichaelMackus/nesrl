@@ -55,8 +55,18 @@ bgdone:
 ; get tile index for x,y
 ; out: index in sprite sheet
 get_tile:
+    ; first check player
+    jsr playerx
+    sta tmp
+    cpx tmp
+    bne check_stair
+    jsr playery
+    sta tmp
+    cpy tmp
+    beq player
     ; todo first check mob
     ; todo then check item
+check_stair:
     ; then check stair
     cpx up_x
     bne check_downstair
@@ -85,6 +95,9 @@ up:
     rts
 down:
     lda #$3F
+    rts
+player:
+    lda #$A1
     rts
 
 .endproc
