@@ -10,8 +10,6 @@ maxtiles = 96
 
 ; generate.s
 .global generate
-.global xpos
-.global ypos
 
 ; random.s
 .global seed
