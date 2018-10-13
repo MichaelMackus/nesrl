@@ -32,6 +32,7 @@ clear_loop:
     bne clear_loop
 
 ; random maze generator (with length limits & no repeats) as way to make more interesting
+; see https://medium.freecodecamp.org/how-to-make-your-own-procedural-dungeon-map-generator-using-the-random-walk-algorithm-e0085c8aa9a?gi=74f51f176996
 generate_corridors:
     sta direction
     lda #0
@@ -121,7 +122,6 @@ check_dir:
     ; update xpos and ypos
     ldx #$00
 
-; todo inc tunnels
 update_tile:
     inc tunnels
     lda tunnels
@@ -147,21 +147,6 @@ update_tile_loop:
 
     ; done, pick a new direction
     jmp random_dir_loop
-
-    ; todo use random walk algorithm
-    ; todo see https://medium.freecodecamp.org/how-to-make-your-own-procedural-dungeon-map-generator-using-the-random-walk-algorithm-e0085c8aa9a?gi=74f51f176996
-
-;generate_corridors_loop:
-;    pla
-;    tay
-;    jsr generate_corridor
-;    tya
-;    pha
-;    jsr update_visited
-;    ; keep going until all cells visited
-;    cmp #12
-;    bne generate_corridors_loop
-;    pla
 
 done_generating:
     rts
@@ -262,49 +247,6 @@ inc_ypos:
 dec_xpos:
     dec xpos
     rts
-
-; get quadrant for offset y
-; in: offset
-; out: quadrant
-; clobbers: tmp and all registers
-; todo fixme the rol stuff is messed up, bits will be reversed
-get_quadrant:
-    tay
-    lda #0
-    sta tmp
-    tya
-    ; divide by 32, storing remainder in tmp
-    lsr
-    rol tmp
-    lsr
-    rol tmp
-    lsr
-    rol tmp
-    lsr
-    rol tmp
-    lsr
-    rol tmp
-    ; decrement division result by 1 to get index
-    tay
-    dey
-    ; now a has y value and tmp has remainder
-
-    ; ; divide remainder by 4
-    ; lda tmp
-    ; ldx #$0
-    ; stx tmp
-    ; lsr
-    ; rol tmp
-    ; lsr
-    ; rol tmp
-
-    ; remainder of division should be x offset
-    ; result is 4 * y + x
-    tya
-    asl
-    asl
-    clc
-    adc tmp
 
 ; get byte offset for x,y
 ; out: offset to first byte in tiles (x/8 + y*4)
