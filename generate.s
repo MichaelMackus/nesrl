@@ -4,17 +4,13 @@
 
 .segment "ZEROPAGE"
 
-xpos:        .res 1
-ypos:        .res 1
 tunnels:     .res 1
 tunnel_len:  .res 1
 direction:   .res 1 ; represents last direction
 
-max_width = 32
-max_height = 24
+maxtiles    = 96
 max_tunnels = 90 ; maximum tunnels
-max_length = 6 ; maximum length for tunnel
-min_bound = 1 ; minimum number of spaces from edge
+max_length  = 6  ; maximum length for tunnel
 
 .segment "CODE"
 
@@ -38,28 +34,9 @@ generate_corridors:
     lda #0
     sta tunnels
 
-; pick random start x from 0-31
-randx:
-    jsr prng
-    lsr
-    lsr
-    lsr
-    cmp #max_width
-    bcs randx
-    sta xpos
-; pick random start y from 0-23
-randy:
-    jsr prng
-    lsr
-    lsr
-    lsr
-    cmp #max_height
-    bcs randy
-    sta ypos
-
-    ; ensure rand x & y are within max_length of edges
-    jsr within_bounds
-    bne randx
+    jsr randxy
+    stx xpos
+    sty ypos
 
     ; initialize vars
     lda #$00
@@ -192,37 +169,6 @@ isnt_opposite:
     lda #1
     rts
 
-; is xpos & ypos within bounds?
-; out: 0 if within bounds of map
-; clobbers: tmp and y
-within_bounds:
-    ldy xpos
-    ; ensure not within 3 pixels of left or right
-    cpy #min_bound
-    bcc within_bounds_fail
-    lda #max_width
-    sec
-    sbc #min_bound
-    sta tmp
-    cpy tmp
-    bcs within_bounds_fail
-    ; ensure not within 3 pixels of top or bottom
-    ldy ypos
-    cpy #min_bound
-    bcc within_bounds_fail
-    lda #max_height
-    sec
-    sbc #min_bound
-    sta tmp
-    cpy tmp
-    bcs within_bounds_fail
-within_bounds_success:
-    lda #0
-    rts
-within_bounds_fail:
-    lda #1
-    rts
-
 ; update xpos and ypos
 ; in: direction (1-4)
 ; affects: xpos and ypos
@@ -247,96 +193,3 @@ inc_ypos:
 dec_xpos:
     dec xpos
     rts
-
-; get byte offset for x,y
-; out: offset to first byte in tiles (x/8 + y*4)
-; clobbers: tmp
-get_byte_offset:
-    lda xpos
-    lsr
-    lsr
-    lsr
-    sta tmp
-    lda ypos
-    asl
-    asl
-    clc
-    adc tmp
-    rts
-
-; get byte mask for x
-; out: byte mask
-; clobbers: tmp and x
-get_byte_mask:
-    lda xpos
-    sta tmp
-    lda #0
-    lsr tmp
-    ror
-    lsr tmp
-    ror
-    lsr tmp
-    ror
-    ; now fill in zeroes
-    ror
-    ror
-    ror
-    ror
-    ror
-    ; now, we have the remainder (bit 0-7)
-    sta tmp
-    lda #0
-    tax
-    sec
-get_byte_mask_loop:
-    ror
-    cpx tmp
-    beq get_byte_mask_done
-    inx
-    jmp get_byte_mask_loop
-get_byte_mask_done:
-    rts
-
-; the tiles quadrants are arranged like so:
-;
-;    0        1        2        3
-; 00000000 00000001 00000010 00000011
-;
-; 00000000 00000000 00000000 00000000
-; 01000000 00000000 00000000 00000000
-; 00000000 00000000 00000000 00000000
-; 00000100 10000000 00000000 00000000
-; 00000000 00000000 00000000 00000000
-; 00000000 00000000 00000000 00000000
-; 00000000 00000000 00000000 00000000
-; 00000000 00000000 00000000 00000000
-
-;    4        5        6        7
-; 00000100 00000101 00000110 00000111
-;
-; 00000000 00000000 00000000 00000000
-; 01000000 00000000 00000000 00000000
-; 00000000 00000000 00000000 00000000
-; 00000100 10000000 00000000 00000000
-; 00000000 00000000 00000000 00000000
-; 00000000 00000000 00000000 00000000
-; 00000000 00000000 00000000 00000000
-; 00000000 00000000 00000000 00000000
-
-;    8        9        10       11
-; 00001000 00001001 00001010 00010111
-;
-; 00000000 00000000 00000000 00000000
-; 01000000 00000000 00000000 00000000
-; 00000000 00000000 00000000 00000000
-; 00000100 10000000 00000000 00000000
-; 00000000 00000000 00000000 00000000
-; 00000000 00000000 00000000 00000000
-; 00000000 00000000 00000000 00000000
-; 00000000 00000000 00000000 00000000
-;
-; bit at x,y of 1,1 would be in quadrant 0 with offset 0
-; bit at x,y of 8,3 would be in quadrant 1 with offset 1
-; bit at x,y of 1,9 would be in quadrant 4 with offset 32
-; bit at x,y of 8,11 would be in quadrant 5 with offset 33
-

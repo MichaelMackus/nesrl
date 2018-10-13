@@ -1,12 +1,16 @@
-; constants
-maxtiles = 96
-
 ; main.s
 .global tmp
-.global tiles
-.global maxtiles
 .global controller1
 .global controller1release
+
+; dungeon.s
+.global xpos
+.global ypos
+.global tiles
+.global randxy
+.global within_bounds
+.global get_byte_mask
+.global get_byte_offset
 
 ; generate.s
 .global generate

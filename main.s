@@ -8,7 +8,6 @@ gamestate:   .res 1
 controller1: .res 1
 controller1release: .res 1
 level:       .res 1            ; level integer
-tiles:       .res maxtiles     ; represents a 256x240 walkable grid in bits, 1 = walkable; 0 = impassable
 nmis:        .res 1            ; how many nmis have passed
 
 .segment "HEADER"
