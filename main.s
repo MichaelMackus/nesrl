@@ -103,6 +103,19 @@ irq:
 main:
     jsr readcontroller
 
+    lda gamestate
+    cmp #1
+    beq playgame
+    ; todo handle more gamestates (e.g. inventory, win, death, quit)
+start_screen:
+    lda controller1release
+    and #%00010000 ; start
+    beq done
+    jsr regenerate
+    lda #1
+    sta gamestate
+    jmp done
+
 playgame:
     jsr handle_input
     jsr render_player
@@ -118,8 +131,8 @@ done:
 
 handle_input:
     lda controller1release
-    and #%00010000 ; start
-    bne regenerate
+    and #%10000000 ; a
+    bne check_action
     ; update player pos to memory
     jsr playerx
     sta xpos
@@ -143,6 +156,20 @@ handle_input:
     and #%00001000  ; up
     bne move_up
     jmp reset_player_pos
+check_action:
+    ; only regenerate when on stair
+    ; todo handle upstair (need to quit on 1st and reduce level/difficulty otherwise)
+    jsr playerx
+    tax
+    jsr playery
+    tay
+    cpx down_x
+    bne input_done
+    cpy down_y
+    bne input_done
+    ; on downstair, generate new level
+    jsr regenerate
+    rts
 move_left:
     dec xpos
     jsr within_bounds
@@ -175,6 +202,7 @@ move_done:
     pla
     pla
     jsr update_player_pos
+input_done:
     rts
 
 ; re-generate dungeon level
@@ -184,8 +212,7 @@ regenerate:
     jsr generate
     ; render the dungeon
     jsr render
-
-    jmp done
+    rts
 
 .segment "RODATA"
 
