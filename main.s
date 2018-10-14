@@ -121,7 +121,7 @@ escape_dungeon:
 
 playgame:
     jsr handle_input
-    jsr render_player
+    jsr render_mobs
 
     lda nmis
 done:

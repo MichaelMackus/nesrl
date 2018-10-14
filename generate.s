@@ -153,6 +153,11 @@ finish_up:
     stx up_x
     sty up_y
 ; todo generate mobs
+; todo ensure mob isn't on space with player or other mob
+; todo generating some weird rendering issues
+generate_mobs:
+    ldy #$00
+    jsr rand_mob
 ; update player x & y to up or down stair, depending on prevdlevel
 update_player:
     lda dlevel

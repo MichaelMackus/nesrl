@@ -24,8 +24,12 @@
 .global playerx
 .global playery
 .global playerlvl
-.global enemies
 .global update_player_pos
+.global enemies
+.global rand_mob
+.global is_alive
+.global enemyx
+.global enemyy
 
 ; generate.s
 .global generate
@@ -43,7 +47,7 @@
 .global render
 .global render_escape
 .global render_win
-.global render_player
+.global render_mobs
 
 ; input.s
 .global readcontroller

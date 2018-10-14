@@ -3,7 +3,7 @@
 .export render
 .export render_escape
 .export render_win
-.export render_player
+.export render_mobs
 
 .segment "CODE"
 
@@ -247,17 +247,17 @@ render_win_done:
 
 .endproc
 
-.proc render_player
+.proc render_mobs
 
 ; render the player sprite
-; todo we should probably multiply by 8?
+render_mobs:
 render_player:
     jsr playery
     asl
     asl
     asl
     clc
-    adc #$04 ; todo sprite data is delayed by 1 scanline in NES
+    adc #$04 ; sprite data is delayed by 1 scanline in NES
     sta $0200
     lda #$A1
     sta $0201
@@ -268,6 +268,43 @@ render_player:
     asl
     asl
     sta $0203
+
+    ldx #$00
+maxenemies = 20
+render_enemies:
+    ; check hp > 0
+    txa
+    jsr is_alive
+    bne skip_enemy
+    ; render mob
+    txa
+    jsr enemyy
+    asl
+    asl
+    asl
+    clc
+    adc #$04 ; sprite data is delayed by 1 scanline in NES
+    sta $0204 ; todo increment by x*4
+    lda #$A2
+    sta $0205
+    lda #%00000000
+    sta $0206
+    txa
+    jsr enemyx
+    asl
+    asl
+    asl
+    sta $0207
+    ;jsr continue_enemies todo
+skip_enemy:
+    ; todo hide sprite
+continue_enemies:
+    ; todo
+    ;inx
+    ;cpx #maxenemies
+    ;beq done_mobs
+
+done_mobs:
     rts
 
 .endproc

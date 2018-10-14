@@ -20,6 +20,7 @@ up_y:        .res 1 ; up stair y
 
 ; pick start x from 0-31 and y from 0-23
 ; updates xpos and ypos with coordinates
+; clobbers: x
 randxy:
 randy:
     jsr prng
@@ -59,6 +60,7 @@ is_passable_success:
     rts
 
 ; rand passable xy
+; clobbers: tmp, x,  and y
 rand_passable:
     jsr randxy
     jsr is_passable

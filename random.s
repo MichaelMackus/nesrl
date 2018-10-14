@@ -19,6 +19,7 @@ seed: .res 2       ; initialize 16-bit seed to any value except 0
 
 .segment "CODE"
 
+; clobbers: x and accum
 prng:
 	ldx #8     ; iteration count (generates 8 bits)
 	lda seed+0
