@@ -63,7 +63,6 @@ update_player_pos:
 ; get mob x coord
 ; in: mob index
 ; out: coord
-; clobbers: y
 mobx:
     lda mobs + Mob::coords + Coord::xcoord, y
     rts
@@ -88,6 +87,37 @@ update_mob_pos:
 ; out: type
 mobtype:
     lda mobs + Mob::type, y
+    rts
+
+; get a mob at xpos and ypos
+; out: 0 on success, 1 on failure
+; updates: y register to mob index
+mob_at:
+    lda #$00
+    tay
+mob_at_loop:
+    jsr is_alive
+    bne mob_at_continue
+    jsr mobx
+    cmp xpos
+    bne mob_at_continue
+    jsr moby
+    cmp ypos
+    beq mob_at_success
+mob_at_continue:
+    tya
+    clc
+    adc #mob_size
+    tay
+    cmp #mobs_size
+    beq mob_at_fail
+    jmp mob_at_loop
+mob_at_success:
+    lda #0
+    rts
+mob_at_fail:
+    ldy #$FF
+    lda #1
     rts
 
 ; deal damage to mob at index y

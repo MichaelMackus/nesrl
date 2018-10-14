@@ -141,10 +141,6 @@ handle_input:
     sta xpos
     jsr playery
     sta ypos
-    lda xpos
-    pha
-    lda ypos
-    pha
     ; handle player movement
     lda controller1release
     and #%00000010  ; left
@@ -158,7 +154,7 @@ handle_input:
     lda controller1release
     and #%00001000  ; up
     bne move_up
-    jmp reset_player_pos
+    jmp input_done
 check_action:
 check_dstair:
     jsr playerx
@@ -195,37 +191,34 @@ check_upstair:
 move_left:
     dec xpos
     jsr within_bounds
-    bne reset_player_pos
+    bne input_done
     jmp move_done
 move_right:
     inc xpos
     jsr within_bounds
-    bne reset_player_pos
+    bne input_done
     jmp move_done
 move_up:
     dec ypos
     jsr within_bounds
-    bne reset_player_pos
+    bne input_done
     jmp move_done
 move_down:
     inc ypos
     jsr within_bounds
-    bne reset_player_pos
-    jmp move_done
-reset_player_pos:
-    pla
-    sta ypos
-    pla
-    sta xpos
-    rts
+    bne input_done
 move_done:
+    jsr mob_at
+    beq attack_mob
     jsr is_passable
-    bne reset_player_pos
-    pla
-    pla
+    bne input_done
     jsr update_player_pos
 input_done:
     rts
+attack_mob:
+    ; todo use damage calc, for now just kill
+    jsr kill_mob
+    jmp input_done
 escape:
     jsr render_escape
     ; escape dungeon
