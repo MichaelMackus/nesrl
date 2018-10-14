@@ -2,7 +2,7 @@
 maxtiles   = 96
 max_width  = 32
 max_height = 24
-maxenemies = 20
+maxmobs    = 20
 
 ; main.s
 .global tmp
@@ -26,16 +26,17 @@ maxenemies = 20
 .global get_byte_offset
 
 ; mob.s
-.global player
+.global mob_size
+.global mobs_size
+.global playerlvl
+.global mobx
+.global moby
+.global update_mob_pos
 .global playerx
 .global playery
-.global playerlvl
 .global update_player_pos
-.global enemies
 .global rand_mob
 .global is_alive
-.global enemyx
-.global enemyy
 
 ; generate.s
 .global generate

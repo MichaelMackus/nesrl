@@ -1,9 +1,11 @@
-.include "global.inc"
-
 .export render
 .export render_escape
 .export render_win
 .export render_mobs
+
+.segment "ZEROPAGE"
+
+.include "global.inc"
 
 .segment "CODE"
 
@@ -248,56 +250,59 @@ render_win_done:
 
 ; render the player sprite
 render_mobs:
-render_player:
-    jsr playery
+    lda #0
+    tay
+    tax
+render_mobs_loop:
+    ; todo check is_alive, need to set hp for player first
+    jsr moby
     asl
     asl
     asl
     clc
     adc #$04 ; sprite data is delayed by 1 scanline in NES
-    sta $0200
-    lda #$A1
-    sta $0201
+    sta $0200, x
+    lda #$A1 ; todo plus type of mob
+    sta $0201, x
     lda #%00000000
-    sta $0202
-    jsr playerx
+    sta $0202, x
+    jsr mobx
     asl
     asl
     asl
-    sta $0203
-
-    ldx #$00
-render_enemies:
-    ; check hp > 0
+    sta $0203, x
+    ; todo continue loop, for now just do another mob
     txa
-    jsr is_alive
-    bne skip_enemy
-    ; render mob
-    txa
-    jsr enemyy
+    clc
+    adc #$04
+    tax
+    tya
+    clc
+    adc #mob_size
+    tay
+    jsr moby
     asl
     asl
     asl
     clc
     adc #$04 ; sprite data is delayed by 1 scanline in NES
-    sta $0204 ; todo increment by x*4
+    sta $0200, x
     lda #$A2
-    sta $0205
+    sta $0201, x
     lda #%00000000
-    sta $0206
-    txa
-    jsr enemyx
+    sta $0202, x
+    jsr mobx
     asl
     asl
     asl
-    sta $0207
-    ;jsr continue_enemies todo
-skip_enemy:
+    sta $0203, x
+
+skip_mob:
     ; todo hide sprite
-continue_enemies:
+continue_mobs:
     ; todo
     ;inx
-    ;cpx #maxenemies
+    ;cpx #maxmobs
     ;beq done_mobs
 
 done_mobs:

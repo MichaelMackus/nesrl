@@ -1,8 +1,9 @@
-.include "global.inc"
-
 .segment "ZEROPAGE"
 
+.include "global.inc"
+
 .enum Mobs
+    player
     goblin
     orc
     ogre
@@ -20,32 +21,83 @@
     type   .byte ; one of Mobs enum
 .endstruct
 
-player:    .res .sizeof(Mob)
-playerlvl: .res 1
-enemies:   .res .sizeof(Mob)*maxenemies
+mob_size  = .sizeof(Mob)
+mobs_size = .sizeof(Mob)*maxmobs
+
+playerlvl: .res 1 ; todo stats struct
+mobs:      .res mobs_size
+mobindex:  .res 1 ; remember index of mob for operations
 
 .segment "CODE"
 
-update_player_pos:
-    lda xpos
-    sta player+Mob::coords+Coord::xcoord
-    lda ypos
-    sta player+Mob::coords+Coord::ycoord
+; get player x coord
+; out: coord
+playerx:
+    lda mobs + Mob::coords + Coord::xcoord
     rts
 
-playerx:
-    lda player+Mob::coords+Coord::xcoord
-    rts
+; get player y coord
+; out: coord
 playery:
-    lda player+Mob::coords+Coord::ycoord
+    lda mobs + Mob::coords + Coord::ycoord
+    rts
+
+; update coords of player with xpos and ypos vars
+update_player_pos:
+    lda xpos
+    sta mobs+Mob::coords+Coord::xcoord
+    lda ypos
+    sta mobs+Mob::coords+Coord::ycoord
+    rts
+
+; update the mob index for mob operations
+; in: mob index (0-19)
+; clobbers: y and accum
+set_mob_index:
+    tay
+    lda #0
+    sta mobindex
+set_mob_index_loop:
+    tya
+    beq set_mob_index_done
+    ; not zero yet, increase mobindex by size
+    lda mobindex
+    clc
+    adc .sizeof(Mob)
+    sta mobindex
+    dey
+    jmp set_mob_index_loop
+set_mob_index_done:
+    rts
+
+; get mob x coord
+; in: mob index
+; out: coord
+; clobbers: tmp and y
+mobx:
+    lda mobs + Mob::coords + Coord::xcoord, y
+    rts
+
+; get mob y coord
+; in: mob index
+; out: coord
+moby:
+    lda mobs + Mob::coords + Coord::ycoord, y
+    rts
+
+; update coords of mob at index y with xpos and ypos vars
+update_mob_pos:
+    lda xpos
+    sta mobs+Mob::coords+Coord::xcoord, y
+    lda ypos
+    sta mobs+Mob::coords+Coord::ycoord, y
     rts
 
 ; check if mob alive
 ; in: mob index
 ; out: 0 if alive
 is_alive:
-    tay
-    lda enemies + Mob::hp, y
+    lda mobs + Mob::hp, y
     cmp #0
     beq is_dead
     lda #0
@@ -54,23 +106,7 @@ is_dead:
     lda #1
     rts
 
-; get enemy x coord
-; in: mob index
-; out: coord
-enemyx:
-    tay
-    lda enemies + Mob::coords + Coord::xcoord, y
-    rts
-
-; get enemy y coord
-; in: mob index
-; out: coord
-enemyy:
-    tay
-    lda enemies + Mob::coords + Coord::ycoord, y
-    rts
-
-; generate random mob at index x
+; generate random mob at index y
 rand_mob:
     ; store y for later use
     tya
@@ -82,9 +118,9 @@ rand_mob:
     tay
     ; continue mob generation
     lda xpos
-    sta enemies + Mob::coords + Coord::xcoord, y
+    sta mobs + Mob::coords + Coord::xcoord, y
     lda ypos
-    sta enemies + Mob::coords + Coord::ycoord, y
+    sta mobs + Mob::coords + Coord::ycoord, y
     ; generate random mob type
     lda dlevel
     cmp #3
@@ -122,31 +158,31 @@ gen_goblin:
     lda tmp
     tay
     lda #4
-    sta enemies + Mob::hp, y
+    sta mobs + Mob::hp, y
     lda Mobs::goblin
-    sta enemies + Mob::type, y
+    sta mobs + Mob::type, y
     rts
 gen_orc:
     lda tmp
     tay
     lda #6
-    sta enemies + Mob::hp, y
+    sta mobs + Mob::hp, y
     lda Mobs::orc
-    sta enemies + Mob::type, y
+    sta mobs + Mob::type, y
     rts
 gen_ogre:
     lda tmp
     tay
     lda #10
-    sta enemies + Mob::hp, y
+    sta mobs + Mob::hp, y
     lda Mobs::ogre
-    sta enemies + Mob::type, y
+    sta mobs + Mob::type, y
     rts
 gen_dragon:
     lda tmp
     tay
     lda #20
-    sta enemies + Mob::hp, y
+    sta mobs + Mob::hp, y
     lda Mobs::dragon
-    sta enemies + Mob::type, y
+    sta mobs + Mob::type, y
     rts

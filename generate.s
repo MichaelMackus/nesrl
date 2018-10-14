@@ -1,8 +1,8 @@
-.include "global.inc"
-
 .export generate
 
 .segment "ZEROPAGE"
+
+.include "global.inc"
 
 tunnels:     .res 1
 tunnel_len:  .res 1
@@ -151,12 +151,6 @@ generate_up:
 finish_up:
     stx up_x
     sty up_y
-; todo generate mobs
-; todo ensure mob isn't on space with player or other mob
-; todo generating some weird rendering issues
-generate_mobs:
-    ldy #$00
-    jsr rand_mob
 ; update player x & y to up or down stair, depending on prevdlevel
 update_player:
     lda dlevel
@@ -169,13 +163,19 @@ update_player_upstair:
     stx xpos
     sty ypos
     jsr update_player_pos
-    rts
+    jsr generate_mobs
 update_player_downstair:
     ldx down_x
     ldy down_y
     stx xpos
     sty ypos
     jsr update_player_pos
+    jsr generate_mobs
+; todo ensure mob isn't on space with player or other mob
+generate_mobs:
+    ; todo generate more than one mob
+    ldy #mob_size
+    jsr rand_mob
     rts
 
 .endproc
