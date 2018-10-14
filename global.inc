@@ -38,6 +38,7 @@ maxmobs    = 20
 .global initialize_player
 .global playerx
 .global playery
+.global playerhp
 .global update_player_pos
 .global rand_mob
 .global is_alive

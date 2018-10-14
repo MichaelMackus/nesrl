@@ -52,6 +52,12 @@ playery:
     lda mobs + Mob::coords + Coord::ycoord
     rts
 
+; get player hp
+; out: hp
+playerhp:
+    lda mobs + Mob::hp
+    rts
+
 ; update coords of player with xpos and ypos vars
 update_player_pos:
     lda xpos

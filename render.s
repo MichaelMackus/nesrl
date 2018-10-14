@@ -11,6 +11,28 @@ tmp: .byte 1
 
 .segment "CODE"
 
+; render string constant to screen
+; in: address to start of str
+; clobbers: x and tmp
+.macro render_str str
+    .local loop
+    .local done
+    ldx #0
+loop:
+    lda str, x
+    beq done
+    sec
+    sbc #$20
+    sta tmp
+    lda #$00
+    clc
+    adc tmp
+    sta $2007
+    inx
+    jmp loop
+done:
+.endmacro
+
 .proc render
 
 generate_ppu:
@@ -53,23 +75,20 @@ x_repeat:
 tiles_done:
     lda #$00
     sta $2007
-    ; todo render hp
-    ; todo render player level
-    ; dlvl
-    lda #$44
-    sta $2007
-    lda #$4C
-    sta $2007
-    lda #$56
-    sta $2007
-    lda #$4C
-    sta $2007
+    ; player hp
+    render_str txt_hp
     lda #$00
     sta $2007
-    lda #$10
-    clc
-    adc dlevel
+    jsr playerhp
+    jsr render_padded_num
+    lda #$00
     sta $2007
+    ; dlvl
+    render_str txt_dlvl
+    lda #$00
+    sta $2007
+    lda dlevel
+    jsr render_padded_num
 render_done:
     ; tell PPU to render BG & sprites
     lda #%00011010 ; note: need second bit in order to show background on left side of screen
@@ -151,30 +170,7 @@ render_escape_message:
     ; You escaped!
     lda #$00
     sta $2007
-    lda #$39 ; Y
-    sta $2007
-    lda #$4F ; o
-    sta $2007
-    lda #$55 ; u
-    sta $2007
-    lda #$00
-    sta $2007
-    lda #$45 ; e
-    sta $2007
-    lda #$53 ; s
-    sta $2007
-    lda #$43 ; c
-    sta $2007
-    lda #$41 ; a
-    sta $2007
-    lda #$50 ; p
-    sta $2007
-    lda #$45 ; e
-    sta $2007
-    lda #$44 ; d
-    sta $2007
-    lda #$01 ; !
-    sta $2007
+    render_str txt_escape
     ; done
     inc tmp
     lda #$00
@@ -218,23 +214,10 @@ render_win_clear_x:
 render_win_message:
     lda tmp
     bne render_win_done
-    ; You escaped!
+    ; You win!
     lda #$00
     sta $2007
-    lda #$39 ; Y
-    sta $2007
-    lda #$4F ; o
-    sta $2007
-    lda #$55 ; u
-    sta $2007
-    lda #$00
-    sta $2007
-    lda #$57 ; w
-    sta $2007
-    lda #$49 ; i
-    sta $2007
-    lda #$4E ; n
-    sta $2007
+    render_str txt_win
     ; done
     inc tmp
     lda #$00
@@ -300,3 +283,56 @@ clear_mob:
 
 .endproc
 
+; render num padded with space at front
+; in: number
+; clobbers: x, y, and tmp
+render_padded_num:
+    cmp #10
+    bcs render_num
+    tax
+    lda #$00
+    sta $2007
+    txa
+    jmp render_num
+
+; render num 0-99
+; in: number
+; clobbers: x, y, and tmp
+render_num:
+    cmp #10
+    bcc render_ones
+    ; first, render tens place for number
+    ldx #0
+tens_loop:
+    cmp #10
+    bcc render_tens
+    sec
+    sbc #10
+    inx
+    jmp tens_loop
+render_tens:
+    tay
+    txa
+    sta tmp
+    lda #$10
+    clc
+    adc tmp
+    sta $2007
+    ; now, render ones place
+    tya
+render_ones:
+    sta tmp
+    lda #$10
+    clc
+    adc tmp
+    sta $2007
+    rts
+
+.segment "RODATA"
+
+; status messages
+txt_hp:     .asciiz "hp"
+txt_lvl:    .asciiz "lvl"
+txt_dlvl:   .asciiz "dlvl"
+txt_win:    .asciiz "You win!"
+txt_escape: .asciiz "You escaped!"
