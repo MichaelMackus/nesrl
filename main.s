@@ -3,7 +3,6 @@
 .segment "ZEROPAGE"
 
 ; variables
-tmp:         .res 1
 gamestate:   .res 1
 controller1: .res 1
 controller1release: .res 1

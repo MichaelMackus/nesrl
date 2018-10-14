@@ -73,7 +73,7 @@ set_mob_index_done:
 ; get mob x coord
 ; in: mob index
 ; out: coord
-; clobbers: tmp and y
+; clobbers: y
 mobx:
     lda mobs + Mob::coords + Coord::xcoord, y
     rts
@@ -155,32 +155,24 @@ gen_4_mob:
     bcs gen_ogre
     jmp gen_orc
 gen_goblin:
-    lda tmp
-    tay
     lda #4
     sta mobs + Mob::hp, y
     lda Mobs::goblin
     sta mobs + Mob::type, y
     rts
 gen_orc:
-    lda tmp
-    tay
     lda #6
     sta mobs + Mob::hp, y
     lda Mobs::orc
     sta mobs + Mob::type, y
     rts
 gen_ogre:
-    lda tmp
-    tay
     lda #10
     sta mobs + Mob::hp, y
     lda Mobs::ogre
     sta mobs + Mob::type, y
     rts
 gen_dragon:
-    lda tmp
-    tay
     lda #20
     sta mobs + Mob::hp, y
     lda Mobs::dragon

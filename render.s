@@ -7,6 +7,8 @@
 
 .segment "ZEROPAGE"
 
+tmp: .byte 1
+
 .segment "CODE"
 
 .proc render

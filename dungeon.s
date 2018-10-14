@@ -12,6 +12,7 @@ down_x:      .res 1 ; down stair x
 down_y:      .res 1 ; down stair y
 up_x:        .res 1 ; up stair x
 up_y:        .res 1 ; up stair y
+tmp:         .res 1
 
 .segment "CODE"
 

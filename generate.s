@@ -8,6 +8,7 @@ tunnels:     .res 1
 tunnel_len:  .res 1
 direction:   .res 1 ; represents last direction
 prevdlevel:  .res 1 ; previous dlevel
+tmp:         .res 1
 
 max_tunnels = 90 ; maximum tunnels
 max_length  = 6  ; maximum length for tunnel

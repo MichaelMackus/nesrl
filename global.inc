@@ -5,7 +5,6 @@ max_height = 24
 maxmobs    = 20
 
 ; main.s
-.globalzp tmp
 .globalzp controller1
 .globalzp controller1release
 
