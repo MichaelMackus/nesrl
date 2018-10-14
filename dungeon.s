@@ -17,16 +17,6 @@ up_y:        .res 1 ; up stair y
 
 .segment "CODE"
 
-; rand passable xy
-rand_passable:
-    jsr randxy
-    jsr get_byte_offset
-    tay
-    jsr get_byte_mask
-    and tiles, y
-    beq rand_passable
-    rts
-
 ; pick start x from 0-31 and y from 0-23
 ; updates xpos and ypos with coordinates
 randxy:
@@ -50,6 +40,28 @@ randx:
     ; ensure rand x & y are within max_length of edges
     jsr within_bounds
     bne randxy
+    rts
+
+; check if tile passable
+; clobbers: tmp and y
+; out: 0 if passable
+is_passable:
+    jsr get_byte_offset
+    tay
+    jsr get_byte_mask
+    and tiles, y
+    bne is_passable_success
+    lda #1
+    rts
+is_passable_success:
+    lda #0
+    rts
+
+; rand passable xy
+rand_passable:
+    jsr randxy
+    jsr is_passable
+    bne rand_passable
     rts
 
 ; is x & y within bounds?

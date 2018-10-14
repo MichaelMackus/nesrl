@@ -12,6 +12,7 @@
 .global down_y
 .global tiles
 .global rand_passable
+.global is_passable
 .global randxy
 .global within_bounds
 .global get_byte_mask

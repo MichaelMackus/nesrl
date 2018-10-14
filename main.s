@@ -170,6 +170,8 @@ reset_player_pos:
     sta xpos
     rts
 move_done:
+    jsr is_passable
+    bne reset_player_pos
     pla
     pla
     jsr update_player_pos
