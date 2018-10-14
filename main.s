@@ -7,7 +7,6 @@ tmp:         .res 1
 gamestate:   .res 1
 controller1: .res 1
 controller1release: .res 1
-level:       .res 1            ; level integer
 nmis:        .res 1            ; how many nmis have passed
 
 .segment "HEADER"
@@ -41,7 +40,8 @@ init_memory:
     sta gamestate
     sta controller1
     sta controller1release
-    sta level
+    lda #1
+    sta dlevel
 
 clear_oam:
     lda #$FF
@@ -158,18 +158,21 @@ handle_input:
     jmp reset_player_pos
 check_action:
     ; only regenerate when on stair
-    ; todo handle upstair (need to quit on 1st and reduce level/difficulty otherwise)
     jsr playerx
     tax
     jsr playery
     tay
     cpx down_x
-    bne input_done
+    bne check_upstair
     cpy down_y
-    bne input_done
+    bne check_upstair
     ; on downstair, generate new level
+    inc dlevel
     jsr regenerate
     rts
+check_upstair:
+    ; todo handle upstair (need to quit on 1st and reduce level/difficulty otherwise)
+    jmp input_done
 move_left:
     dec xpos
     jsr within_bounds

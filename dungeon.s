@@ -8,6 +8,7 @@ max_height = 24
 min_bound  = 1  ; minimum number of spaces from edge
 
 tiles:       .res maxtiles ; represents a 256x240 walkable grid in bits, 1 = walkable; 0 = impassable
+dlevel:      .res 1
 xpos:        .res 1
 ypos:        .res 1
 down_x:      .res 1 ; down stair x

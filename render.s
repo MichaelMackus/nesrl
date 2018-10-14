@@ -33,7 +33,7 @@ clear_line:
 ; loop through x and y
 y_repeat:
     cpy #max_height
-    beq bgdone
+    beq tiles_done
 x_repeat:
     stx xpos
     sty ypos
@@ -47,7 +47,27 @@ x_repeat:
     iny
     ldx #$00
     jmp y_repeat
-bgdone:
+tiles_done:
+    lda #$00
+    sta $2007
+    ; todo render hp
+    ; todo render player level
+    ; dlvl
+    lda #$44
+    sta $2007
+    lda #$4C
+    sta $2007
+    lda #$56
+    sta $2007
+    lda #$4C
+    sta $2007
+    lda #$00
+    sta $2007
+    lda #$10
+    clc
+    adc dlevel
+    sta $2007
+render_done:
     ; tell PPU to render BG & sprites
     lda #%00011010 ; note: need second bit in order to show background on left side of screen
     sta $2001
@@ -55,6 +75,7 @@ bgdone:
 
 ; get tile index for x,y
 ; out: index in sprite sheet
+; todo maybe we should render BG if sprite already on pos?
 get_tile:
     ; todo then check item ??
 check_stair:

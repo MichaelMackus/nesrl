@@ -4,13 +4,14 @@
 .global controller1release
 
 ; dungeon.s
+.global tiles
+.global dlevel
 .global xpos
 .global ypos
 .global up_x
 .global up_y
 .global down_x
 .global down_y
-.global tiles
 .global rand_passable
 .global is_passable
 .global randxy
