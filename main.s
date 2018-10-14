@@ -40,7 +40,6 @@ init_memory:
     sta gamestate
     sta controller1
     sta controller1release
-    lda #1
     sta dlevel
 
 clear_oam:

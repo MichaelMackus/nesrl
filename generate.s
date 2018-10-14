@@ -7,6 +7,7 @@
 tunnels:     .res 1
 tunnel_len:  .res 1
 direction:   .res 1 ; represents last direction
+prevdlevel:  .res 1 ; previous dlevel
 
 maxtiles    = 96
 max_tunnels = 90 ; maximum tunnels
@@ -17,6 +18,13 @@ max_length  = 6  ; maximum length for tunnel
 ; generate level
 .proc generate
 
+initialize:
+    lda dlevel
+    cmp #0
+    bne clear_tiles
+    ; initialize dlevel and prevdlevel
+    sta prevdlevel
+    inc dlevel
 clear_tiles:
     ldx #$00 ; counter for background sprite position
     ldy #$00 ; counter for background bit index
@@ -145,8 +153,22 @@ finish_up:
     stx up_x
     sty up_y
 ; todo generate mobs
-; update player x & y to upstair
+; update player x & y to up or down stair, depending on prevdlevel
 update_player:
+    lda dlevel
+    cmp prevdlevel
+    sta prevdlevel ; update prevdlevel
+    bcc update_player_downstair
+update_player_upstair:
+    ldx up_x
+    ldy up_y
+    stx xpos
+    sty ypos
+    jsr update_player_pos
+    rts
+update_player_downstair:
+    ldx down_x
+    ldy down_y
     stx xpos
     sty ypos
     jsr update_player_pos
