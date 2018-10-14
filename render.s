@@ -1,6 +1,7 @@
 .include "global.inc"
 
 .export render
+.export render_escape
 .export render_player
 
 .segment "CODE"
@@ -112,6 +113,76 @@ player:
     lda #$A1
     rts
 
+
+.endproc
+
+.proc render_escape
+
+    ; turn off rendering
+    lda #%00000000 ; note: need second bit in order to show background on left side of screen
+    sta $2001
+    ; prep ppu for first nametable write
+    lda #$20
+    sta $2006
+    lda #$00
+    sta $2006
+    ldx #$00 ; counter for background sprite position
+    txa
+    tay
+    sta tmp
+; clear line until middle of screen
+render_escape_clear_y:
+    cpy #$0F
+    beq render_escape_message
+render_escape_clear_x:
+    lda #$00
+    sta $2007
+    inx
+    cpx #$20
+    bne render_escape_clear_x
+    ldx #$00
+    iny
+    jmp render_escape_clear_y
+render_escape_message:
+    lda tmp
+    bne render_escape_done
+    ; You escaped!
+    lda #$00
+    sta $2007
+    lda #$39 ; Y
+    sta $2007
+    lda #$4F ; o
+    sta $2007
+    lda #$55 ; u
+    sta $2007
+    lda #$00
+    sta $2007
+    lda #$45 ; e
+    sta $2007
+    lda #$53 ; s
+    sta $2007
+    lda #$43 ; c
+    sta $2007
+    lda #$41 ; a
+    sta $2007
+    lda #$50 ; p
+    sta $2007
+    lda #$45 ; e
+    sta $2007
+    lda #$44 ; d
+    sta $2007
+    lda #$01 ; !
+    sta $2007
+    ; done
+    inc tmp
+    lda #$00
+    tax
+    tay
+    jsr render_escape_clear_y
+render_escape_done:
+    lda #%00001010 ; note: need second bit in order to show background on left side of screen
+    sta $2001
+
 .endproc
 
 .proc render_player
@@ -138,3 +209,4 @@ render_player:
     rts
 
 .endproc
+

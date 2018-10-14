@@ -106,6 +106,8 @@ main:
     lda gamestate
     cmp #1
     beq playgame
+    cmp #2
+    beq escape_dungeon
     ; todo handle more gamestates (e.g. inventory, win, death, quit)
 start_screen:
     lda controller1release
@@ -114,6 +116,9 @@ start_screen:
     jsr regenerate
     lda #1
     sta gamestate
+    jmp done
+
+escape_dungeon:
     jmp done
 
 playgame:
@@ -157,7 +162,7 @@ handle_input:
     bne move_up
     jmp reset_player_pos
 check_action:
-    ; only regenerate when on stair
+check_dstair:
     jsr playerx
     tax
     jsr playery
@@ -171,8 +176,21 @@ check_action:
     jsr regenerate
     rts
 check_upstair:
-    ; todo handle upstair (need to quit on 1st and reduce level/difficulty otherwise)
-    jmp input_done
+    jsr playerx
+    tax
+    jsr playery
+    tay
+    cpx up_x
+    bne input_done
+    cpy up_y
+    bne input_done
+    ; on upstair, generate new level
+    dec dlevel
+    lda dlevel
+    cmp #0
+    beq escape
+    jsr regenerate
+    rts
 move_left:
     dec xpos
     jsr within_bounds
@@ -206,6 +224,12 @@ move_done:
     pla
     jsr update_player_pos
 input_done:
+    rts
+escape:
+    jsr render_escape
+    ; escape dungeon
+    lda #2
+    sta gamestate
     rts
 
 ; re-generate dungeon level
