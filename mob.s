@@ -83,6 +83,13 @@ update_mob_pos:
     sta mobs+Mob::coords+Coord::ycoord, y
     rts
 
+; get mob type
+; in: mob index
+; out: type
+mobtype:
+    lda mobs + Mob::type, y
+    rts
+
 ; deal damage to mob at index y
 ; in: damage
 damage_mob:

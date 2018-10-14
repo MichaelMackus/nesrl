@@ -30,6 +30,7 @@ maxmobs    = 20
 .globalzp playerlvl
 .global mobx
 .global moby
+.global mobtype
 .global update_mob_pos
 .global damage_mob
 .global kill_mob

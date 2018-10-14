@@ -256,7 +256,8 @@ render_mobs:
     tay
     tax
 render_mobs_loop:
-    ; todo check is_alive, need to set hp for player first
+    jsr is_alive
+    bne clear_mob
     jsr moby
     asl
     asl
@@ -264,7 +265,9 @@ render_mobs_loop:
     clc
     adc #$04 ; sprite data is delayed by 1 scanline in NES
     sta $0200, x
-    lda #$A1 ; todo plus type of mob
+    jsr mobtype
+    clc
+    adc #$A1 ; first mob sprite index
     sta $0201, x
     lda #%00000000
     sta $0202, x
@@ -273,7 +276,7 @@ render_mobs_loop:
     asl
     asl
     sta $0203, x
-    ; todo continue loop, for now just do another mob
+continue_mobs_loop:
     txa
     clc
     adc #$04
@@ -282,33 +285,18 @@ render_mobs_loop:
     clc
     adc #mob_size
     tay
-    jsr moby
-    asl
-    asl
-    asl
-    clc
-    adc #$04 ; sprite data is delayed by 1 scanline in NES
-    sta $0200, x
-    lda #$A2
-    sta $0201, x
-    lda #%00000000
-    sta $0202, x
-    jsr mobx
-    asl
-    asl
-    asl
-    sta $0203, x
-
-skip_mob:
-    ; todo hide sprite
-continue_mobs:
-    ; todo
-    ;inx
-    ;cpx #maxmobs
-    ;beq done_mobs
+    cmp #mobs_size
+    bne render_mobs_loop
 
 done_mobs:
     rts
+
+clear_mob:
+    ; set sprite x and y to off screen
+    lda #$FF
+    sta $0200, x
+    sta $0203, x
+    jmp continue_mobs_loop
 
 .endproc
 
