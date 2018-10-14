@@ -3,7 +3,6 @@
 .segment "ZEROPAGE"
 
 .enum Mobs
-    player
     goblin
     orc
     ogre
@@ -21,7 +20,6 @@
     type   .byte ; one of Mobs enum
 .endstruct
 
-maxenemies = 20
 player:    .res .sizeof(Mob)
 playerlvl: .res 1
 enemies:   .res .sizeof(Mob)*maxenemies

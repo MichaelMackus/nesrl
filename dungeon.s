@@ -2,9 +2,6 @@
 
 .segment "ZEROPAGE"
 
-maxtiles   = 96
-max_width  = 32
-max_height = 24
 min_bound  = 1  ; minimum number of spaces from edge
 
 tiles:       .res maxtiles ; represents a 256x240 walkable grid in bits, 1 = walkable; 0 = impassable

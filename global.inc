@@ -1,3 +1,9 @@
+; global constants
+maxtiles   = 96
+max_width  = 32
+max_height = 24
+maxenemies = 20
+
 ; main.s
 .global tmp
 .global controller1

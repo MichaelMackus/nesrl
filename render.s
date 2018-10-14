@@ -9,9 +9,6 @@
 
 .proc render
 
-max_width  = 32
-max_height = 24
-
 generate_ppu:
     ; turn off rendering
     lda #%00000000 ; note: need second bit in order to show background on left side of screen
@@ -270,7 +267,6 @@ render_player:
     sta $0203
 
     ldx #$00
-maxenemies = 20
 render_enemies:
     ; check hp > 0
     txa
