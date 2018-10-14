@@ -105,8 +105,7 @@ main:
     lda gamestate
     cmp #1
     beq playgame
-    cmp #2
-    beq escape_dungeon
+    bcs done
     ; todo handle more gamestates (e.g. inventory, win, death, quit)
 start_screen:
     lda controller1release
@@ -172,6 +171,9 @@ check_dstair:
     bne check_upstair
     ; on downstair, generate new level
     inc dlevel
+    lda dlevel
+    cmp #10 ; todo custom win condition
+    beq win
     jsr regenerate
     rts
 check_upstair:
@@ -228,6 +230,12 @@ escape:
     jsr render_escape
     ; escape dungeon
     lda #2
+    sta gamestate
+    rts
+win:
+    jsr render_win
+    ; win dungeon
+    lda #3
     sta gamestate
     rts
 

@@ -2,6 +2,7 @@
 
 .export render
 .export render_escape
+.export render_win
 .export render_player
 
 .segment "CODE"
@@ -182,6 +183,67 @@ render_escape_message:
 render_escape_done:
     lda #%00001010 ; note: need second bit in order to show background on left side of screen
     sta $2001
+    rts
+
+.endproc
+
+.proc render_win
+
+    ; turn off rendering
+    lda #%00000000 ; note: need second bit in order to show background on left side of screen
+    sta $2001
+    ; prep ppu for first nametable write
+    lda #$20
+    sta $2006
+    lda #$00
+    sta $2006
+    ldx #$00 ; counter for background sprite position
+    txa
+    tay
+    sta tmp
+; clear line until middle of screen
+render_win_clear_y:
+    cpy #$0F
+    beq render_win_message
+render_win_clear_x:
+    lda #$00
+    sta $2007
+    inx
+    cpx #$20
+    bne render_win_clear_x
+    ldx #$00
+    iny
+    jmp render_win_clear_y
+render_win_message:
+    lda tmp
+    bne render_win_done
+    ; You escaped!
+    lda #$00
+    sta $2007
+    lda #$39 ; Y
+    sta $2007
+    lda #$4F ; o
+    sta $2007
+    lda #$55 ; u
+    sta $2007
+    lda #$00
+    sta $2007
+    lda #$57 ; w
+    sta $2007
+    lda #$49 ; i
+    sta $2007
+    lda #$4E ; n
+    sta $2007
+    ; done
+    inc tmp
+    lda #$00
+    tax
+    tay
+    jsr render_win_clear_y
+render_win_done:
+    lda #%00001010 ; note: need second bit in order to show background on left side of screen
+    sta $2001
+    rts
 
 .endproc
 

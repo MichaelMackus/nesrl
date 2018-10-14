@@ -42,6 +42,7 @@
 ; render.s
 .global render
 .global render_escape
+.global render_win
 .global render_player
 
 ; input.s
