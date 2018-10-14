@@ -5,19 +5,19 @@ max_height = 24
 maxmobs    = 20
 
 ; main.s
-.global tmp
-.global controller1
-.global controller1release
+.globalzp tmp
+.globalzp controller1
+.globalzp controller1release
 
 ; dungeon.s
-.global tiles
-.global dlevel
-.global xpos
-.global ypos
-.global up_x
-.global up_y
-.global down_x
-.global down_y
+.globalzp tiles
+.globalzp dlevel
+.globalzp xpos
+.globalzp ypos
+.globalzp up_x
+.globalzp up_y
+.globalzp down_x
+.globalzp down_y
 .global rand_passable
 .global is_passable
 .global randxy
@@ -26,9 +26,9 @@ maxmobs    = 20
 .global get_byte_offset
 
 ; mob.s
-.global mob_size
-.global mobs_size
-.global playerlvl
+.globalzp mob_size
+.globalzp mobs_size
+.globalzp playerlvl
 .global mobx
 .global moby
 .global update_mob_pos
@@ -42,7 +42,7 @@ maxmobs    = 20
 .global generate
 
 ; random.s
-.global seed
+.globalzp seed
 .global prng
 .global d2
 .global d3

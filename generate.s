@@ -1,8 +1,8 @@
+.include "global.inc"
+
 .export generate
 
 .segment "ZEROPAGE"
-
-.include "global.inc"
 
 tunnels:     .res 1
 tunnel_len:  .res 1

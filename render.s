@@ -1,11 +1,11 @@
+.include "global.inc"
+
 .export render
 .export render_escape
 .export render_win
 .export render_mobs
 
 .segment "ZEROPAGE"
-
-.include "global.inc"
 
 .segment "CODE"
 

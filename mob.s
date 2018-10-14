@@ -1,6 +1,6 @@
-.segment "ZEROPAGE"
-
 .include "global.inc"
+
+.segment "ZEROPAGE"
 
 .enum Mobs
     player

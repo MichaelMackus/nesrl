@@ -44,6 +44,7 @@ randx:
 ; check if tile passable
 ; clobbers: tmp and y
 ; out: 0 if passable
+; todo check mobs
 is_passable:
     jsr get_byte_offset
     tay
