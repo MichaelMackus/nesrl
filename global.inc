@@ -39,6 +39,7 @@
 
 ; render.s
 .global render
+.global render_player
 
 ; input.s
 .global readcontroller

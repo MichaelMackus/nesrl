@@ -103,12 +103,10 @@ irq:
 main:
     jsr readcontroller
 
-    lda controller1release
-    and #%00010000 ; start
-    bne regenerate
-
 playgame:
-    ; todo input & logic
+    jsr handle_input
+    jsr render_player
+
     lda nmis
 done:
     cmp nmis
@@ -117,6 +115,65 @@ done:
     ; endless game loop
     jmp main
 
+
+handle_input:
+    lda controller1release
+    and #%00010000 ; start
+    bne regenerate
+    ; update player pos to memory
+    jsr playerx
+    sta xpos
+    jsr playery
+    sta ypos
+    lda xpos
+    pha
+    lda ypos
+    pha
+    ; handle player movement
+    lda controller1release
+    and #%00000010  ; left
+    bne move_left
+    lda controller1release
+    and #%00000001  ; right
+    bne move_right
+    lda controller1release
+    and #%00000100  ; down
+    bne move_down
+    lda controller1release
+    and #%00001000  ; up
+    bne move_up
+    jmp reset_player_pos
+move_left:
+    dec xpos
+    jsr within_bounds
+    bne reset_player_pos
+    jmp move_done
+move_right:
+    inc xpos
+    jsr within_bounds
+    bne reset_player_pos
+    jmp move_done
+move_up:
+    dec ypos
+    jsr within_bounds
+    bne reset_player_pos
+    jmp move_done
+move_down:
+    inc ypos
+    jsr within_bounds
+    bne reset_player_pos
+    jmp move_done
+reset_player_pos:
+    pla
+    sta ypos
+    pla
+    sta xpos
+    rts
+move_done:
+    pla
+    pla
+    jsr update_player_pos
+    rts
 
 ; re-generate dungeon level
 regenerate:

@@ -1,6 +1,7 @@
 .include "global.inc"
 
 .export render
+.export render_player
 
 .segment "CODE"
 
@@ -55,17 +56,7 @@ bgdone:
 ; get tile index for x,y
 ; out: index in sprite sheet
 get_tile:
-    ; first check player
-    jsr playerx
-    sta tmp
-    cpx tmp
-    bne check_stair
-    jsr playery
-    sta tmp
-    cpy tmp
-    beq player
-    ; todo first check mob
-    ; todo then check item
+    ; todo then check item ??
 check_stair:
     ; then check stair
     cpx up_x
@@ -98,6 +89,31 @@ down:
     rts
 player:
     lda #$A1
+    rts
+
+.endproc
+
+.proc render_player
+
+; render the player sprite
+; todo we should probably multiply by 8?
+render_player:
+    jsr playery
+    asl
+    asl
+    asl
+    clc
+    adc #$04 ; todo sprite data is delayed by 1 scanline in NES
+    sta $0200
+    lda #$A1
+    sta $0201
+    lda #%00000000
+    sta $0202
+    jsr playerx
+    asl
+    asl
+    asl
+    sta $0203
     rts
 
 .endproc
