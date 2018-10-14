@@ -26,9 +26,19 @@ mobs_size = .sizeof(Mob)*maxmobs
 
 playerlvl: .res 1 ; todo stats struct
 mobs:      .res mobs_size
-mobindex:  .res 1 ; remember index of mob for operations
+dmg:       .res 1 ; tmp var for damage calculation
 
 .segment "CODE"
+
+; initialize player mob
+initialize_player:
+    ; initialize HP to 10
+    lda #10
+    sta mobs+Mob::hp
+    ; initialize tile type
+    lda Mobs::player
+    sta mobs+Mob::type
+    rts
 
 ; get player x coord
 ; out: coord
@@ -48,26 +58,6 @@ update_player_pos:
     sta mobs+Mob::coords+Coord::xcoord
     lda ypos
     sta mobs+Mob::coords+Coord::ycoord
-    rts
-
-; update the mob index for mob operations
-; in: mob index (0-19)
-; clobbers: y and accum
-set_mob_index:
-    tay
-    lda #0
-    sta mobindex
-set_mob_index_loop:
-    tya
-    beq set_mob_index_done
-    ; not zero yet, increase mobindex by size
-    lda mobindex
-    clc
-    adc .sizeof(Mob)
-    sta mobindex
-    dey
-    jmp set_mob_index_loop
-set_mob_index_done:
     rts
 
 ; get mob x coord
@@ -91,6 +81,25 @@ update_mob_pos:
     sta mobs+Mob::coords+Coord::xcoord, y
     lda ypos
     sta mobs+Mob::coords+Coord::ycoord, y
+    rts
+
+; deal damage to mob at index y
+; in: damage
+damage_mob:
+    cmp mobs+Mob::hp, y
+    bcs kill_mob
+    ; subtract damage from hp
+    sta dmg
+    lda mobs+Mob::hp, y
+    sec
+    sbc dmg
+    sta mobs+Mob::hp, y
+    rts
+
+; kill the mob at index y
+kill_mob:
+    lda #0
+    sta mobs+Mob::hp, y
     rts
 
 ; check if mob alive

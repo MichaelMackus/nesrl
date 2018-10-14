@@ -40,6 +40,7 @@ init_memory:
     sta controller1
     sta controller1release
     sta dlevel
+    jsr initialize_player
 
 clear_oam:
     lda #$FF

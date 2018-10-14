@@ -179,6 +179,22 @@ generate_mobs:
     ; todo generate more than one mob
     ldy #mob_size
     jsr rand_mob
+    ; increment y by mob_size
+    tya
+    clc
+    adc #mob_size
+    tay
+; clear the rest of the mobs
+clear_mobs_loop:
+    jsr kill_mob
+    ; increment y by mob_size
+    tya
+    clc
+    adc #mob_size
+    tay
+    cmp #mobs_size
+    bne clear_mobs_loop
+    ; done
     rts
 
 .endproc

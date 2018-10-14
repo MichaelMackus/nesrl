@@ -31,6 +31,9 @@ maxmobs    = 20
 .global mobx
 .global moby
 .global update_mob_pos
+.global damage_mob
+.global kill_mob
+.global initialize_player
 .global playerx
 .global playery
 .global update_player_pos
