@@ -156,7 +156,6 @@ finish_up:
 update_player:
     lda dlevel
     cmp prevdlevel
-    sta prevdlevel ; update prevdlevel
     bcc update_player_downstair
 update_player_upstair:
     ldx up_x
@@ -164,14 +163,17 @@ update_player_upstair:
     stx xpos
     sty ypos
     jsr update_player_pos
-    jsr generate_mobs
+    jmp done_update_player
 update_player_downstair:
     ldx down_x
     ldy down_y
     stx xpos
     sty ypos
     jsr update_player_pos
-    jsr generate_mobs
+done_update_player:
+    ; update prevdlevel for next generation
+    lda dlevel
+    sta prevdlevel
 ; todo ensure mob isn't on space with player or other mob
 generate_mobs:
     ; todo generate more than one mob
