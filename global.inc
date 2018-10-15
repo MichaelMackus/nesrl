@@ -25,6 +25,7 @@ maxmobs    = 20
 .endstruct
 .globalzp max_messages
 .globalzp messages
+.globalzp messages_updated
 .global push_msg
 
 ; dungeon.s

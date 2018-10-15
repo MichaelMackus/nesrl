@@ -95,10 +95,9 @@ nmi:
     lda tmp
     pha
 
-    ; re-render messages, todo only do this if difference in msgs
-    ; todo will need to detect difference especially to not affect render
-    lda messages
-    cmp #Messages::none
+    ; re-render messages if updated
+    ; todo figure out universal draw queue
+    lda messages_updated
     beq continue_nmi
     jsr render_messages
     lda #$00
@@ -251,7 +250,7 @@ attack_mob:
     sta damage
     jsr damage_mob
     ; push message
-    lda Messages::hit
+    lda #Messages::hit
     ldx damage
     jsr push_msg
     ; done

@@ -352,6 +352,9 @@ render_messages_loop:
     tax
     cmp #.sizeof(Message)*max_messages
     bne render_messages_loop
+    ; turn off message rendering
+    lda #0
+    sta messages_updated
     rts
 render_message:
     lda messages, x

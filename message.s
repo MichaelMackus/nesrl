@@ -5,6 +5,7 @@
 max_messages = 3
 messages:    .res .sizeof(Message)*max_messages
 tmp_message: .res .sizeof(Message)
+messages_updated: .byte 1 ; used to re-render messages on change
 
 .segment "CODE"
 
@@ -38,4 +39,6 @@ shift_messages:
     sta messages
     lda tmp_message+Message::amount
     sta messages+Message::amount
+    lda #1
+    sta messages_updated
     rts
