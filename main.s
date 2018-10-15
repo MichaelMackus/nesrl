@@ -95,8 +95,10 @@ nmi:
     lda tmp
     pha
 
-    ; re-render messages if updated
     ; todo figure out universal draw queue
+    ; todo re-render hp, not working right now due to updating while rendering
+    ;jsr render_hp
+    ; re-render messages if updated
     lda messages_updated
     beq continue_nmi
     jsr render_messages
@@ -147,8 +149,15 @@ escape_dungeon:
     jmp done
 
 playgame:
+    ; update turn when input is made
+    lda controller1release
+    beq playgame_noinput
+
     jsr handle_input
-    ; todo handle mob ai
+    jsr mob_ai ; todo only handle for 1 turn
+
+playgame_noinput:
+    ; update sprite OAM data
     jsr render_mobs
 
     lda nmis
@@ -267,6 +276,75 @@ win:
     lda #3
     sta gamestate
     rts
+
+; update mob pos randomly, and attack player
+; todo move towards player if can see
+mob_ai:
+    ldy #mob_size
+mob_ai_loop:
+    tya
+    jsr is_alive
+    bne continue_mob_ai
+    ; todo diff function
+    jsr mobx
+    sta xpos
+    jsr moby
+    sta ypos
+    ; check x
+    jsr playerx
+    cmp xpos
+    beq checkyplus1
+    inc xpos
+    cmp xpos
+    beq checky
+    dec xpos
+    dec xpos
+    cmp xpos
+    beq checky
+    jmp move_mob
+checkyplus1:
+    ; check y
+    jsr playery
+    inc ypos
+    cmp ypos
+    beq attack_player
+    dec ypos
+    dec ypos
+    cmp ypos
+    beq attack_player
+checky:
+    jsr playery
+    cmp ypos
+    beq attack_player
+    jmp move_mob
+attack_player:
+    ; remember y to stack
+    tya
+    pha
+    ; todo use damage calc, for now just do 1 damage
+    lda #1
+    ldy #0 ; player index
+    sta damage
+    jsr damage_mob
+    ; push message
+    lda #Messages::hurt
+    ldx #1
+    jsr push_msg
+    ; done
+    pla
+    tay
+    jmp continue_mob_ai
+move_mob:
+    ; todo move mob random dir
+continue_mob_ai:
+    tya
+    clc
+    adc #mob_size
+    tay
+    cmp #mobs_size
+    bne mob_ai_loop
+    rts
+
 
 ; re-generate dungeon level
 regenerate:

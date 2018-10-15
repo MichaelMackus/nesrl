@@ -82,21 +82,7 @@ x_repeat:
 
 ; render status messages
 render_status:
-    bit $2002
-    lda #$23
-    sta $2006
-    lda #$21
-    sta $2006
-
-    ; player hp
-    render_str txt_hp
-    lda #$00
-    sta $2007
-    lda #$00 ; extra space to line up with dlvl
-    sta $2007
-    jsr playerhp
-    jsr render_padded_num
-    ; todo max hp
+    jsr render_hp
     ; todo player stats, player lvl
 
     bit $2002
@@ -170,6 +156,24 @@ player:
     rts
 
 
+.endproc
+
+.proc render_hp
+    bit $2002
+    lda #$23
+    sta $2006
+    lda #$21
+    sta $2006
+    ; player hp
+    render_str txt_hp
+    lda #$00
+    sta $2007
+    lda #$00 ; extra space to line up with dlvl
+    sta $2007
+    jsr playerhp
+    jsr render_padded_num
+    ; todo max hp
+    rts
 .endproc
 
 .proc render_escape
@@ -318,6 +322,7 @@ clear_mob:
 
 .endproc
 
+; todo clear until end of line
 .proc render_messages
     ; render message area
     lda #0
@@ -383,8 +388,14 @@ render_hit:
     jsr render_num
     rts
 render_hurt:
-    ; todo amount
+    ; todo reduce need for stack...
+    lda messages+Message::amount, x
+    pha
+    ; You got hit for 
     render_str txt_hurt
+    ; damage
+    pla
+    jsr render_num
     rts
 render_kill:
     render_str txt_kill
