@@ -9,6 +9,24 @@ maxmobs    = 20
 .globalzp controller1release
 .globalzp nmis
 
+; message.s
+.enum Messages
+    none
+    hit
+    hurt
+    kill
+    heal
+    scroll
+    quaff
+.endenum
+.struct Message
+    type   .byte 1 ; one of Messages enum
+    amount .byte 1 ; amount for hit/hurt/heal messages
+.endstruct
+.globalzp max_messages
+.globalzp messages
+.global push_msg
+
 ; dungeon.s
 .globalzp tiles
 .globalzp dlevel

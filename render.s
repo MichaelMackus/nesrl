@@ -85,11 +85,9 @@ render_status:
     bit $2002
     lda #$23
     sta $2006
-    lda #$20
+    lda #$21
     sta $2006
 
-    lda #$00
-    sta $2007
     ; player hp
     render_str txt_hp
     lda #$00
@@ -98,15 +96,14 @@ render_status:
     sta $2007
     jsr playerhp
     jsr render_padded_num
+    ; todo max hp
     ; todo player stats, player lvl
 
     bit $2002
     lda #$23
     sta $2006
-    lda #$60
+    lda #$61
     sta $2006
-    lda #$00
-    sta $2007
 
     ; dlvl
     render_str txt_dlvl
@@ -115,25 +112,7 @@ render_status:
     lda dlevel
     jsr render_num
 
-    ; todo render message area
-    ;bit $2002
-    ;lda #$23
-    ;sta $2006
-    ;lda #$2C
-    ;sta $2006
-    ;render_str txt_kill
-    ;bit $2002
-    ;lda #$23
-    ;sta $2006
-    ;lda #$4C
-    ;sta $2006
-    ;render_str txt_hit
-    ;bit $2002
-    ;lda #$23
-    ;sta $2006
-    ;lda #$6C
-    ;sta $2006
-    ;render_str txt_scroll
+    jsr render_messages
 
     lda nmis
 render_done:
@@ -339,6 +318,80 @@ clear_mob:
 
 .endproc
 
+.proc render_messages
+    ; render message area
+    lda #0
+    tax
+    sta tmp
+    bit $2002
+render_messages_loop:
+    lda #$23
+    sta $2006
+    lda #$2C
+    clc
+    adc tmp
+    sta $2006
+    ; remember vars & render message
+    lda tmp
+    pha
+    txa
+    pha
+    jsr render_message
+    pla
+    tax
+    pla
+    sta tmp
+    ; end rendering message
+    lda tmp
+    clc
+    adc #$20
+    sta tmp
+    txa
+    clc
+    adc #.sizeof(Message)
+    tax
+    cmp #.sizeof(Message)*max_messages
+    bne render_messages_loop
+    rts
+render_message:
+    lda messages, x
+    cmp #Messages::hit
+    beq render_hit
+    cmp #Messages::hurt
+    beq render_hurt
+    cmp #Messages::kill
+    beq render_kill
+    cmp #Messages::heal
+    beq render_heal
+    cmp #Messages::scroll
+    beq render_scroll
+    cmp #Messages::quaff
+    beq render_quaff
+render_finish:
+    rts
+render_hit:
+    ; todo amount
+    render_str txt_hit
+    rts
+render_hurt:
+    ; todo amount
+    render_str txt_hurt
+    rts
+render_kill:
+    render_str txt_kill
+    rts
+render_heal:
+    ; todo amount
+    render_str txt_heal
+    rts
+render_scroll:
+    render_str txt_scroll
+    rts
+render_quaff:
+    render_str txt_quaff
+    rts
+.endproc
+
 ; render num padded with space at front
 ; in: number
 ; clobbers: x, y, and tmp
@@ -386,15 +439,16 @@ render_ones:
 
 .segment "RODATA"
 
-; status messages
+; status
 txt_hp:     .asciiz "hp"
 txt_lvl:    .asciiz "lvl"
 txt_dlvl:   .asciiz "dlvl"
+; messages
 txt_win:    .asciiz "You win!"
 txt_escape: .asciiz "You escaped!"
-txt_kill:   .asciiz "It died!"
 txt_hit:    .asciiz "You hit it for XX"
 txt_hurt:   .asciiz "You got hit for XX"
+txt_kill:   .asciiz "It died!"
 txt_heal:   .asciiz "You healed for XX"
 txt_scroll: .asciiz "You read the scroll"
 txt_quaff:  .asciiz "*gulp*" ; todo need asterisk

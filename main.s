@@ -7,6 +7,7 @@ gamestate:   .res 1
 controller1: .res 1
 controller1release: .res 1
 nmis:        .res 1            ; how many nmis have passed
+tmp:         .res 1
 
 .segment "HEADER"
 
@@ -41,6 +42,10 @@ init_memory:
     sta controller1release
     sta dlevel
     jsr initialize_player
+    lda Messages::none
+    sta messages
+    sta messages + .sizeof(Message)
+    sta messages + .sizeof(Message)*2
 
 clear_oam:
     lda #$FF
@@ -219,6 +224,8 @@ input_done:
 attack_mob:
     ; todo use damage calc, for now just do 1 damage
     lda #1
+    damage = tmp
+    sta damage
     jsr damage_mob
     jmp input_done
 escape:
