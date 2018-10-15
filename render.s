@@ -176,6 +176,53 @@ player:
     rts
 .endproc
 
+.proc render_death
+
+    ; turn off rendering
+    lda #%00000000 ; note: need second bit in order to show background on left side of screen
+    sta $2001
+    ; prep ppu for first nametable write
+    lda #$20
+    sta $2006
+    lda #$00
+    sta $2006
+    ldx #$00 ; counter for background sprite position
+    txa
+    tay
+    sta tmp
+; clear line until middle of screen
+render_death_clear_y:
+    cpy #$0F
+    beq render_death_message
+render_death_clear_x:
+    lda #$00
+    sta $2007
+    inx
+    cpx #$20
+    bne render_death_clear_x
+    ldx #$00
+    iny
+    jmp render_death_clear_y
+render_death_message:
+    lda tmp
+    bne render_death_done
+    ; You deathd!
+    lda #$00
+    sta $2007
+    render_str txt_death
+    ; done
+    inc tmp
+    lda #$00
+    tax
+    tay
+    jsr render_death_clear_y
+render_death_done:
+    lda #%00001010 ; note: need second bit in order to show background on left side of screen
+    sta $2001
+    rts
+
+.endproc
+
 .proc render_escape
 
     ; turn off rendering
@@ -480,6 +527,7 @@ txt_dlvl:   .asciiz "dlvl"
 txt_blank:  .asciiz " "
 txt_win:    .asciiz "You win!"
 txt_escape: .asciiz "You escaped!"
+txt_death:  .asciiz "You died!"
 txt_hit:    .asciiz "You hit it for "
 txt_hurt:   .asciiz "You got hit for "
 txt_kill:   .asciiz "It died!"

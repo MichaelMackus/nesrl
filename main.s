@@ -343,10 +343,21 @@ attack_player:
     lda #Messages::hurt
     ldx #1
     jsr push_msg
+    ; check if player dead
+    ldy #0
+    jsr is_alive
+    bne player_dead
     ; done
     pla
     tay
     jmp continue_mob_ai
+player_dead:
+    ; dead
+    lda #4
+    sta gamestate
+    pla
+    tay
+    jmp render_death
 move_mob:
     ; todo move mob random dir
 continue_mob_ai:

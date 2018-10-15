@@ -80,6 +80,7 @@ maxmobs    = 20
 .global render_hp
 .global render_messages
 .global render_escape
+.global render_death
 .global render_win
 .global render_mobs
 
