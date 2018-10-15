@@ -322,11 +322,10 @@ clear_mob:
 
 .endproc
 
-; todo clear until end of line
 .proc render_messages
     ; render message area
     lda #0
-    tax
+    tay
     sta tmp
     bit $2002
 render_messages_loop:
@@ -339,11 +338,11 @@ render_messages_loop:
     ; remember vars & render message
     lda tmp
     pha
-    txa
+    tya
     pha
     jsr render_message
     pla
-    tax
+    tay
     pla
     sta tmp
     ; end rendering message
@@ -351,10 +350,10 @@ render_messages_loop:
     clc
     adc #$20
     sta tmp
-    txa
+    tya
     clc
     adc #.sizeof(Message)
-    tax
+    tay
     cmp #.sizeof(Message)*max_messages
     bne render_messages_loop
     ; turn off message rendering
@@ -362,54 +361,68 @@ render_messages_loop:
     sta messages_updated
     rts
 render_message:
-    lda messages, x
+    lda messages, y
     cmp #Messages::hit
     beq render_hit
     cmp #Messages::hurt
     beq render_hurt
+    jmp continue_render
+render_hit:
+    ; You hit it for 
+    render_str txt_hit
+    ; damage
+    lda messages+Message::amount, y
+    jsr render_num
+    ; clear previous msgs
+    render_str txt_blank
+    render_str txt_blank
+    rts
+render_hurt:
+    ; You got hit for 
+    render_str txt_hurt
+    ; damage
+    lda messages+Message::amount, y
+    jsr render_num
+    ; clear previous msgs
+    render_str txt_blank
+    render_str txt_blank
+    rts
+continue_render:
     cmp #Messages::kill
     beq render_kill
+    jmp continue_render2
+render_kill:
+    render_str txt_kill
+    ; clear previous msgs
+    ldy #0
+clear_kill:
+    render_str txt_blank
+    iny
+    cpy #10
+    bne clear_kill
+    rts
+continue_render2:
     cmp #Messages::heal
     beq render_heal
     cmp #Messages::scroll
     beq render_scroll
-    ;cmp #Messages::quaff ; todo range error
-    ;beq render_quaff
+    cmp #Messages::quaff
+    beq render_quaff
 render_finish:
-    rts
-render_hit:
-    ; todo reduce need for stack...
-    lda messages+Message::amount, x
-    pha
-    ; You hit it for 
-    render_str txt_hit
-    ; damage
-    pla
-    jsr render_num
-    rts
-render_hurt:
-    ; todo reduce need for stack...
-    lda messages+Message::amount, x
-    pha
-    ; You got hit for 
-    render_str txt_hurt
-    ; damage
-    pla
-    jsr render_num
-    rts
-render_kill:
-    render_str txt_kill
     rts
 render_heal:
     ; todo amount
     render_str txt_heal
+    ; clear previous msgs
+    render_str txt_blank
+    render_str txt_blank
     rts
 render_scroll:
     render_str txt_scroll
     rts
-;render_quaff:
-;    render_str txt_quaff
-;    rts
+render_quaff:
+    render_str txt_quaff
+    rts
 .endproc
 
 ; render num padded with space at front
@@ -464,6 +477,7 @@ txt_hp:     .asciiz "hp"
 txt_lvl:    .asciiz "lvl"
 txt_dlvl:   .asciiz "dlvl"
 ; messages
+txt_blank:  .asciiz " "
 txt_win:    .asciiz "You win!"
 txt_escape: .asciiz "You escaped!"
 txt_hit:    .asciiz "You hit it for "

@@ -191,7 +191,7 @@ handle_input:
     lda controller1release
     and #%00001000  ; up
     bne move_up
-    jmp input_done
+    rts
 check_action:
 check_dstair:
     jsr playerx
@@ -224,6 +224,18 @@ check_upstair:
     cmp #0
     beq escape
     jsr regenerate
+    rts
+escape:
+    jsr render_escape
+    ; escape dungeon
+    lda #2
+    sta gamestate
+    rts
+win:
+    jsr render_win
+    ; win dungeon
+    lda #3
+    sta gamestate
     rts
 move_left:
     dec xpos
@@ -258,23 +270,24 @@ attack_mob:
     lda #1
     sta damage
     jsr damage_mob
-    ; push message
+    ; if dead, push kill message
+    jsr is_alive
+    bne push_kill_msg
+    ; push damage message
     lda #Messages::hit
     ldx damage
     jsr push_msg
     ; done
-    jmp input_done
-escape:
-    jsr render_escape
-    ; escape dungeon
-    lda #2
-    sta gamestate
     rts
-win:
-    jsr render_win
-    ; win dungeon
-    lda #3
-    sta gamestate
+push_kill_msg:
+    ; push damage message
+    lda #Messages::hit
+    ldx damage
+    jsr push_msg
+    ; push kill message
+    lda #Messages::kill
+    jsr push_msg
+    ; done
     rts
 
 ; update mob pos randomly, and attack player
