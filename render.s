@@ -368,13 +368,19 @@ render_message:
     beq render_heal
     cmp #Messages::scroll
     beq render_scroll
-    cmp #Messages::quaff
-    beq render_quaff
+    ;cmp #Messages::quaff ; todo range error
+    ;beq render_quaff
 render_finish:
     rts
 render_hit:
-    ; todo amount
+    ; todo reduce need for stack...
+    lda messages+Message::amount, x
+    pha
+    ; You hit it for 
     render_str txt_hit
+    ; damage
+    pla
+    jsr render_num
     rts
 render_hurt:
     ; todo amount
@@ -390,9 +396,9 @@ render_heal:
 render_scroll:
     render_str txt_scroll
     rts
-render_quaff:
-    render_str txt_quaff
-    rts
+;render_quaff:
+;    render_str txt_quaff
+;    rts
 .endproc
 
 ; render num padded with space at front
@@ -449,9 +455,9 @@ txt_dlvl:   .asciiz "dlvl"
 ; messages
 txt_win:    .asciiz "You win!"
 txt_escape: .asciiz "You escaped!"
-txt_hit:    .asciiz "You hit it for XX"
-txt_hurt:   .asciiz "You got hit for XX"
+txt_hit:    .asciiz "You hit it for "
+txt_hurt:   .asciiz "You got hit for "
 txt_kill:   .asciiz "It died!"
-txt_heal:   .asciiz "You healed for XX"
+txt_heal:   .asciiz "You healed for "
 txt_scroll: .asciiz "You read the scroll"
 txt_quaff:  .asciiz "*gulp*" ; todo need asterisk
