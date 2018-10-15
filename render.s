@@ -35,10 +35,17 @@ done:
 
 .proc render
 
+    lda nmis
+wait_nmi:
+    ; wait for nmi
+    cmp nmis
+    beq wait_nmi
 generate_ppu:
     ; turn off rendering
     lda #%00000000 ; note: need second bit in order to show background on left side of screen
     sta $2001
+
+    bit $2002
     ; prep ppu for first nametable write
     lda #$20
     sta $2006
@@ -58,7 +65,7 @@ clear_line:
 ; loop through x and y
 y_repeat:
     cpy #max_height
-    beq tiles_done
+    beq render_status
 x_repeat:
     stx xpos
     sty ypos
@@ -72,24 +79,73 @@ x_repeat:
     iny
     ldx #$00
     jmp y_repeat
-tiles_done:
+
+; render status messages
+render_status:
+    bit $2002
+    lda #$23
+    sta $2006
+    lda #$20
+    sta $2006
+
     lda #$00
     sta $2007
     ; player hp
     render_str txt_hp
     lda #$00
     sta $2007
+    lda #$00 ; extra space to line up with dlvl
+    sta $2007
     jsr playerhp
     jsr render_padded_num
+    ; todo player stats, player lvl
+
+    bit $2002
+    lda #$23
+    sta $2006
+    lda #$60
+    sta $2006
     lda #$00
     sta $2007
+
     ; dlvl
     render_str txt_dlvl
     lda #$00
     sta $2007
     lda dlevel
-    jsr render_padded_num
+    jsr render_num
+
+    ; todo render message area
+    ;bit $2002
+    ;lda #$23
+    ;sta $2006
+    ;lda #$2C
+    ;sta $2006
+    ;render_str txt_kill
+    ;bit $2002
+    ;lda #$23
+    ;sta $2006
+    ;lda #$4C
+    ;sta $2006
+    ;render_str txt_hit
+    ;bit $2002
+    ;lda #$23
+    ;sta $2006
+    ;lda #$6C
+    ;sta $2006
+    ;render_str txt_scroll
+
+    lda nmis
 render_done:
+    cmp nmis
+    beq render_done
+
+    ; update scrolling
+    bit $2002
+    lda #$00
+    sta $2005
+    sta $2005
+
     ; tell PPU to render BG & sprites
     lda #%00011010 ; note: need second bit in order to show background on left side of screen
     sta $2001
@@ -246,7 +302,7 @@ render_mobs_loop:
     asl
     asl
     clc
-    adc #$04 ; sprite data is delayed by 1 scanline in NES
+    adc #$07 ; +8 (skip first row), and -1 (sprite data delayed 1 scanline)
     sta $0200, x
     jsr mobtype
     clc
@@ -336,3 +392,9 @@ txt_lvl:    .asciiz "lvl"
 txt_dlvl:   .asciiz "dlvl"
 txt_win:    .asciiz "You win!"
 txt_escape: .asciiz "You escaped!"
+txt_kill:   .asciiz "It died!"
+txt_hit:    .asciiz "You hit it for XX"
+txt_hurt:   .asciiz "You got hit for XX"
+txt_heal:   .asciiz "You healed for XX"
+txt_scroll: .asciiz "You read the scroll"
+txt_quaff:  .asciiz "*gulp*" ; todo need asterisk

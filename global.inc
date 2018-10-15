@@ -7,6 +7,7 @@ maxmobs    = 20
 ; main.s
 .globalzp controller1
 .globalzp controller1release
+.globalzp nmis
 
 ; dungeon.s
 .globalzp tiles
