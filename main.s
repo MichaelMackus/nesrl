@@ -121,6 +121,7 @@ escape_dungeon:
 
 playgame:
     jsr handle_input
+    ; todo handle mob ai
     jsr render_mobs
 
     lda nmis
@@ -216,8 +217,9 @@ move_done:
 input_done:
     rts
 attack_mob:
-    ; todo use damage calc, for now just kill
-    jsr kill_mob
+    ; todo use damage calc, for now just do 1 damage
+    lda #1
+    jsr damage_mob
     jmp input_done
 escape:
     jsr render_escape
@@ -247,13 +249,6 @@ PALETTE:
     .byte $30, $21, $2c, $3a, $0f, $21, $2c, $3a
     .byte $30, $21, $2c, $3a, $0f, $21, $2c, $3a
     .byte $30, $12, $13, $23, $0f, $29, $19, $1A
-
-SPRITES:
-    .byte 4                  ; number of sprites
-    .byte 200, $84, $00, 124 ; player sprite
-    .byte 100, $84, $01,  54 ; box 1
-    .byte 100, $84, $01, 204 ; box 2
-    .byte  50, $84, $01, 124 ; box 3
 
 .segment "VECTORS"
 
