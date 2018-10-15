@@ -88,13 +88,36 @@ init_ppu:
 
 nmi:
     pha
+    txa
+    pha
+    tya
+    pha
+    lda tmp
+    pha
 
+    ; re-render messages, todo only do this if difference in msgs
+    ; todo will need to detect difference especially to not affect render
+    lda messages
+    cmp #Messages::none
+    beq continue_nmi
+    jsr render_messages
+    lda #$00
+    sta $2005
+    sta $2005
+
+continue_nmi:
     lda #$00
     sta $2003
     ; draw OAM data via DMA
     lda #$02
     sta $4014
 
+    pla
+    sta tmp
+    pla
+    tay
+    pla
+    tax
     pla
 
     inc nmis
@@ -223,10 +246,15 @@ input_done:
     rts
 attack_mob:
     ; todo use damage calc, for now just do 1 damage
-    lda #1
     damage = tmp
+    lda #1
     sta damage
     jsr damage_mob
+    ; push message
+    lda Messages::hit
+    ldx damage
+    jsr push_msg
+    ; done
     jmp input_done
 escape:
     jsr render_escape

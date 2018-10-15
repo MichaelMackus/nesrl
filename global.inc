@@ -79,6 +79,7 @@ maxmobs    = 20
 .global render_escape
 .global render_win
 .global render_mobs
+.global render_messages
 
 ; input.s
 .global readcontroller
