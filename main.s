@@ -8,6 +8,7 @@ controller1: .res 1
 controller1release: .res 1
 nmis:        .res 1            ; how many nmis have passed
 tmp:         .res 1
+need_draw:   .res 1            ; do we need to draw draw buffer?
 
 .segment "HEADER"
 
@@ -50,6 +51,9 @@ init_memory:
     jsr push_msg
     lda Messages::none
     jsr push_msg
+    ; tell nmi to draw on first frame
+    lda #1
+    sta need_draw
 
 clear_oam:
     lda #$FF
@@ -99,9 +103,15 @@ nmi:
     lda tmp
     pha
 
+    lda need_draw
+    beq continue_nmi
 render_draw_buffer:
     ; render draw queue
     jsr render_buffer
+
+    ; done drawing
+    lda #$00
+    sta need_draw
 
     ; update scroll
     lda #$00
@@ -169,6 +179,12 @@ done:
     ; update draw buffer with messages
     jsr buffer_messages
     jsr buffer_hp
+    ; stop further buffering
+    lda #0
+    sta messages_updated
+    ; notify nmi to draw the buffer
+    lda #1
+    sta need_draw
 
     lda nmis
 wait_nmi:

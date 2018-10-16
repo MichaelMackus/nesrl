@@ -25,7 +25,6 @@ tmp: .res 1
 .endproc
 
 ; todo max hp
-; todo disable nmi rendering while buffering
 .proc buffer_hp
     jsr next_index
     ; length
