@@ -41,6 +41,7 @@ init_memory:
     sta controller1
     sta controller1release
     sta dlevel
+    sta draw_buffer
     jsr initialize_player
     lda Messages::none
     sta messages
@@ -95,13 +96,11 @@ nmi:
     lda tmp
     pha
 
-    ; todo figure out universal draw queue
-    ; todo re-render hp, not working right now due to updating while rendering
-    ;jsr render_hp
-    ; re-render messages if updated
-    lda messages_updated
-    beq continue_nmi
-    jsr render_messages
+render_draw_buffer:
+    ; render draw queue
+    jsr render_buffer
+
+    ; update scroll
     lda #$00
     sta $2005
     sta $2005
@@ -158,12 +157,19 @@ playgame:
 
 playgame_noinput:
     ; update sprite OAM data
-    jsr render_mobs
+    jsr update_sprites
+
+done:
+    ; check for new messages
+    ;lda messages_updated
+    ;beq done_next
+    ; update draw buffer with messages
+    jsr buffer_messages
 
     lda nmis
-done:
+wait_nmi:
     cmp nmis
-    beq done
+    beq wait_nmi
 
     ; endless game loop
     jmp main
@@ -329,6 +335,7 @@ checky:
     cmp ypos
     beq attack_player
     jmp move_mob
+; todo buffer HP to draw buffer
 attack_player:
     ; remember y to stack
     tya

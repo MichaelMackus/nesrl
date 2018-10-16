@@ -16,6 +16,7 @@ maxmobs    = 20
 .globalzp messages
 .globalzp messages_updated
 .global push_msg
+.global buffer_messages
 
 ; dungeon.s
 .global tiles
@@ -70,7 +71,7 @@ maxmobs    = 20
 .global render_escape
 .global render_death
 .global render_win
-.global render_mobs
+.global update_sprites
 
 ; buffer.s
 .globalzp max_buffer_size
