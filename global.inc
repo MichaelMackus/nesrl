@@ -18,7 +18,7 @@ maxmobs    = 20
 .global push_msg
 
 ; dungeon.s
-.globalzp tiles
+.global tiles
 .globalzp dlevel
 .globalzp xpos
 .globalzp ypos
