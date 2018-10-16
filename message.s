@@ -11,11 +11,6 @@ messages:    .res .sizeof(Message)*max_messages
 tmp_message: .res .sizeof(Message)
 str_pointer:     .res 2 ; tmp str buffer for buffer rendering
 
-; used to re-render messages on change
-; todo figure out better way - can't just use draw buffer, since it
-; todo might get updated during NMI
-messages_updated: .byte 1
-
 .segment "CODE"
 
 ; Use messages as a message stack & push the message.
@@ -49,8 +44,6 @@ shift_messages:
     sta messages
     lda tmp_message+Message::amount
     sta messages+Message::amount
-    lda #1
-    sta messages_updated
     rts
 .endproc
 

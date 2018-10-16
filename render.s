@@ -1,3 +1,5 @@
+; todo simplify - we shouldn't need render_str or render_num in here
+
 .include "global.inc"
 
 .export render
@@ -85,6 +87,9 @@ render_status:
     lda #$21
     sta $2006
     render_str txt_hp
+    ; render hp via draw buffer
+    jsr buffer_hp
+    jsr render_buffer
 
     ; dlvl
     bit $2002

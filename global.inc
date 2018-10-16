@@ -14,7 +14,6 @@ maxmobs    = 20
 ; message.s
 .globalzp max_messages
 .globalzp messages
-.globalzp messages_updated
 .global push_msg
 .global buffer_messages
 

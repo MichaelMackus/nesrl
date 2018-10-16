@@ -9,6 +9,7 @@ controller1release: .res 1
 nmis:        .res 1            ; how many nmis have passed
 tmp:         .res 1
 need_draw:   .res 1            ; do we need to draw draw buffer?
+need_buffer: .res 1            ; do we need to update the draw buffer?
 
 .segment "HEADER"
 
@@ -43,17 +44,15 @@ init_memory:
     sta controller1release
     sta dlevel
     sta draw_buffer
-    jsr initialize_player
-    ; push_msg here ensures we render the draw buffer first time
-    lda Messages::none
-    jsr push_msg
-    lda Messages::none
-    jsr push_msg
-    lda Messages::none
-    jsr push_msg
-    ; tell nmi to draw on first frame
-    lda #1
     sta need_draw
+    sta need_buffer
+    jsr initialize_player
+    lda Messages::none
+    jsr push_msg
+    lda Messages::none
+    jsr push_msg
+    lda Messages::none
+    jsr push_msg
 
 clear_oam:
     lda #$FF
@@ -174,14 +173,14 @@ playgame_noinput:
 
 done:
     ; check for new messages
-    lda messages_updated
+    lda need_buffer
     beq wait_nmi
     ; update draw buffer with messages
     jsr buffer_messages
     jsr buffer_hp
     ; stop further buffering
     lda #0
-    sta messages_updated
+    sta need_buffer
     ; notify nmi to draw the buffer
     lda #1
     sta need_draw
@@ -290,6 +289,9 @@ move_done:
 input_done:
     rts
 attack_mob:
+    ; ensure we update buffer
+    lda #1
+    sta need_buffer
     ; todo use damage calc, for now just do 1 damage
     damage = tmp
     lda #1
@@ -359,6 +361,9 @@ attack_player:
     ; remember y to stack
     tya
     pha
+    ; ensure we update draw buffer
+    lda #1
+    sta need_buffer
     ; todo use damage calc, for now just do 1 damage
     lda #1
     ldy #0 ; player index
