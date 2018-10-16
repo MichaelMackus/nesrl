@@ -43,10 +43,13 @@ init_memory:
     sta dlevel
     sta draw_buffer
     jsr initialize_player
+    ; push_msg here ensures we render the draw buffer first time
     lda Messages::none
-    sta messages
-    sta messages + .sizeof(Message)
-    sta messages + .sizeof(Message)*2
+    jsr push_msg
+    lda Messages::none
+    jsr push_msg
+    lda Messages::none
+    jsr push_msg
 
 clear_oam:
     lda #$FF
@@ -161,10 +164,11 @@ playgame_noinput:
 
 done:
     ; check for new messages
-    ;lda messages_updated
-    ;beq done_next
+    lda messages_updated
+    beq wait_nmi
     ; update draw buffer with messages
     jsr buffer_messages
+    jsr buffer_hp
 
     lda nmis
 wait_nmi:
@@ -335,7 +339,6 @@ checky:
     cmp ypos
     beq attack_player
     jmp move_mob
-; todo buffer HP to draw buffer
 attack_player:
     ; remember y to stack
     tya
@@ -347,7 +350,7 @@ attack_player:
     jsr damage_mob
     ; push message
     lda #Messages::hurt
-    ldx #1
+    ldx damage
     jsr push_msg
     ; check if player dead
     ldy #0

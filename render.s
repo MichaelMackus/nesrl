@@ -28,7 +28,6 @@ loop:
 done:
 .endmacro
 
-; todo this isn't working anymore, x and y all jacked up
 .proc render
 
     lda nmis
@@ -79,23 +78,26 @@ x_repeat:
 
 ; render status messages
 render_status:
-    jsr render_hp
-    ; todo player stats, player lvl
+    ; hp
+    bit $2002
+    lda #$23
+    sta $2006
+    lda #$21
+    sta $2006
+    render_str txt_hp
 
+    ; dlvl
     bit $2002
     lda #$23
     sta $2006
     lda #$61
     sta $2006
-
-    ; dlvl
     render_str txt_dlvl
+    ; render current dlevel
     lda #$00
     sta $2007
     lda dlevel
     jsr render_num
-
-    ;jsr render_messages
 
     lda nmis
 render_done:
@@ -113,24 +115,6 @@ render_done:
     sta $2001
     rts
 
-.endproc
-
-.proc render_hp
-    bit $2002
-    lda #$23
-    sta $2006
-    lda #$21
-    sta $2006
-    ; player hp
-    render_str txt_hp
-    lda #$00
-    sta $2007
-    lda #$00 ; extra space to line up with dlvl
-    sta $2007
-    lda mobs + Mob::hp
-    jsr render_padded_num
-    ; todo max hp
-    rts
 .endproc
 
 .proc render_death
@@ -324,124 +308,6 @@ clear_mob:
     jmp continue_mobs_loop
 
 .endproc
-
-;.proc render_messages
-;    ; render message area
-;    lda #0
-;    tay
-;    sta tmp
-;    bit $2002
-;render_messages_loop:
-;    lda #$23
-;    sta $2006
-;    lda #$2C
-;    clc
-;    adc tmp
-;    sta $2006
-;    ; remember vars & render message
-;    lda tmp
-;    pha
-;    tya
-;    pha
-;    jsr render_message
-;    pla
-;    tay
-;    pla
-;    sta tmp
-;    ; end rendering message
-;    lda tmp
-;    clc
-;    adc #$20
-;    sta tmp
-;    tya
-;    clc
-;    adc #.sizeof(Message)
-;    tay
-;    cmp #.sizeof(Message)*max_messages
-;    bne render_messages_loop
-;    ; turn off message rendering
-;    lda #0
-;    sta messages_updated
-;    rts
-;render_message:
-;    lda messages, y
-;    cmp #Messages::hit
-;    beq render_hit
-;    cmp #Messages::hurt
-;    beq render_hurt
-;    jmp continue_render
-;render_hit:
-;    ; You hit it for 
-;    render_str txt_hit
-;    ; damage
-;    lda messages+Message::amount, y
-;    jsr render_num
-;    ; clear previous msgs
-;    lda #$00
-;    sta $2007
-;    sta $2007
-;    rts
-;render_hurt:
-;    ; You got hit for 
-;    render_str txt_hurt
-;    ; damage
-;    lda messages+Message::amount, y
-;    jsr render_num
-;    ; clear previous msgs
-;    render_str txt_blank
-;    render_str txt_blank
-;    rts
-;continue_render:
-;    cmp #Messages::kill
-;    beq render_kill
-;    jmp continue_render2
-;render_kill:
-;    render_str txt_kill
-;    ; clear previous msgs
-;    lda #$00
-;    tay
-;clear_kill:
-;    sta $2007
-;    iny
-;    cpy #10
-;    bne clear_kill
-;    rts
-;continue_render2:
-;    cmp #Messages::heal
-;    beq render_heal
-;    cmp #Messages::scroll
-;    beq render_scroll
-;    cmp #Messages::quaff
-;    beq render_quaff
-;render_finish:
-;    rts
-;render_heal:
-;    ; todo amount
-;    render_str txt_heal
-;    ; clear previous msgs
-;    lda #$00
-;    sta $2007
-;    sta $2007
-;    rts
-;render_scroll:
-;    render_str txt_scroll
-;    rts
-;render_quaff:
-;    render_str txt_quaff
-;    rts
-;.endproc
-
-; render num padded with space at front
-; in: number
-; clobbers: x, y, and tmp
-render_padded_num:
-    cmp #10
-    bcs render_num
-    tax
-    lda #$00
-    sta $2007
-    txa
-    jmp render_num
 
 ; render num 0-99
 ; in: number

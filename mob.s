@@ -5,21 +5,10 @@
 mob_size  = .sizeof(Mob)
 mobs_size = .sizeof(Mob)*maxmobs
 
-playerlvl: .res 1 ; todo stats struct
 mobs:      .res mobs_size
 dmg:       .res 1 ; tmp var for damage calculation
 
 .segment "CODE"
-
-; initialize player mob
-initialize_player:
-    ; initialize HP to 10
-    lda #10
-    sta mobs+Mob::hp
-    ; initialize tile type
-    lda #Mobs::player
-    sta mobs+Mob::type
-    rts
 
 ; get a mob at xpos and ypos
 ; out: 0 on success, 1 on failure

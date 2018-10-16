@@ -55,6 +55,7 @@ shift_messages:
 .endproc
 
 ; buffer the messages to draw buffer
+; todo disable nmi rendering while buffering
 .proc buffer_messages
     message_ppu_offset = $20
     message_ppu_start  = $2C
@@ -65,6 +66,7 @@ shift_messages:
     pha ; remember message index
 write_message_header:
     ; store next draw buffer index into y
+    ; todo should this be stack/tmp var instead?
     jsr next_index
     ; write the message length
     lda #message_strlen
