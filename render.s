@@ -13,7 +13,7 @@ tmp: .byte 1
 
 ; render string constant to screen
 ; in: address to start of str
-; clobbers: x and tmp
+; clobbers: x
 .macro render_str str
     .local loop
     .local done
@@ -21,18 +21,14 @@ tmp: .byte 1
 loop:
     lda str, x
     beq done
-    sec
-    sbc #$20
-    sta tmp
-    lda #$00
-    clc
-    adc tmp
+    jsr get_str_tile
     sta $2007
     inx
     jmp loop
 done:
 .endmacro
 
+; todo this isn't working anymore, x and y all jacked up
 .proc render
 
     lda nmis
@@ -69,7 +65,7 @@ y_repeat:
 x_repeat:
     stx xpos
     sty ypos
-    jsr get_tile
+    jsr get_bg_tile
     sta $2007
     ldx xpos
     ldy ypos
@@ -79,6 +75,7 @@ x_repeat:
     iny
     ldx #$00
     jmp y_repeat
+    rts
 
 ; render status messages
 render_status:
@@ -115,46 +112,6 @@ render_done:
     lda #%00011010 ; note: need second bit in order to show background on left side of screen
     sta $2001
     rts
-
-; get tile index for x,y
-; out: index in sprite sheet
-; todo maybe we should render BG if sprite already on pos?
-get_tile:
-    ; todo then check item ??
-check_stair:
-    ; then check stair
-    cpx up_x
-    bne check_downstair
-    cpy up_y
-    beq up
-check_downstair:
-    cpx down_x
-    bne tile
-    cpy down_y
-    beq down
-tile:
-    ; finally, display tile
-    jsr get_byte_offset
-    tay
-    jsr get_byte_mask
-    and tiles, y
-    bne floor
-bg:
-    lda #$00
-    rts
-floor:
-    lda #$82
-    rts
-up:
-    lda #$3E
-    rts
-down:
-    lda #$3F
-    rts
-player:
-    lda #$A1
-    rts
-
 
 .endproc
 
@@ -334,9 +291,7 @@ render_mobs_loop:
     clc
     adc #$07 ; +8 (skip first row), and -1 (sprite data delayed 1 scanline)
     sta $0200, x
-    jsr mobtype
-    clc
-    adc #$A1 ; first mob sprite index
+    jsr get_mob_tile
     sta $0201, x
     lda #%00000000
     sta $0202, x
@@ -486,7 +441,7 @@ render_padded_num:
 
 ; render num 0-99
 ; in: number
-; clobbers: x, y, and tmp
+; clobbers: x and y
 render_num:
     cmp #10
     bcc render_ones
@@ -502,18 +457,12 @@ tens_loop:
 render_tens:
     tay
     txa
-    sta tmp
-    lda #$10
-    clc
-    adc tmp
+    jsr get_num_tile
     sta $2007
     ; now, render ones place
     tya
 render_ones:
-    sta tmp
-    lda #$10
-    clc
-    adc tmp
+    jsr get_num_tile
     sta $2007
     rts
 

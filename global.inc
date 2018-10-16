@@ -75,6 +75,12 @@ maxmobs    = 20
 .global d6
 .global d12
 
+; tile.s
+.global get_bg_tile
+.global get_mob_tile
+.global get_str_tile
+.global get_num_tile
+
 ; render.s
 .global render
 .global render_hp
