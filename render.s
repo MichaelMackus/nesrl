@@ -3,7 +3,7 @@
 .export render
 .export render_escape
 .export render_win
-.export render_mobs
+.export update_sprites
 
 .segment "ZEROPAGE"
 
@@ -95,7 +95,7 @@ render_status:
     lda dlevel
     jsr render_num
 
-    jsr render_messages
+    ;jsr render_messages
 
     lda nmis
 render_done:
@@ -274,7 +274,7 @@ render_win_done:
 
 .endproc
 
-.proc render_mobs
+.proc update_sprites
 
 ; render the player sprite
 render_mobs:
@@ -325,111 +325,111 @@ clear_mob:
 
 .endproc
 
-.proc render_messages
-    ; render message area
-    lda #0
-    tay
-    sta tmp
-    bit $2002
-render_messages_loop:
-    lda #$23
-    sta $2006
-    lda #$2C
-    clc
-    adc tmp
-    sta $2006
-    ; remember vars & render message
-    lda tmp
-    pha
-    tya
-    pha
-    jsr render_message
-    pla
-    tay
-    pla
-    sta tmp
-    ; end rendering message
-    lda tmp
-    clc
-    adc #$20
-    sta tmp
-    tya
-    clc
-    adc #.sizeof(Message)
-    tay
-    cmp #.sizeof(Message)*max_messages
-    bne render_messages_loop
-    ; turn off message rendering
-    lda #0
-    sta messages_updated
-    rts
-render_message:
-    lda messages, y
-    cmp #Messages::hit
-    beq render_hit
-    cmp #Messages::hurt
-    beq render_hurt
-    jmp continue_render
-render_hit:
-    ; You hit it for 
-    render_str txt_hit
-    ; damage
-    lda messages+Message::amount, y
-    jsr render_num
-    ; clear previous msgs
-    lda #$00
-    sta $2007
-    sta $2007
-    rts
-render_hurt:
-    ; You got hit for 
-    render_str txt_hurt
-    ; damage
-    lda messages+Message::amount, y
-    jsr render_num
-    ; clear previous msgs
-    render_str txt_blank
-    render_str txt_blank
-    rts
-continue_render:
-    cmp #Messages::kill
-    beq render_kill
-    jmp continue_render2
-render_kill:
-    render_str txt_kill
-    ; clear previous msgs
-    lda #$00
-    tay
-clear_kill:
-    sta $2007
-    iny
-    cpy #10
-    bne clear_kill
-    rts
-continue_render2:
-    cmp #Messages::heal
-    beq render_heal
-    cmp #Messages::scroll
-    beq render_scroll
-    cmp #Messages::quaff
-    beq render_quaff
-render_finish:
-    rts
-render_heal:
-    ; todo amount
-    render_str txt_heal
-    ; clear previous msgs
-    lda #$00
-    sta $2007
-    sta $2007
-    rts
-render_scroll:
-    render_str txt_scroll
-    rts
-render_quaff:
-    render_str txt_quaff
-    rts
-.endproc
+;.proc render_messages
+;    ; render message area
+;    lda #0
+;    tay
+;    sta tmp
+;    bit $2002
+;render_messages_loop:
+;    lda #$23
+;    sta $2006
+;    lda #$2C
+;    clc
+;    adc tmp
+;    sta $2006
+;    ; remember vars & render message
+;    lda tmp
+;    pha
+;    tya
+;    pha
+;    jsr render_message
+;    pla
+;    tay
+;    pla
+;    sta tmp
+;    ; end rendering message
+;    lda tmp
+;    clc
+;    adc #$20
+;    sta tmp
+;    tya
+;    clc
+;    adc #.sizeof(Message)
+;    tay
+;    cmp #.sizeof(Message)*max_messages
+;    bne render_messages_loop
+;    ; turn off message rendering
+;    lda #0
+;    sta messages_updated
+;    rts
+;render_message:
+;    lda messages, y
+;    cmp #Messages::hit
+;    beq render_hit
+;    cmp #Messages::hurt
+;    beq render_hurt
+;    jmp continue_render
+;render_hit:
+;    ; You hit it for 
+;    render_str txt_hit
+;    ; damage
+;    lda messages+Message::amount, y
+;    jsr render_num
+;    ; clear previous msgs
+;    lda #$00
+;    sta $2007
+;    sta $2007
+;    rts
+;render_hurt:
+;    ; You got hit for 
+;    render_str txt_hurt
+;    ; damage
+;    lda messages+Message::amount, y
+;    jsr render_num
+;    ; clear previous msgs
+;    render_str txt_blank
+;    render_str txt_blank
+;    rts
+;continue_render:
+;    cmp #Messages::kill
+;    beq render_kill
+;    jmp continue_render2
+;render_kill:
+;    render_str txt_kill
+;    ; clear previous msgs
+;    lda #$00
+;    tay
+;clear_kill:
+;    sta $2007
+;    iny
+;    cpy #10
+;    bne clear_kill
+;    rts
+;continue_render2:
+;    cmp #Messages::heal
+;    beq render_heal
+;    cmp #Messages::scroll
+;    beq render_scroll
+;    cmp #Messages::quaff
+;    beq render_quaff
+;render_finish:
+;    rts
+;render_heal:
+;    ; todo amount
+;    render_str txt_heal
+;    ; clear previous msgs
+;    lda #$00
+;    sta $2007
+;    sta $2007
+;    rts
+;render_scroll:
+;    render_str txt_scroll
+;    rts
+;render_quaff:
+;    render_str txt_quaff
+;    rts
+;.endproc
 
 ; render num padded with space at front
 ; in: number
@@ -476,14 +476,7 @@ render_ones:
 txt_hp:     .asciiz "hp"
 txt_lvl:    .asciiz "lvl"
 txt_dlvl:   .asciiz "dlvl"
-; messages
-txt_blank:  .asciiz " "
+; end messages
 txt_win:    .asciiz "You win!"
 txt_escape: .asciiz "You escaped!"
 txt_death:  .asciiz "You died!"
-txt_hit:    .asciiz "You hit it for "
-txt_hurt:   .asciiz "You got hit for "
-txt_kill:   .asciiz "It died!"
-txt_heal:   .asciiz "You healed for "
-txt_scroll: .asciiz "You read the scroll"
-txt_quaff:  .asciiz "*gulp*" ; todo need asterisk
