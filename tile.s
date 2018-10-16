@@ -49,8 +49,33 @@ floor:
 .proc get_mob_tile
     ; todo branch based on type
     jsr mobtype
-    clc
-    adc #$A1 ; first mob sprite index
+    cmp #Mobs::player
+    beq player_tile
+    cmp #Mobs::goblin
+    beq goblin_tile
+    cmp #Mobs::orc
+    beq orc_tile
+    cmp #Mobs::ogre
+    beq ogre_tile
+    cmp #Mobs::dragon
+    beq dragon_tile
+    ; unknown tile
+    lda #$01
+    rts
+player_tile:
+    lda #$A1
+    rts
+goblin_tile:
+    lda #$47
+    rts
+orc_tile:
+    lda #$4F
+    rts
+ogre_tile:
+    lda #$2F
+    rts
+dragon_tile:
+    lda #$24
     rts
 .endproc
 

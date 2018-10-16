@@ -2,14 +2,6 @@
 
 .segment "ZEROPAGE"
 
-.enum Mobs
-    player
-    goblin
-    orc
-    ogre
-    dragon
-.endenum
-
 .struct Coord
     xcoord .byte
     ycoord .byte
@@ -36,7 +28,7 @@ initialize_player:
     lda #10
     sta mobs+Mob::hp
     ; initialize tile type
-    lda Mobs::player
+    lda #Mobs::player
     sta mobs+Mob::type
     rts
 
@@ -209,24 +201,24 @@ gen_4_mob:
 gen_goblin:
     lda #4
     sta mobs + Mob::hp, y
-    lda Mobs::goblin
+    lda #Mobs::goblin
     sta mobs + Mob::type, y
     rts
 gen_orc:
     lda #6
     sta mobs + Mob::hp, y
-    lda Mobs::orc
+    lda #Mobs::orc
     sta mobs + Mob::type, y
     rts
 gen_ogre:
     lda #10
     sta mobs + Mob::hp, y
-    lda Mobs::ogre
+    lda #Mobs::ogre
     sta mobs + Mob::type, y
     rts
 gen_dragon:
     lda #20
     sta mobs + Mob::hp, y
-    lda Mobs::dragon
+    lda #Mobs::dragon
     sta mobs + Mob::type, y
     rts

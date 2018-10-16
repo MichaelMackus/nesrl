@@ -1,3 +1,5 @@
+.include "scopes.inc"
+
 ; global constants
 maxtiles   = 96
 max_width  = 32
@@ -10,19 +12,6 @@ maxmobs    = 20
 .globalzp nmis
 
 ; message.s
-.enum Messages
-    none
-    hit
-    hurt
-    kill
-    heal
-    scroll
-    quaff
-.endenum
-.struct Message
-    type   .byte 1 ; one of Messages enum
-    amount .byte 1 ; amount for hit/hurt/heal messages
-.endstruct
 .globalzp max_messages
 .globalzp messages
 .globalzp messages_updated
