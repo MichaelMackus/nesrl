@@ -377,8 +377,9 @@ render_hit:
     lda messages+Message::amount, y
     jsr render_num
     ; clear previous msgs
-    render_str txt_blank
-    render_str txt_blank
+    lda #$00
+    sta $2007
+    sta $2007
     rts
 render_hurt:
     ; You got hit for 
@@ -397,14 +398,13 @@ continue_render:
 render_kill:
     render_str txt_kill
     ; clear previous msgs
-    ldy #0
-clear_kill:
-    render_str txt_blank
-    iny
-    cpy #9 ; todo flash if comparing to 10...? perhaps too many cycles
-    bne clear_kill
     lda #$00
+    tay
+clear_kill:
     sta $2007
+    iny
+    cpy #10
+    bne clear_kill
     rts
 continue_render2:
     cmp #Messages::heal
@@ -419,8 +419,9 @@ render_heal:
     ; todo amount
     render_str txt_heal
     ; clear previous msgs
-    render_str txt_blank
-    render_str txt_blank
+    lda #$00
+    sta $2007
+    sta $2007
     rts
 render_scroll:
     render_str txt_scroll
