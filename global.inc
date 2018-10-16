@@ -72,5 +72,11 @@ maxmobs    = 20
 .global render_win
 .global render_mobs
 
+; buffer.s
+.globalzp max_buffer_size
+.globalzp draw_buffer
+.global next_index
+.global render_buffer
+
 ; input.s
 .global readcontroller
