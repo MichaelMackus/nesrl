@@ -401,8 +401,10 @@ render_kill:
 clear_kill:
     render_str txt_blank
     iny
-    cpy #10
+    cpy #9 ; todo flash if comparing to 10...? perhaps too many cycles
     bne clear_kill
+    lda #$00
+    sta $2007
     rts
 continue_render2:
     cmp #Messages::heal
