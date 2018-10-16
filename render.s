@@ -127,7 +127,7 @@ render_done:
     sta $2007
     lda #$00 ; extra space to line up with dlvl
     sta $2007
-    jsr playerhp
+    lda mobs + Mob::hp
     jsr render_padded_num
     ; todo max hp
     rts
@@ -284,18 +284,19 @@ render_mobs:
 render_mobs_loop:
     jsr is_alive
     bne clear_mob
-    jsr moby
+    lda mobs + Mob::coords + Coord::ycoord, y
     asl
     asl
     asl
     clc
     adc #$07 ; +8 (skip first row), and -1 (sprite data delayed 1 scanline)
     sta $0200, x
+    tya
     jsr get_mob_tile
     sta $0201, x
     lda #%00000000
     sta $0202, x
-    jsr mobx
+    lda mobs + Mob::coords + Coord::xcoord, y
     asl
     asl
     asl

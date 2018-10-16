@@ -174,9 +174,9 @@ handle_input:
     and #%10000000 ; a
     bne check_action
     ; update player pos to memory
-    jsr playerx
+    lda mobs + Mob::coords + Coord::xcoord
     sta xpos
-    jsr playery
+    lda mobs + Mob::coords + Coord::ycoord
     sta ypos
     ; handle player movement
     lda controller1release
@@ -194,10 +194,8 @@ handle_input:
     rts
 check_action:
 check_dstair:
-    jsr playerx
-    tax
-    jsr playery
-    tay
+    ldx mobs + Mob::coords + Coord::xcoord
+    ldy mobs + Mob::coords + Coord::ycoord
     cpx down_x
     bne check_upstair
     cpy down_y
@@ -210,10 +208,8 @@ check_dstair:
     jsr regenerate
     rts
 check_upstair:
-    jsr playerx
-    tax
-    jsr playery
-    tay
+    ldx mobs + Mob::coords + Coord::xcoord
+    lda mobs + Mob::coords + Coord::ycoord
     cpx up_x
     bne input_done
     cpy up_y
@@ -261,7 +257,10 @@ move_done:
     beq attack_mob
     jsr is_passable
     bne input_done
-    jsr update_player_pos
+    lda xpos
+    sta mobs+Mob::coords+Coord::xcoord
+    lda ypos
+    sta mobs+Mob::coords+Coord::ycoord
 input_done:
     rts
 attack_mob:
@@ -299,12 +298,12 @@ mob_ai_loop:
     jsr is_alive
     bne continue_mob_ai
     ; todo diff function
-    jsr mobx
+    lda mobs + Mob::coords + Coord::xcoord, y
     sta xpos
-    jsr moby
+    lda mobs + Mob::coords + Coord::ycoord, y
     sta ypos
     ; check x
-    jsr playerx
+    lda mobs + Mob::coords + Coord::xcoord
     cmp xpos
     beq checkyplus1
     inc xpos
@@ -317,7 +316,7 @@ mob_ai_loop:
     jmp move_mob
 checkyplus1:
     ; check y
-    jsr playery
+    lda mobs + Mob::coords + Coord::ycoord
     inc ypos
     cmp ypos
     beq attack_player
@@ -326,7 +325,7 @@ checkyplus1:
     cmp ypos
     beq attack_player
 checky:
-    jsr playery
+    lda mobs + Mob::coords + Coord::ycoord
     cmp ypos
     beq attack_player
     jmp move_mob

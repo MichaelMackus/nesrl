@@ -160,16 +160,14 @@ update_player:
 update_player_upstair:
     ldx up_x
     ldy up_y
-    stx xpos
-    sty ypos
-    jsr update_player_pos
+    stx mobs+Mob::coords+Coord::xcoord
+    sty mobs+Mob::coords+Coord::ycoord
     jmp done_update_player
 update_player_downstair:
     ldx down_x
     ldy down_y
-    stx xpos
-    sty ypos
-    jsr update_player_pos
+    stx mobs+Mob::coords+Coord::xcoord
+    sty mobs+Mob::coords+Coord::ycoord
 done_update_player:
     ; update prevdlevel for next generation
     lda dlevel

@@ -48,7 +48,8 @@ floor:
 ; out: tile
 .proc get_mob_tile
     ; todo branch based on type
-    jsr mobtype
+    tay
+    lda mobs + Mob::type, y
     cmp #Mobs::player
     beq player_tile
     cmp #Mobs::goblin

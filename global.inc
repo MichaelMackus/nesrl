@@ -36,19 +36,12 @@ maxmobs    = 20
 ; mob.s
 .globalzp mob_size
 .globalzp mobs_size
+.globalzp mobs
 .globalzp playerlvl
-.global mobx
-.global moby
-.global mobtype
-.global update_mob_pos
 .global mob_at
 .global damage_mob
 .global kill_mob
 .global initialize_player
-.global playerx
-.global playery
-.global playerhp
-.global update_player_pos
 .global rand_mob
 .global is_alive
 

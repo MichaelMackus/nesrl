@@ -20,3 +20,15 @@
     ogre
     dragon
 .endenum
+
+.struct Coord
+    xcoord .byte
+    ycoord .byte
+.endstruct
+
+.struct Mob
+    coords .tag Coord
+    hp     .byte
+    type   .byte ; one of Mobs enum
+.endstruct
+

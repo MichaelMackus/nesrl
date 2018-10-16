@@ -2,17 +2,6 @@
 
 .segment "ZEROPAGE"
 
-.struct Coord
-    xcoord .byte
-    ycoord .byte
-.endstruct
-
-.struct Mob
-    coords .tag Coord
-    hp     .byte
-    type   .byte ; one of Mobs enum
-.endstruct
-
 mob_size  = .sizeof(Mob)
 mobs_size = .sizeof(Mob)*maxmobs
 
@@ -32,61 +21,6 @@ initialize_player:
     sta mobs+Mob::type
     rts
 
-; get player x coord
-; out: coord
-playerx:
-    lda mobs + Mob::coords + Coord::xcoord
-    rts
-
-; get player y coord
-; out: coord
-playery:
-    lda mobs + Mob::coords + Coord::ycoord
-    rts
-
-; get player hp
-; out: hp
-playerhp:
-    lda mobs + Mob::hp
-    rts
-
-; update coords of player with xpos and ypos vars
-update_player_pos:
-    lda xpos
-    sta mobs+Mob::coords+Coord::xcoord
-    lda ypos
-    sta mobs+Mob::coords+Coord::ycoord
-    rts
-
-; get mob x coord
-; in: mob index
-; out: coord
-mobx:
-    lda mobs + Mob::coords + Coord::xcoord, y
-    rts
-
-; get mob y coord
-; in: mob index
-; out: coord
-moby:
-    lda mobs + Mob::coords + Coord::ycoord, y
-    rts
-
-; update coords of mob at index y with xpos and ypos vars
-update_mob_pos:
-    lda xpos
-    sta mobs+Mob::coords+Coord::xcoord, y
-    lda ypos
-    sta mobs+Mob::coords+Coord::ycoord, y
-    rts
-
-; get mob type
-; in: mob index
-; out: type
-mobtype:
-    lda mobs + Mob::type, y
-    rts
-
 ; get a mob at xpos and ypos
 ; out: 0 on success, 1 on failure
 ; updates: y register to mob index
@@ -96,10 +30,10 @@ mob_at:
 mob_at_loop:
     jsr is_alive
     bne mob_at_continue
-    jsr mobx
+    lda mobs + Mob::coords + Coord::xcoord, y
     cmp xpos
     bne mob_at_continue
-    jsr moby
+    lda mobs + Mob::coords + Coord::ycoord, y
     cmp ypos
     beq mob_at_success
 mob_at_continue:
