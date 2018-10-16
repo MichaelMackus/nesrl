@@ -9,7 +9,6 @@ max_messages = 3
 message_strlen = 18
 messages:    .res .sizeof(Message)*max_messages
 tmp_message: .res .sizeof(Message)
-str_pointer:     .res 2 ; tmp str buffer for buffer rendering
 
 .segment "CODE"
 
@@ -78,33 +77,20 @@ write_message_str:
     jsr update_str_pointer
     txa
     pha
-
-    ; begin loop
-    tya
+    jsr buffer_str
     tax
-    ldy #0
-str_loop:
-    lda (str_pointer), y
-    beq fill_loop
-    jsr get_str_tile
-    sta draw_buffer, x
-    inx
-    iny
-    jmp str_loop
+    ; todo add damage
 fill_loop:
     ; done, fill with blank spaces
     lda #$00
-    sta draw_buffer, x
+    sta draw_buffer, y
     inx
     iny
-    cpy #message_strlen
+    cpx #message_strlen
     bne fill_loop
     ; store a length of zero at end, to ensure we can get next index
     lda #$00
-    sta draw_buffer, x
-    ; restore y
-    txa
-    tay
+    sta draw_buffer, y
 continue_loop:
     pla
     clc

@@ -77,7 +77,9 @@ maxmobs    = 20
 ; buffer.s
 .globalzp max_buffer_size
 .globalzp draw_buffer
+.globalzp str_pointer
 .global next_index
+.global buffer_str
 .global render_buffer
 
 ; input.s

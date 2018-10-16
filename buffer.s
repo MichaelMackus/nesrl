@@ -29,12 +29,14 @@
 max_buffer_size = 120
 draw_buffer: .res max_buffer_size
 draw_length: .res 1
+str_pointer: .res 2 ; pointer for buffering of strings
 
 .segment "CODE"
 
 ; get next index for drawing
 ;
 ; updates: y with next available index
+; preserves: x
 .proc next_index
     lda #0
     tay
@@ -57,6 +59,44 @@ update_ppuaddr:
     tay
     jmp loop
 .endproc
+
+; Append string at str_pointer to draw_buffer.
+;
+; y: index of current draw buffer pos
+; out: length of written string
+; clobbers: x
+.proc buffer_str
+    ; index str with y, so we can use indirect indexed addressing mode
+    tya
+    tax
+    ldy #0
+str_loop:
+    ; load first char of str
+    lda (str_pointer), y
+    beq done ; done?
+    ; load tile index for char
+    jsr get_str_tile
+    ; update draw buffer, and increment
+    sta draw_buffer, x
+    inx
+    iny
+    jmp str_loop
+done:
+    ; restore y and return write length
+    sty draw_length
+    txa
+    tay
+    lda draw_length
+    rts
+.endproc
+
+; todo add number to draw_buffer
+;
+; in: number (only supports 0-99 for now)
+; y: index of current draw buffer pos
+; out: length of the written str
+;.proc buffer_num
+;.endproc
 
 ; Render the draw buffer.
 ; Only call this during vblank or when rendering is disabled. Caller will need
