@@ -33,6 +33,8 @@ draw_buffer: .res max_buffer_size
 draw_length: .res 1
 str_pointer: .res 2 ; pointer for buffering of strings
 
+tmp: .res 1
+
 .segment "CODE"
 
 ; get next index for drawing
@@ -48,16 +50,16 @@ loop:
     ; length is 0, so we're done drawing
     rts
 update_ppuaddr:
-    sta draw_length
+    sta tmp
     ; for length
     iny
     ; set ppu addr, high byte then low byte
     iny
     iny
-    ; add draw_length to y for next index
+    ; add tmp to y for next index
     tya
     clc
-    adc draw_length
+    adc tmp
     tay
     jmp loop
 .endproc
@@ -144,7 +146,7 @@ loop:
     sta draw_buffer
     rts
 update_ppuaddr:
-    sta draw_length
+    sta tmp
     iny
     ; reset ppu latch
     bit $2002
@@ -156,7 +158,7 @@ update_ppuaddr:
     sta $2006
     iny
 vram_loop:
-    cpx draw_length
+    cpx tmp
     beq next
     ; now we can write the actual buffer data to vram
     lda draw_buffer, y

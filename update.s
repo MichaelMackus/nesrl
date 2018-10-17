@@ -10,9 +10,10 @@
 
 .segment "ZEROPAGE"
 
-tmp:  .res 1
-endy: .res 1 ; for buffer seen loop
-endx: .res 1 ; for buffer seen loop
+tmp:   .res 1
+prevx: .res 1 ; for buffer seen loop
+endy:  .res 1 ; for buffer seen loop
+endx:  .res 1 ; for buffer seen loop
 draw_y:   .res 1 ; current draw buffer index
 draw_ppu: .res 2 ; current draw ppu addr
 
@@ -42,6 +43,10 @@ draw_ppu: .res 2 ; current draw ppu addr
     adc #sight_distance + 1 ; increment by 1 for player
     sta endx
 
+    ; initialize draw_length
+    lda #sight_distance*2 + 1 ; increment by 1 for player
+    sta draw_length
+
     ; set ypos to ypos - 2, and xpos to xpos - 2
 update_ypos:
     lda ypos
@@ -55,6 +60,7 @@ update_xpos:
     sbc #sight_distance
     bcc fix_overflow_xpos ; detect overflow
     sta xpos
+    sta prevx
     jmp loop
 
 fix_overflow_ypos:
@@ -64,6 +70,12 @@ fix_overflow_ypos:
 fix_overflow_xpos:
     lda #0
     sta xpos
+    sta prevx
+    ; update draw_length
+    lda mobs + Mob::coords + Coord::xcoord
+    clc
+    adc #sight_distance+1 ; increment by 1 for player
+    sta draw_length
 
 loop:
     lda ypos
@@ -73,7 +85,7 @@ loop:
 loop_start_buffer:
     ; write draw buffer length of sight distance
     jsr next_index
-    lda #sight_distance*2 + 1 ; increment by 1 for player
+    lda draw_length
     sta draw_buffer, y
     iny
     sty draw_y
@@ -129,9 +141,7 @@ loop_nextx:
 
 loop_donex:
     ; reset x
-    lda xpos
-    sec
-    sbc #sight_distance*2 + 1
+    lda prevx
     sta xpos
 loop_next:
     ; store zero length at end
