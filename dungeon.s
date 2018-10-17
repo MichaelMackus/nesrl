@@ -71,27 +71,19 @@ rand_passable:
 
 ; is x & y within bounds?
 ; out: 0 if within bounds of map
-; clobbers: tmp, y, and accum
+; clobbers: tmp and accum
 within_bounds:
     ; ensure not within 3 pixels of left or right
-    ldy xpos
-    cpy #min_bound
+    lda xpos
+    cmp #min_bound
     bcc within_bounds_fail
-    lda #max_width
-    sec
-    sbc #min_bound
-    sta tmp
-    cpy tmp
+    cmp #max_width-min_bound
     bcs within_bounds_fail
     ; ensure not within 3 pixels of top or bottom
-    ldy ypos
-    cpy #min_bound
+    lda ypos
+    cmp #min_bound
     bcc within_bounds_fail
-    lda #max_height
-    sec
-    sbc #min_bound
-    sta tmp
-    cpy tmp
+    cmp #max_height-min_bound
     bcs within_bounds_fail
 within_bounds_success:
     lda #0

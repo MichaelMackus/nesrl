@@ -39,16 +39,9 @@ clear_loop:
 ; see https://medium.freecodecamp.org/how-to-make-your-own-procedural-dungeon-map-generator-using-the-random-walk-algorithm-e0085c8aa9a?gi=74f51f176996
 generate_corridors:
     sta direction
-    lda #0
     sta tunnels
 
     jsr randxy
-    stx xpos
-    sty ypos
-
-    ; initialize vars
-    lda #$00
-    sta tunnels
 
     ; push xpos & ypos to stack
     lda xpos
