@@ -21,6 +21,8 @@
 .include "global.inc"
 
 .export next_index
+.export buffer_num
+.export buffer_str
 .export render_buffer
 
 .segment "ZEROPAGE"
@@ -86,17 +88,40 @@ done:
     sty draw_length
     txa
     tay
-    lda draw_length
     rts
 .endproc
 
-; todo add number to draw_buffer
+; add number to draw_buffer
 ;
 ; in: number (only supports 0-99 for now)
 ; y: index of current draw buffer pos
-; out: length of the written str
-;.proc buffer_num
-;.endproc
+; clobbers: x
+.proc buffer_num
+    cmp #10
+    bcc render_ones
+    ; first, render tens place for number
+    ldx #0
+tens_loop:
+    cmp #10
+    bcc render_tens
+    sec
+    sbc #10
+    inx
+    jmp tens_loop
+render_tens:
+    pha ; remember ones
+    txa
+    jsr get_num_tile
+    sta draw_buffer, y
+    iny
+    ; now, render ones place
+    pla
+render_ones:
+    jsr get_num_tile
+    sta draw_buffer, y
+    iny
+    rts
+.endproc
 
 ; Render the draw buffer.
 ; Only call this during vblank or when rendering is disabled. Caller will need

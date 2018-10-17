@@ -38,46 +38,22 @@ tmp: .res 1
     lda #$25
     sta draw_buffer, y
     iny
-    ; remember draw index
-    tya
-    pha
-    ; data
+    ; add leading space (for spacing up with other elements)
     lda mobs + Mob::hp
     cmp #10
     bcc buffer_space
     ; buffer tens place
-    ldx #0
-buffer_tens_loop:
-    cmp #10
-    bcc buffer_tens
-    sec
-    sbc #10
-    inx
-    jmp buffer_tens_loop
-buffer_tens:
-    sta tmp
-    pla
-    tay
-    txa
-    jsr get_num_tile
-    sta draw_buffer, y
-    iny
-    lda tmp
-buffer_ones:
-    jsr get_num_tile
-    sta draw_buffer, y
-    iny
-    ; length 0 signifying end of buffer
+continue_buffer:
+    jsr buffer_num
+    ; finish buffer
     lda #$00
     sta draw_buffer, y
     rts
 
 buffer_space:
-    pla
-    tay
     lda #$00
     sta draw_buffer, y
     iny
     lda mobs + Mob::hp
-    jmp buffer_ones
+    jmp continue_buffer
 .endproc

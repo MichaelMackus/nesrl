@@ -71,15 +71,20 @@ write_message_header:
     sta draw_buffer, y
     iny
 write_message_str:
-    ; write message bytes loop
     pla
     tax
-    jsr update_str_pointer
+    ; update tmp_message using stack var
+    lda messages+Message::type, x
+    sta tmp_message+Message::type
+    lda messages+Message::amount, x
+    sta tmp_message+Message::amount
     txa
     pha
+    jsr update_str_pointer
     jsr buffer_str
-    tax
-    ; todo add damage
+    ldx draw_length
+    ; add damage/amount
+    jsr buffer_amount
 fill_loop:
     ; done, fill with blank spaces
     lda #$00
@@ -115,10 +120,45 @@ done:
     pla
     rts
 
+; buffer amount to draw buffer
+; increment x by amount tiles drawn
+buffer_amount:
+    lda tmp_message+Message::type
+    cmp #Messages::hit
+    beq continue_buffer_amount
+    cmp #Messages::hurt
+    beq continue_buffer_amount
+    cmp #Messages::heal
+    beq continue_buffer_amount
+    ; default condition
+    rts
+continue_buffer_amount:
+    ; increase x by amount of digits
+    lda tmp_message+Message::amount
+    cmp #10
+    bcc increase_x_once
+    ; more than 1 digit, assuming num 0-99
+    inx
+    inx
+update_buffer_amount:
+    ; remember x for after buffer update
+    txa
+    pha
+    ; buffer number to draw buffer
+    lda tmp_message+Message::amount
+    jsr buffer_num
+    ; remember x index
+    pla
+    tax
+    rts
+increase_x_once:
+    inx
+    jmp update_buffer_amount
+
 ; update the str_pointer to point to the correct message
 ; uses index in x for message
 update_str_pointer:
-    lda messages+Message::type, x
+    lda tmp_message+Message::type
     cmp #Messages::none
     beq load_blank
     cmp #Messages::hit
