@@ -1,5 +1,11 @@
 .include "global.inc"
 
+.export rand_passable
+.export is_passable
+.export within_bounds
+.export get_byte_mask
+.export get_byte_offset
+
 .segment "ZEROPAGE"
 
 min_bound  = 1  ; minimum number of spaces from edge
@@ -16,13 +22,14 @@ tmp:         .res 1
 .segment "BSS"
 
 tiles:       .res maxtiles ; represents a 256x240 walkable grid in bits, 1 = walkable; 0 = impassable
+; todo probably want to keep track of seen tiles so we can re-draw them
 
 .segment "CODE"
 
 ; pick start x from 0-31 and y from 0-23
 ; updates xpos and ypos with coordinates
 ; clobbers: x
-randxy:
+.proc randxy
 randy:
     jsr prng
     lsr
@@ -44,12 +51,13 @@ randx:
     jsr within_bounds
     bne randxy
     rts
+.endproc
 
 ; check if tile passable
 ; out: 0 if passable
 ; clobbers: tmp, y, and x
 ; todo check mobs
-is_passable:
+.proc is_passable
     jsr get_byte_offset
     tay
     jsr get_byte_mask
@@ -60,19 +68,21 @@ is_passable:
 is_passable_success:
     lda #0
     rts
+.endproc
 
 ; rand passable xy
 ; clobbers: tmp, x,  and y
-rand_passable:
+.proc rand_passable
     jsr randxy
     jsr is_passable
     bne rand_passable
     rts
+.endproc
 
 ; is x & y within bounds?
 ; out: 0 if within bounds of map
 ; clobbers: tmp and accum
-within_bounds:
+.proc within_bounds
     ; ensure not within 3 pixels of left or right
     lda xpos
     cmp #min_bound
@@ -91,11 +101,12 @@ within_bounds_success:
 within_bounds_fail:
     lda #1
     rts
+.endproc
 
 ; get byte offset for x,y
 ; out: offset to first byte in tiles (x/8 + y*4)
 ; clobbers: tmp
-get_byte_offset:
+.proc get_byte_offset
     lda xpos
     lsr
     lsr
@@ -107,11 +118,12 @@ get_byte_offset:
     clc
     adc tmp
     rts
+.endproc
 
 ; get byte mask for x
 ; out: byte mask
 ; clobbers: tmp and x
-get_byte_mask:
+.proc get_byte_mask
     lda xpos
     sta tmp
     lda #0
@@ -140,6 +152,7 @@ get_byte_mask_loop:
     jmp get_byte_mask_loop
 get_byte_mask_done:
     rts
+.endproc
 
 ; the tiles are arranged like so:
 ;
