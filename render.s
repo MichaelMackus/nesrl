@@ -8,7 +8,7 @@
 
 .segment "ZEROPAGE"
 
-tmp: .byte 1
+tmp: .res 1
 
 .segment "CODE"
 
@@ -134,11 +134,11 @@ render_done:
 .endproc
 
 .proc render_death
-    ; turn off rendering
-    lda #%00000000 ; note: need second bit in order to show background on left side of screen
-    sta $2001
-    ; clear the screen first
-    jsr clear_screen
+    ; wait for nmi
+    lda nmis
+waitnmi:
+    cmp nmis
+    beq waitnmi
     ; prep ppu for first nametable write
     bit $2002
     lda #$21
@@ -165,18 +165,19 @@ render_done:
     sta str_pointer+1
     jsr render_str
     ; done
-    jsr finish_render
-    lda #%00001010 ; note: need second bit in order to show background on left side of screen
-    sta $2001
+    bit $2002
+    lda #$00
+    sta $2005
+    sta $2005
     rts
 .endproc
 
 .proc render_escape
-    ; turn off rendering
-    lda #%00000000 ; note: need second bit in order to show background on left side of screen
-    sta $2001
-    ; clear the screen first
-    jsr clear_screen
+    ; wait for nmi
+    lda nmis
+waitnmi:
+    cmp nmis
+    beq waitnmi
     ; prep ppu for first nametable write
     bit $2002
     lda #$21
@@ -191,18 +192,19 @@ render_escape_message:
     sta str_pointer+1
     jsr render_str
     ; done
-    jsr finish_render
-    lda #%00001010 ; note: need second bit in order to show background on left side of screen
-    sta $2001
+    bit $2002
+    lda #$00
+    sta $2005
+    sta $2005
     rts
 .endproc
 
 .proc render_win
-    ; turn off rendering
-    lda #%00000000 ; note: need second bit in order to show background on left side of screen
-    sta $2001
-    ; clear the screen first
-    jsr clear_screen
+    ; wait for nmi
+    lda nmis
+waitnmi:
+    cmp nmis
+    beq waitnmi
     ; prep ppu for first nametable write
     bit $2002
     lda #$21
@@ -216,14 +218,14 @@ render_escape_message:
     sta str_pointer+1
     jsr render_str
     ; done
-    jsr finish_render
-    lda #%00001010 ; note: need second bit in order to show background on left side of screen
-    sta $2001
+    bit $2002
+    lda #$00
+    sta $2005
+    sta $2005
     rts
 .endproc
 
 .proc update_sprites
-
 ; render the player sprite
 render_mobs:
     lda #0
@@ -270,47 +272,6 @@ clear_mob:
     sta $0200, x
     sta $0203, x
     jmp continue_mobs_loop
-.endproc
-
-; turn back on render when nmi ready
-.proc finish_render
-    lda nmis
-waitnmi:
-    cmp nmis
-    beq waitnmi
-    ; nmi done, reset scrolling
-    bit $2002
-    lda #$00
-    sta $2005
-    sta $2005
-    rts
-.endproc
-
-; clear the entire screen
-.proc clear_screen
-    ; prepare PPU
-    bit $2002
-    lda #$20
-    sta $2006
-    lda #$00
-    sta $2006
-    ldy #0
-    ldx #0
-; clear line until bottom
-clear_y:
-    cpy #$1e
-    beq done
-clear_x:
-    lda #$00
-    sta $2007
-    inx
-    cpx #$20
-    bne clear_x
-    ldx #$00
-    iny
-    jmp clear_y
-done:
-    rts
 .endproc
 
 ; render padded num 0-99
