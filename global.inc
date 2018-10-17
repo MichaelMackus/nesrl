@@ -45,6 +45,9 @@ maxmobs    = 20
 .global rand_mob
 .global is_alive
 
+; ai.s
+.global mob_ai
+
 ; player.s
 .global initialize_player
 .global buffer_hp
