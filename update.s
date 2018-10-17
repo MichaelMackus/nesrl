@@ -1,4 +1,6 @@
-; functions relating to updating the buffer
+; procedures relating to updating the buffer
+;
+; todo probably want to have a proc for updating previously seen tiles to another tile
 
 .include "global.inc"
 
@@ -13,11 +15,6 @@ endy: .res 1 ; for buffer seen loop
 endx: .res 1 ; for buffer seen loop
 draw_y:   .res 1 ; current draw buffer index
 draw_ppu: .res 2 ; current draw ppu addr
-
-.segment "BSS"
-
-seen:    .res maxtiles
-see_cur: .res maxtiles ; what tiles can we currently see, todo probably don't want as much ram for this...
 
 .segment "CODE"
 
@@ -34,6 +31,7 @@ see_cur: .res maxtiles ; what tiles can we currently see, todo probably don't wa
     jsr get_byte_offset
     tay
     jsr get_byte_mask
+
     ; update endx and endy
     lda ypos
     clc
@@ -43,17 +41,35 @@ see_cur: .res maxtiles ; what tiles can we currently see, todo probably don't wa
     clc
     adc #sight_distance + 1 ; increment by 1 for player
     sta endx
+
     ; set ypos to ypos - 2, and xpos to xpos - 2
+update_ypos:
     lda ypos
     sec
     sbc #sight_distance
+    bcc fix_overflow_ypos ; detect overflow
     sta ypos
+update_xpos:
     lda xpos
     sec
     sbc #sight_distance
+    bcc fix_overflow_xpos ; detect overflow
+    sta xpos
+    jmp loop
+
+fix_overflow_ypos:
+    lda #0
+    sta ypos
+    jmp update_xpos
+fix_overflow_xpos:
+    lda #0
     sta xpos
 
 loop:
+    lda ypos
+    cmp #max_height
+    bcc loop_start_buffer
+    jmp done
 loop_start_buffer:
     ; write draw buffer length of sight distance
     jsr next_index
@@ -81,7 +97,15 @@ tile_loop:
     ; check if we can see
     ldy #0
     jsr can_see
-    bne tile_bg ; todo draw seen tile, if already seen
+    beq draw_seen
+    ; draw seen tile, if already seen
+    jsr get_byte_offset
+    tay
+    jsr get_byte_mask
+    and seen, y
+    ; no tile was seen, draw bg
+    beq tile_bg
+draw_seen:
     ; success, draw tile
     ldx xpos
     ldy ypos
@@ -119,7 +143,7 @@ loop_next:
     lda ypos
     cmp endy
     beq done
-    jmp loop_start_buffer
+    jmp loop
  
 done:
     rts

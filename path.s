@@ -10,6 +10,10 @@ prevx: .res 1
 prevy: .res 1
 i:     .res 1 ; used for increment in loop, to prevent use of stack
 
+.segment "BSS"
+
+seen:    .res maxtiles
+
 .segment "CODE"
 
 ; check if mob can see tile
@@ -20,7 +24,7 @@ i:     .res 1 ; used for increment in loop, to prevent use of stack
 ; y: mob index (unmodified)
 ;
 ; out: 0 if can see
-; clobbers: x register
+; clobbers: x and y register
 .proc can_see
     ; load our destination
     lda xpos
@@ -89,6 +93,12 @@ success:
     sta xpos
     lda prevy
     sta ypos
+    ; update seen with success
+    jsr get_byte_offset
+    tay
+    jsr get_byte_mask
+    ora seen, y
+    sta seen, y
     ; success result
     lda #0
     rts

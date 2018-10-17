@@ -57,6 +57,7 @@ maxmobs    = 20
 
 ; path.s
 .globalzp sight_distance
+.global seen
 .global can_see
 
 ; player.s
