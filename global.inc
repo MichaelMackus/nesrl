@@ -10,6 +10,8 @@ maxmobs    = 20
 .globalzp controller1
 .globalzp controller1release
 .globalzp nmis
+.globalzp gamestate
+.globalzp need_buffer
 
 ; message.s
 .globalzp max_messages
@@ -67,8 +69,7 @@ maxmobs    = 20
 
 ; render.s
 .global render
-.global render_hp
-.global render_messages
+.global regenerate
 .global render_escape
 .global render_death
 .global render_win
@@ -86,3 +87,4 @@ maxmobs    = 20
 
 ; input.s
 .global readcontroller
+.global handle_input

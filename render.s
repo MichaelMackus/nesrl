@@ -3,6 +3,7 @@
 .include "global.inc"
 
 .export render
+.export regenerate
 .export render_escape
 .export render_win
 .export update_sprites
@@ -120,6 +121,16 @@ render_done:
     sta $2001
     rts
 
+.endproc
+
+; re-generate next dungeon level
+.proc regenerate
+    lda nmis
+    sta seed
+    jsr generate
+    ; render the dungeon
+    jsr render
+    rts
 .endproc
 
 .proc render_death

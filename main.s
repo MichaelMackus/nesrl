@@ -194,129 +194,6 @@ wait_nmi:
     jmp main
 
 
-handle_input:
-    lda controller1release
-    and #%10000000 ; a
-    bne check_action
-    ; update player pos to memory
-    lda mobs + Mob::coords + Coord::xcoord
-    sta xpos
-    lda mobs + Mob::coords + Coord::ycoord
-    sta ypos
-    ; handle player movement
-    lda controller1release
-    and #%00000010  ; left
-    bne move_left
-    lda controller1release
-    and #%00000001  ; right
-    bne move_right
-    lda controller1release
-    and #%00000100  ; down
-    bne move_down
-    lda controller1release
-    and #%00001000  ; up
-    bne move_up
-    rts
-check_action:
-check_dstair:
-    ldx mobs + Mob::coords + Coord::xcoord
-    ldy mobs + Mob::coords + Coord::ycoord
-    cpx down_x
-    bne check_upstair
-    cpy down_y
-    bne check_upstair
-    ; on downstair, generate new level
-    inc dlevel
-    lda dlevel
-    cmp #10 ; todo custom win condition
-    beq win
-    jsr regenerate
-    rts
-check_upstair:
-    ldx mobs + Mob::coords + Coord::xcoord
-    lda mobs + Mob::coords + Coord::ycoord
-    cpx up_x
-    bne input_done
-    cpy up_y
-    bne input_done
-    ; on upstair, generate new level
-    dec dlevel
-    lda dlevel
-    cmp #0
-    beq escape
-    jsr regenerate
-    rts
-escape:
-    jsr render_escape
-    ; escape dungeon
-    lda #2
-    sta gamestate
-    rts
-win:
-    jsr render_win
-    ; win dungeon
-    lda #3
-    sta gamestate
-    rts
-move_left:
-    dec xpos
-    jsr within_bounds
-    bne input_done
-    jmp move_done
-move_right:
-    inc xpos
-    jsr within_bounds
-    bne input_done
-    jmp move_done
-move_up:
-    dec ypos
-    jsr within_bounds
-    bne input_done
-    jmp move_done
-move_down:
-    inc ypos
-    jsr within_bounds
-    bne input_done
-move_done:
-    jsr mob_at
-    beq attack_mob
-    jsr is_passable
-    bne input_done
-    lda xpos
-    sta mobs+Mob::coords+Coord::xcoord
-    lda ypos
-    sta mobs+Mob::coords+Coord::ycoord
-input_done:
-    rts
-damage = tmp
-attack_mob:
-    ; ensure we update buffer
-    lda #1
-    sta need_buffer
-    ; todo use damage calc, for now just do 1 damage
-    lda #1
-    sta damage
-    jsr damage_mob
-    ; if dead, push kill message
-    jsr is_alive
-    bne push_kill_msg
-    ; push damage message
-    lda #Messages::hit
-    ldx damage
-    jsr push_msg
-    ; done
-    rts
-push_kill_msg:
-    ; push damage message
-    lda #Messages::hit
-    ldx damage
-    jsr push_msg
-    ; push kill message
-    lda #Messages::kill
-    jsr push_msg
-    ; done
-    rts
-
 ; update mob pos randomly, and attack player
 ; todo move towards player if can see
 mob_ai:
@@ -359,6 +236,7 @@ checky:
     cmp ypos
     beq attack_player
     jmp move_mob
+damage = tmp
 attack_player:
     ; remember y to stack
     tya
@@ -460,16 +338,6 @@ continue_mob_ai:
     beq done_ai_loop
     jmp mob_ai_loop
 done_ai_loop:
-    rts
-
-
-; re-generate dungeon level
-regenerate:
-    lda nmis
-    sta seed
-    jsr generate
-    ; render the dungeon
-    jsr render
     rts
 
 .segment "RODATA"
