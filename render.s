@@ -1,5 +1,3 @@
-; todo simplify - we shouldn't need render_str or render_num in here
-
 .include "global.inc"
 
 .export render
@@ -14,25 +12,8 @@ tmp: .byte 1
 
 .segment "CODE"
 
-; render string constant to screen
-; in: address to start of str
-; clobbers: x
-.macro render_str str
-    .local loop
-    .local done
-    ldx #0
-loop:
-    lda str, x
-    beq done
-    jsr get_str_tile
-    sta $2007
-    inx
-    jmp loop
-done:
-.endmacro
-
+; render the dungeon level
 .proc render
-
     lda nmis
 wait_nmi:
     ; wait for nmi
@@ -67,8 +48,18 @@ y_repeat:
 x_repeat:
     stx xpos
     sty ypos
+    ; update tile if seen
+    ldy #0
+    jsr can_see
+    bne not_seen
+    ; it's seen!
     jsr get_bg_tile
     sta $2007
+    jmp continue_loop
+not_seen:
+    lda #$00
+    sta $2007
+continue_loop:
     ldx xpos
     ldy ypos
     inx
@@ -87,10 +78,18 @@ render_status:
     sta $2006
     lda #$21
     sta $2006
-    render_str txt_hp
-    ; render hp via draw buffer
-    jsr buffer_hp
-    jsr render_buffer
+    lda #<txt_hp
+    sta str_pointer
+    lda #>txt_hp
+    sta str_pointer+1
+    jsr render_str
+    ; spacing to line up with dlvl
+    lda #$00
+    sta $2007
+    sta $2007
+    ; render hp
+    lda mobs + Mob::hp
+    jsr render_num
 
     ; dlvl
     bit $2002
@@ -98,10 +97,12 @@ render_status:
     sta $2006
     lda #$61
     sta $2006
-    render_str txt_dlvl
+    lda #<txt_dlvl
+    sta str_pointer
+    lda #>txt_dlvl
+    sta str_pointer+1
+    jsr render_str
     ; render current dlevel
-    lda #$00
-    sta $2007
     lda dlevel
     jsr render_num
 
@@ -120,7 +121,6 @@ render_done:
     lda #%00011010 ; note: need second bit in order to show background on left side of screen
     sta $2001
     rts
-
 .endproc
 
 ; re-generate next dungeon level
@@ -134,144 +134,92 @@ render_done:
 .endproc
 
 .proc render_death
-
     ; turn off rendering
     lda #%00000000 ; note: need second bit in order to show background on left side of screen
     sta $2001
+    ; clear the screen first
+    jsr clear_screen
     ; prep ppu for first nametable write
-    lda #$20
+    bit $2002
+    lda #$21
     sta $2006
-    lda #$00
+    lda #$8B
     sta $2006
-    ldx #$00 ; counter for background sprite position
-    txa
-    tay
-    sta tmp
-; clear line until middle of screen
-render_death_clear_y:
-    cpy #$0F
-    beq render_death_message
-render_death_clear_x:
-    lda #$00
-    sta $2007
-    inx
-    cpx #$20
-    bne render_death_clear_x
-    ldx #$00
-    iny
-    jmp render_death_clear_y
-render_death_message:
-    lda tmp
-    bne render_death_done
-    ; You deathd!
-    lda #$00
-    sta $2007
-    render_str txt_death
+    ; You died
+    lda #<txt_death
+    sta str_pointer
+    lda #>txt_death
+    sta str_pointer+1
+    jsr render_str
+    ; Game Over
+    ; prep ppu for next nametable write
+    bit $2002
+    lda #$22
+    sta $2006
+    lda #$0B
+    sta $2006
+    ; You died
+    lda #<txt_gameover
+    sta str_pointer
+    lda #>txt_gameover
+    sta str_pointer+1
+    jsr render_str
     ; done
-    inc tmp
-    lda #$00
-    tax
-    tay
-    jsr render_death_clear_y
-render_death_done:
+    jsr finish_render
     lda #%00001010 ; note: need second bit in order to show background on left side of screen
     sta $2001
     rts
-
 .endproc
 
 .proc render_escape
-
     ; turn off rendering
     lda #%00000000 ; note: need second bit in order to show background on left side of screen
     sta $2001
+    ; clear the screen first
+    jsr clear_screen
     ; prep ppu for first nametable write
-    lda #$20
+    bit $2002
+    lda #$21
     sta $2006
-    lda #$00
+    lda #$CA
     sta $2006
-    ldx #$00 ; counter for background sprite position
-    txa
-    tay
-    sta tmp
-; clear line until middle of screen
-render_escape_clear_y:
-    cpy #$0F
-    beq render_escape_message
-render_escape_clear_x:
-    lda #$00
-    sta $2007
-    inx
-    cpx #$20
-    bne render_escape_clear_x
-    ldx #$00
-    iny
-    jmp render_escape_clear_y
 render_escape_message:
-    lda tmp
-    bne render_escape_done
     ; You escaped!
-    lda #$00
-    sta $2007
-    render_str txt_escape
+    lda #<txt_escape
+    sta str_pointer
+    lda #>txt_escape
+    sta str_pointer+1
+    jsr render_str
     ; done
-    inc tmp
-    lda #$00
-    tax
-    tay
-    jsr render_escape_clear_y
-render_escape_done:
+    jsr finish_render
     lda #%00001010 ; note: need second bit in order to show background on left side of screen
     sta $2001
     rts
-
 .endproc
 
 .proc render_win
-
     ; turn off rendering
     lda #%00000000 ; note: need second bit in order to show background on left side of screen
     sta $2001
+    ; clear the screen first
+    jsr clear_screen
     ; prep ppu for first nametable write
-    lda #$20
+    bit $2002
+    lda #$21
     sta $2006
-    lda #$00
+    lda #$CC
     sta $2006
-    ldx #$00 ; counter for background sprite position
-    txa
-    tay
-    sta tmp
-; clear line until middle of screen
-render_win_clear_y:
-    cpy #$0F
-    beq render_win_message
-render_win_clear_x:
-    lda #$00
-    sta $2007
-    inx
-    cpx #$20
-    bne render_win_clear_x
-    ldx #$00
-    iny
-    jmp render_win_clear_y
-render_win_message:
-    lda tmp
-    bne render_win_done
     ; You win!
-    lda #$00
-    sta $2007
-    render_str txt_win
+    lda #<txt_win
+    sta str_pointer
+    lda #>txt_win
+    sta str_pointer+1
+    jsr render_str
     ; done
-    inc tmp
-    lda #$00
-    tax
-    tay
-    jsr render_win_clear_y
-render_win_done:
+    jsr finish_render
     lda #%00001010 ; note: need second bit in order to show background on left side of screen
     sta $2001
     rts
-
 .endproc
 
 .proc update_sprites
@@ -322,15 +270,55 @@ clear_mob:
     sta $0200, x
     sta $0203, x
     jmp continue_mobs_loop
-
 .endproc
 
-; render num 0-99
+; turn back on render when nmi ready
+.proc finish_render
+    lda nmis
+waitnmi:
+    cmp nmis
+    beq waitnmi
+    ; nmi done, reset scrolling
+    bit $2002
+    lda #$00
+    sta $2005
+    sta $2005
+    rts
+.endproc
+
+; clear the entire screen
+.proc clear_screen
+    ; prepare PPU
+    bit $2002
+    lda #$20
+    sta $2006
+    lda #$00
+    sta $2006
+    ldy #0
+    ldx #0
+; clear line until bottom
+clear_y:
+    cpy #$1e
+    beq done
+clear_x:
+    lda #$00
+    sta $2007
+    inx
+    cpx #$20
+    bne clear_x
+    ldx #$00
+    iny
+    jmp clear_y
+done:
+    rts
+.endproc
+
+; render padded num 0-99
 ; in: number
 ; clobbers: x and y
-render_num:
+.proc render_num
     cmp #10
-    bcc render_ones
+    bcc render_padded
     ; first, render tens place for number
     ldx #0
 tens_loop:
@@ -351,6 +339,29 @@ render_ones:
     jsr get_num_tile
     sta $2007
     rts
+render_padded:
+    tax
+    lda #$00
+    sta $2007
+    txa
+    jmp render_ones
+.endproc
+
+; render string constant to screen
+; in: address to start of str
+; clobbers: y
+.proc render_str
+    ldy #0
+loop:
+    lda (str_pointer), y
+    beq done
+    jsr get_str_tile
+    sta $2007
+    iny
+    jmp loop
+done:
+    rts
+.endproc
 
 .segment "RODATA"
 
@@ -359,6 +370,7 @@ txt_hp:     .asciiz "hp"
 txt_lvl:    .asciiz "lvl"
 txt_dlvl:   .asciiz "dlvl"
 ; end messages
-txt_win:    .asciiz "You win!"
-txt_escape: .asciiz "You escaped!"
-txt_death:  .asciiz "You died!"
+txt_win:      .asciiz "You win!"
+txt_escape:   .asciiz "You escaped!"
+txt_death:    .asciiz "You died!"
+txt_gameover: .asciiz "Game Over"
