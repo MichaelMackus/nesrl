@@ -48,6 +48,9 @@ maxmobs    = 20
 ; ai.s
 .global mob_ai
 
+; path.s
+.global can_see
+
 ; player.s
 .global initialize_player
 .global buffer_hp
