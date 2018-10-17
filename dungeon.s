@@ -46,8 +46,8 @@ randx:
     rts
 
 ; check if tile passable
-; clobbers: tmp and y
 ; out: 0 if passable
+; clobbers: tmp, y, and x
 ; todo check mobs
 is_passable:
     jsr get_byte_offset

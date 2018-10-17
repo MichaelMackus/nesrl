@@ -288,12 +288,12 @@ move_done:
     sta mobs+Mob::coords+Coord::ycoord
 input_done:
     rts
+damage = tmp
 attack_mob:
     ; ensure we update buffer
     lda #1
     sta need_buffer
     ; todo use damage calc, for now just do 1 damage
-    damage = tmp
     lda #1
     sta damage
     jsr damage_mob
@@ -324,7 +324,9 @@ mob_ai:
 mob_ai_loop:
     tya
     jsr is_alive
-    bne continue_mob_ai
+    beq do_ai
+    jmp continue_mob_ai
+do_ai:
     ; todo diff function
     lda mobs + Mob::coords + Coord::xcoord, y
     sta xpos
@@ -388,15 +390,76 @@ player_dead:
     pla
     tay
     jmp render_death
+mob_index = tmp
 move_mob:
-    ; todo move mob random dir
+    ; todo wtf not working now :(
+    ; move mob random dir
+    lda mobs + Mob::coords + Coord::xcoord, y
+    sta xpos
+    lda mobs + Mob::coords + Coord::ycoord, y
+    sta ypos
+    sty mob_index
+    jsr d4
+    cmp #1
+    beq move_mob_up
+    cmp #2
+    beq move_mob_right
+    cmp #3
+    beq move_mob_down
+move_mob_left:
+    dec xpos
+    jsr is_passable
+    ; todo is this affecting beq statement?
+    beq do_move_mob_left
+    ldy mob_index
+    jmp continue_mob_ai
+do_move_mob_left:
+    ldy mob_index
+    lda xpos
+    sta mobs+Mob::coords+Coord::xcoord, y
+    jmp continue_mob_ai
+move_mob_up:
+    dec ypos
+    jsr is_passable
+    beq do_move_mob_up
+    ldy mob_index
+    jmp continue_mob_ai
+do_move_mob_up:
+    ldy mob_index
+    lda ypos
+    sta mobs+Mob::coords+Coord::ycoord, y
+    jmp continue_mob_ai
+move_mob_right:
+    inc xpos
+    jsr is_passable
+    beq do_move_mob_right
+    ldy mob_index
+    jmp continue_mob_ai
+do_move_mob_right:
+    ldy mob_index
+    lda xpos
+    sta mobs+Mob::coords+Coord::xcoord, y
+    jmp continue_mob_ai
+move_mob_down:
+    inc ypos
+    jsr is_passable
+    beq do_move_mob_up
+    ldy mob_index
+    jmp continue_mob_ai
+do_move_mob_down:
+    ldy mob_index
+    lda ypos
+    sta mobs+Mob::coords+Coord::ycoord, y
+    jmp continue_mob_ai
 continue_mob_ai:
     tya
     clc
     adc #mob_size
     tay
     cmp #mobs_size
-    bne mob_ai_loop
+    beq done_ai_loop
+    jmp mob_ai_loop
+done_ai_loop:
     rts
 
 
