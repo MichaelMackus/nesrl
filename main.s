@@ -178,6 +178,7 @@ done:
     ; update draw buffer with messages
     jsr buffer_messages
     jsr buffer_hp
+    jsr buffer_seen
     ; stop further buffering
     lda #0
     sta need_buffer
@@ -192,6 +193,7 @@ wait_nmi:
 
     ; endless game loop
     jmp main
+
 
 
 .segment "RODATA"

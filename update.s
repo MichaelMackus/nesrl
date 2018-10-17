@@ -3,13 +3,128 @@
 .include "global.inc"
 
 .export buffer_hp
+.export buffer_seen
 .export buffer_messages
 
 .segment "ZEROPAGE"
 
-tmp: .res 1
+tmp:  .res 1
+endy: .res 1 ; for buffer seen loop
+endx: .res 1 ; for buffer seen loop
+draw_y:   .res 1 ; current draw buffer index
+draw_ppu: .res 2 ; current draw ppu addr
+
+.segment "BSS"
+
+seen:    .res maxtiles
+see_cur: .res maxtiles ; what tiles can we currently see, todo probably don't want as much ram for this...
 
 .segment "CODE"
+
+; update draw buffer with seen bg tiles
+;
+; clobbers: all registers, xpos, and ypos
+.proc buffer_seen
+    ; load player xpos and ypos
+    lda mobs + Mob::coords + Coord::xcoord
+    sta xpos
+    lda mobs + Mob::coords + Coord::ycoord
+    sta ypos
+    ; get current byte offset & mask
+    jsr get_byte_offset
+    tay
+    jsr get_byte_mask
+    ; update endx and endy
+    lda ypos
+    clc
+    adc #sight_distance + 1 ; increment by 1 for player
+    sta endy
+    lda xpos
+    clc
+    adc #sight_distance + 1 ; increment by 1 for player
+    sta endx
+    ; set ypos to ypos - 2, and xpos to xpos - 2
+    lda ypos
+    sec
+    sbc #sight_distance
+    sta ypos
+    lda xpos
+    sec
+    sbc #sight_distance
+    sta xpos
+
+loop:
+loop_start_buffer:
+    ; write draw buffer length of sight distance
+    jsr next_index
+    lda #sight_distance*2 + 1 ; increment by 1 for player
+    sta draw_buffer, y
+    iny
+    sty draw_y
+    ; update ppu addr pointer, todo just need to inc by 32 each time for y
+    jsr update_ppuaddr
+    ; store ppu addr to buffer
+    ldy draw_y
+    lda draw_ppu
+    sta draw_buffer, y
+    iny
+    lda draw_ppu+1
+    sta draw_buffer, y
+    iny
+
+   ; now we're ready to draw tile data
+tile_loop:
+    sty draw_y
+    ; ensure xpos and ypos is valid
+    jsr within_bounds
+    bne tile_bg
+    ; check if we can see
+    ldy #0
+    jsr can_see
+    bne tile_bg ; todo draw seen tile, if already seen
+    ; success, draw tile
+    ldx xpos
+    ldy ypos
+    jsr get_bg_tile
+    ldy draw_y
+    sta draw_buffer, y
+    iny
+    jmp loop_nextx
+tile_bg:
+    ldy draw_y
+    lda #$00
+    sta draw_buffer, y
+    iny
+
+loop_nextx:
+    inc xpos
+    lda xpos
+    cmp endx
+    beq loop_donex
+    jmp tile_loop
+
+loop_donex:
+    ; reset x
+    lda xpos
+    sec
+    sbc #sight_distance*2 + 1
+    sta xpos
+loop_next:
+    ; store zero length at end
+    lda #$00
+    sta draw_buffer, y
+    iny
+    ; increment y & ensure we're not done
+    inc ypos
+    lda ypos
+    cmp endy
+    beq done
+    jmp loop_start_buffer
+ 
+done:
+    rts
+
+.endproc
 
 ; todo max hp
 .proc buffer_hp
@@ -141,5 +256,40 @@ update_buffer_amount:
 increase_draw_len_once:
     inc draw_length
     jmp update_buffer_amount
+.endproc
+
+; get the ppu addr for xpos and ypos and store in draw_ppu
+; todo test this
+.proc update_ppuaddr
+    lda #$20
+    sta draw_ppu
+    lda #$20
+    sta draw_ppu+1
+    ldx #0
+    ldy #0
+loop:
+    cpy ypos
+    bne inc_ppu
+    cpx xpos
+    bne inc_ppu
+    jmp done
+inc_ppu:
+    inc draw_ppu+1
+    lda draw_ppu+1
+    bne loop_next
+    ; increment ppu high byte
+    inc draw_ppu
+loop_next:
+    inx
+    cpx #$20
+    bne loop
+    ldx #$0
+    iny
+    ; ensure y didn't overflow
+    cpy #$00
+    beq done
+    jmp loop
+done:
+    rts
 .endproc
 

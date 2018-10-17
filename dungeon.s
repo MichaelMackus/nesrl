@@ -81,7 +81,7 @@ is_passable_success:
 
 ; is x & y within bounds?
 ; out: 0 if within bounds of map
-; clobbers: tmp and accum
+; clobbers: accum
 .proc within_bounds
     ; ensure not within 3 pixels of left or right
     lda xpos

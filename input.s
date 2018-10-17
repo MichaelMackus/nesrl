@@ -11,6 +11,9 @@
     beq check_movement
     jmp handle_action
 check_movement:
+    ; ensure we update buffer
+    lda #1
+    sta need_buffer
     ; update player pos to memory
     lda mobs + Mob::coords + Coord::xcoord
     sta xpos
@@ -29,6 +32,8 @@ check_movement:
     lda controller1release
     and #%00001000  ; up
     bne attempt_up
+    ; no input - don't need to update buffer after all
+    dec need_buffer
     rts
 attempt_left:
     dec xpos
@@ -111,9 +116,6 @@ do_move:
     sta mobs+Mob::coords+Coord::ycoord
     rts
 attack_mob:
-    ; ensure we update buffer
-    lda #1
-    sta need_buffer
     ; todo use damage calc, for now just do 1 damage
     lda #1
     tax ; preserve for messaging

@@ -22,6 +22,7 @@ maxmobs    = 20
 .global has_amount
 
 ; update.s
+.global buffer_seen
 .global buffer_messages
 .global buffer_hp
 
@@ -55,6 +56,7 @@ maxmobs    = 20
 .global mob_ai
 
 ; path.s
+.globalzp sight_distance
 .global can_see
 
 ; player.s
