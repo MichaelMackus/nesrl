@@ -1,7 +1,8 @@
 .include "global.inc"
 
 .export push_msg
-.export buffer_messages
+.export update_message_str
+.export has_amount
 
 .segment "ZEROPAGE"
 
@@ -46,119 +47,10 @@ shift_messages:
     rts
 .endproc
 
-; buffer the messages to draw buffer
-.proc buffer_messages
-    message_ppu_offset = $20
-    message_ppu_start  = $2C
-    ldx #message_ppu_start
-    txa
-    pha ; remember ppu index for next iteration
-    lda #0
-    pha ; remember message index
-write_message_header:
-    ; store next draw buffer index into y
-    jsr next_index
-    ; write the message length
-    lda #message_strlen
-    sta draw_buffer, y
-    iny
-    ; write the PPU addr high byte
-    lda #$23
-    sta draw_buffer, y
-    iny
-    ; write the PPU addr low byte
-    txa
-    sta draw_buffer, y
-    iny
-write_message_str:
-    pla
-    tax
-    ; update tmp_message using stack var
-    lda messages+Message::type, x
-    sta tmp_message+Message::type
-    lda messages+Message::amount, x
-    sta tmp_message+Message::amount
-    txa
-    pha
-    jsr update_str_pointer
-    jsr buffer_str
-    ldx draw_length
-    ; add damage/amount
-    jsr buffer_amount
-fill_loop:
-    ; done, fill with blank spaces
-    lda #$00
-    sta draw_buffer, y
-    inx
-    iny
-    cpx #message_strlen
-    bne fill_loop
-    ; store a length of zero at end, to ensure we can get next index
-    lda #$00
-    sta draw_buffer, y
-continue_loop:
-    pla
-    clc
-    adc #.sizeof(Message)
-    tay
-
-    ; end condition
-    cmp #max_messages*.sizeof(Message)
-    beq done
-
-    ; increment ppu offset and add to stack
-    pla
-    clc
-    adc #message_ppu_offset
-    pha
-    tax ; for next loop iteration
-
-    tya
-    pha
-    jmp write_message_header
-done:
-    pla
-    rts
-
-; buffer amount to draw buffer
-; increment x by amount tiles drawn
-buffer_amount:
-    lda tmp_message+Message::type
-    cmp #Messages::hit
-    beq continue_buffer_amount
-    cmp #Messages::hurt
-    beq continue_buffer_amount
-    cmp #Messages::heal
-    beq continue_buffer_amount
-    ; default condition
-    rts
-continue_buffer_amount:
-    ; increase x by amount of digits
-    lda tmp_message+Message::amount
-    cmp #10
-    bcc increase_x_once
-    ; more than 1 digit, assuming num 0-99
-    inx
-    inx
-update_buffer_amount:
-    ; remember x for after buffer update
-    txa
-    pha
-    ; buffer number to draw buffer
-    lda tmp_message+Message::amount
-    jsr buffer_num
-    ; remember x index
-    pla
-    tax
-    rts
-increase_x_once:
-    inx
-    jmp update_buffer_amount
-
+.proc update_message_str
 ; update the str_pointer to point to the correct message
 ; uses index in x for message
-update_str_pointer:
-    lda tmp_message+Message::type
+    lda messages+Message::type, x
     cmp #Messages::none
     beq load_blank
     cmp #Messages::hit
@@ -191,6 +83,23 @@ load_kill:
     sta str_pointer
     lda #>txt_kill
     sta str_pointer+1
+    rts
+.endproc
+
+; out: 0 if type uses amount at end of str
+.proc has_amount
+    lda messages+Message::type, x
+    cmp #Messages::hit
+    beq success
+    cmp #Messages::hurt
+    beq success
+    cmp #Messages::heal
+    beq success
+    ; default condition
+    lda #1
+    rts
+success:
+    lda #0
     rts
 .endproc
 

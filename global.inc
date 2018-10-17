@@ -16,8 +16,14 @@ maxmobs    = 20
 ; message.s
 .globalzp max_messages
 .globalzp messages
+.globalzp message_strlen
 .global push_msg
+.global update_message_str
+.global has_amount
+
+; update.s
 .global buffer_messages
+.global buffer_hp
 
 ; dungeon.s
 .global tiles
@@ -53,7 +59,6 @@ maxmobs    = 20
 
 ; player.s
 .global initialize_player
-.global buffer_hp
 
 ; generate.s
 .global generate
