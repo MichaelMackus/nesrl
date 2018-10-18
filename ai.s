@@ -59,8 +59,8 @@ attack_player:
     ; ensure we update draw buffer
     lda #1
     sta need_buffer
-    ; todo use damage calc, for now just do 1 damage
-    lda #1
+    ; use damage calc for mob
+    jsr mob_dmg
     ldy #0 ; player index
     sta damage
     jsr damage_mob

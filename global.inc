@@ -54,6 +54,7 @@ maxmobs    = 20
 .global kill_mob
 .global rand_mob
 .global is_alive
+.global mob_dmg
 
 ; ai.s
 .global mob_ai
@@ -67,6 +68,7 @@ maxmobs    = 20
 .globalzp stats
 .global initialize_player
 .global player_regen
+.global player_dmg
 
 ; generate.s
 .global generate
@@ -78,6 +80,7 @@ maxmobs    = 20
 .global d3
 .global d4
 .global d6
+.global d8
 .global d12
 
 ; tile.s

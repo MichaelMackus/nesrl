@@ -2,6 +2,7 @@
 
 .export initialize_player
 .export player_regen
+.export player_dmg
 
 .segment "ZEROPAGE"
 
@@ -47,5 +48,12 @@ stats: .res .sizeof(PlayerStats)
     lda #1
     sta need_buffer
 done:
+    rts
+.endproc
+
+; todo generate damage for player based on level & equipment
+.proc player_dmg
+    ; for now, just generate random number 1-6
+    jsr d6
     rts
 .endproc

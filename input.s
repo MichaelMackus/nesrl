@@ -116,8 +116,8 @@ do_move:
     sta mobs+Mob::coords+Coord::ycoord
     rts
 attack_mob:
-    ; todo use damage calc, for now just do 1 damage
-    lda #1
+    ; use damage calc for player
+    jsr player_dmg
     tax ; preserve for messaging
     jsr damage_mob
     ; if dead, push kill message

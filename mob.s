@@ -1,5 +1,12 @@
 .include "global.inc"
 
+.export mob_at
+.export damage_mob
+.export kill_mob
+.export rand_mob
+.export is_alive
+.export mob_dmg
+
 .segment "ZEROPAGE"
 
 mob_size  = .sizeof(Mob)
@@ -13,7 +20,7 @@ dmg:       .res 1 ; tmp var for damage calculation
 ; get a mob at xpos and ypos
 ; out: 0 on success, 1 on failure
 ; updates: y register to mob index
-mob_at:
+.proc mob_at
     lda #$00
     tay
 mob_at_loop:
@@ -40,10 +47,11 @@ mob_at_fail:
     ldy #$FF
     lda #1
     rts
+.endproc
 
 ; deal damage to mob at index y
 ; in: damage
-damage_mob:
+.proc damage_mob
     cmp mobs+Mob::hp, y
     bcs kill_mob
     ; subtract damage from hp
@@ -53,17 +61,19 @@ damage_mob:
     sbc dmg
     sta mobs+Mob::hp, y
     rts
+.endproc
 
 ; kill the mob at index y
-kill_mob:
+.proc kill_mob
     lda #0
     sta mobs+Mob::hp, y
     rts
+.endproc
 
 ; check if mob alive
 ; in: mob index
 ; out: 0 if alive
-is_alive:
+.proc is_alive
     lda mobs + Mob::hp, y
     cmp #0
     beq is_dead
@@ -72,9 +82,44 @@ is_alive:
 is_dead:
     lda #1
     rts
+.endproc
+
+; damage roll for mob at index y
+; out: damage amount
+; clobbers: x
+.proc mob_dmg
+    lda mobs + Mob::type, y
+    cmp #Mobs::player
+    beq player
+    cmp #Mobs::goblin
+    beq d4_dmg
+    cmp #Mobs::orc
+    beq d6_dmg
+    cmp #Mobs::ogre
+    beq d8_dmg
+    cmp #Mobs::dragon
+    beq d12_dmg
+    rts
+player:
+    jsr player_dmg
+    rts
+d4_dmg:
+    jsr d4
+    rts
+d6_dmg:
+    jsr d4
+    rts
+d8_dmg:
+    jsr d8
+    rts
+d12_dmg:
+    jsr d12
+    rts
+.endproc
+
 
 ; generate random mob at index y
-rand_mob:
+.proc rand_mob
     ; store y for later use
     tya
     pha
@@ -145,3 +190,4 @@ gen_dragon:
     lda #Mobs::dragon
     sta mobs + Mob::type, y
     rts
+.endproc

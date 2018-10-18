@@ -66,6 +66,16 @@ d6:
     jsr prng
     and #%00000111
     beq d6 ; don't generate zero
+    cmp #7
+    beq d6 ; don't generate 7
+    rts
+
+; generate random value from 1-8
+d8:
+    jsr prng
+    and #%00000111
+    clc
+    adc #$01
     rts
 
 ; generate random value from 1-12
