@@ -64,7 +64,9 @@ attack_player:
     jsr mob_dmg
     ldy #0 ; player index
     sta damage
+.ifndef WIZARD
     jsr damage_mob
+.endif
     ; push message
     lda #Messages::hurt
     ldx damage
