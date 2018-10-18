@@ -31,46 +31,23 @@ generate_ppu:
     lda #$00
     sta $2006
     ldx #$00 ; counter for background sprite position
-; clear first line (not renderable)
-clear_line:
-    lda #$00
-    sta $2007
-    inx
-    cpx #$20
-    bne clear_line
-    lda #$00
-    tax
-    tay
 ; loop through x and y
 y_repeat:
-    cpy #max_height
-    beq render_status
+    cpy #max_height+1 ; +1 to ensure we clear first line
+    beq render_seen
 x_repeat:
-    stx xpos
-    sty ypos
-    ; update tile if seen
-    ldy #0
-    jsr can_see
-    bne not_seen
-    ; it's seen!
-    jsr update_seen
-    jsr get_bg_tile
-    sta $2007
-    jmp continue_loop
-not_seen:
+    ; clear tiles
     lda #$00
     sta $2007
 continue_loop:
-    ldx xpos
-    ldy ypos
     inx
     cpx #max_width
     bne x_repeat
     iny
     ldx #$00
     jmp y_repeat
-    rts
-
+render_seen:
+    jsr buffer_seen
 ; render status messages
 render_status:
     ; hp
@@ -90,7 +67,6 @@ render_status:
     sta $2007
     ; render hp
     jsr buffer_hp
-    jsr render_buffer
 
     ; dlvl
     bit $2002
@@ -106,6 +82,9 @@ render_status:
     ; render current dlevel
     lda dlevel
     jsr render_num
+
+    ; render the buffer
+    jsr render_buffer
 
     lda nmis
 render_done:
