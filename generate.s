@@ -165,16 +165,27 @@ done_update_player:
     ; update prevdlevel for next generation
     lda dlevel
     sta prevdlevel
+    ; generate max mobs
+    jsr d4
+    sta tmp
+    ldy #mob_size
+    ldx #0
 ; todo ensure mob isn't on space with player or other mob
 generate_mobs:
-    ; todo generate more than one mob
-    ldy #mob_size
+    txa
+    pha
     jsr rand_mob
+    pla
+    tax
     ; increment y by mob_size
     tya
     clc
     adc #mob_size
     tay
+    inx
+    cpx tmp
+    beq clear_mobs_loop
+    jmp generate_mobs
 ; clear the rest of the mobs
 clear_mobs_loop:
     jsr kill_mob
