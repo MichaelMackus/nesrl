@@ -98,10 +98,12 @@ done:
 ; y: index of current draw buffer pos
 ; clobbers: x
 .proc buffer_num
-    cmp #10
-    bcc render_ones
     ; first, render tens place for number
     ldx #0
+    stx tmp
+    inc tmp
+    cmp #10
+    bcc render_ones
 tens_loop:
     cmp #10
     bcc render_tens
@@ -111,6 +113,7 @@ tens_loop:
     jmp tens_loop
 render_tens:
     pha ; remember ones
+    inc tmp
     txa
     jsr get_num_tile
     sta draw_buffer, y
@@ -121,6 +124,8 @@ render_ones:
     jsr get_num_tile
     sta draw_buffer, y
     iny
+    ; return length of written number
+    lda tmp
     rts
 .endproc
 

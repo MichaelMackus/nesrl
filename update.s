@@ -272,25 +272,17 @@ done:
 ; increment x by amount tiles drawn
 buffer_amount:
     jsr has_amount
-    beq continue_buffer_amount
+    beq update_buffer_amount
     ; default condition
     rts
-continue_buffer_amount:
-    ; increase x by amount of digits
-    lda messages+Message::amount, x
-    cmp #10
-    bcc increase_draw_len_once
-    ; more than 1 digit, assuming num 0-99
-    inc draw_length
-    inc draw_length
 update_buffer_amount:
     ; buffer number to draw buffer
     lda messages+Message::amount, x
     jsr buffer_num
+    clc
+    adc draw_length
+    sta draw_length
     rts
-increase_draw_len_once:
-    inc draw_length
-    jmp update_buffer_amount
 .endproc
 
 ; get the ppu addr for xpos and ypos and store in draw_ppu
