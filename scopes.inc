@@ -1,3 +1,10 @@
+.enum GameState
+    start
+    playing
+    end
+    win
+.endenum
+
 .enum Messages
     none
     hit

@@ -79,7 +79,7 @@ attack_player:
     jmp continue_mob_ai
 player_dead:
     ; dead
-    lda #4
+    lda #GameState::end
     sta gamestate
     pla
     tay

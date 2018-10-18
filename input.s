@@ -86,13 +86,13 @@ check_upstair:
 escape:
     jsr render_escape
     ; escape dungeon
-    lda #2
+    lda #GameState::end
     sta gamestate
     rts
 win:
     jsr render_win
     ; win dungeon
-    lda #3
+    lda #GameState::win
     sta gamestate
     rts
 input_done:

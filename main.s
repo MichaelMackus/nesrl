@@ -39,7 +39,7 @@ waitforppu:
 init:
 init_memory:
     ; initialize vars to zero
-    lda #0
+    lda #GameState::start
     sta gamestate
     sta controller1
     sta controller1release
@@ -155,7 +155,7 @@ start_screen:
     and #%00010000 ; start
     beq done
     jsr regenerate
-    lda #1
+    lda #GameState::playing
     sta gamestate
     jmp done
 
@@ -170,8 +170,14 @@ playgame:
     ; increment turn counter
     inc turn
 
-    jsr handle_input
+    jsr handle_input ; todo sometimes death message not rendering properly
     jsr mob_ai
+
+    ; check gamestate, to ensure we're still playing
+    lda gamestate
+    cmp #GameState::playing
+    bne skip_buffer
+
     jsr mob_spawner
     jsr player_regen
 
@@ -194,6 +200,7 @@ done:
     lda #1
     sta need_draw
 
+skip_buffer:
     lda nmis
 wait_nmi:
     cmp nmis
