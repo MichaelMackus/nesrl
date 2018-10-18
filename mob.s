@@ -119,6 +119,7 @@ d12_dmg:
 
 
 ; generate random mob at index y
+; clobbers: x
 .proc rand_mob
     ; store y for later use
     tya

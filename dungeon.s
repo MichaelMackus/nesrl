@@ -58,17 +58,22 @@ randx:
 ; check if tile passable
 ; out: 0 if passable
 ; clobbers: tmp, y, and x
-; todo check mobs
 .proc is_passable
     jsr get_byte_offset
     tay
     jsr get_byte_mask
     and tiles, y
-    bne is_passable_success
-    lda #1
-    rts
-is_passable_success:
+    bne tile_passable
+    jmp fail
+tile_passable:
+    ; ensure no mobs at x, y
+    jsr mob_at
+    beq fail
+    ; success!
     lda #0
+    rts
+fail:
+    lda #1
     rts
 .endproc
 
@@ -102,6 +107,7 @@ success:
 
 ; rand passable xy
 ; clobbers: tmp, x,  and y
+; todo ensure we don't hit endless loop if out of x,y
 .proc rand_passable
     jsr randxy
     jsr is_passable
