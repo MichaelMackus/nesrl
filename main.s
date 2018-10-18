@@ -3,6 +3,7 @@
 .segment "ZEROPAGE"
 
 ; variables
+turn:        .res 1
 gamestate:   .res 1
 controller1: .res 1
 controller1release: .res 1
@@ -46,6 +47,8 @@ init_memory:
     sta draw_buffer
     sta need_draw
     sta need_buffer
+    sta turn
+    inc turn ; set turn to 1
     jsr initialize_player
     lda Messages::none
     jsr push_msg
@@ -164,8 +167,12 @@ playgame:
     lda controller1release
     beq playgame_noinput
 
+    ; increment turn counter
+    inc turn
+
     jsr handle_input
     jsr mob_ai
+    jsr mob_spawner
 
 playgame_noinput:
     ; update sprite OAM data

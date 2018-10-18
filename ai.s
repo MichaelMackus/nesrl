@@ -5,7 +5,7 @@
 
 .segment "ZEROPAGE"
 
-tmp: .res 1
+tmp:  .res 1
 
 .segment "CODE"
 
@@ -151,5 +151,38 @@ continue_mob_ai:
     beq done_ai_loop
     jmp mob_ai_loop
 done_ai_loop:
+    rts
+.endproc
+
+; should be called each time turn in order to spawn mobs randomly
+.proc mob_spawner
+    ; try to spawn a mob every 8 turns
+    lda turn
+    lsr
+    bcs skip_spawn
+    lsr
+    bcs skip_spawn
+    lsr
+    bcs skip_spawn
+    jmp attempt_spawn
+skip_spawn:
+    ; don't spawn a mob this turn
+    rts
+attempt_spawn:
+    ; loop through mobs and try to find an empty spot
+    ldy #mob_size
+loop:
+    lda mobs + Mob::hp, y
+    beq spawn
+    tya
+    clc
+    adc #mob_size
+    tay
+    cpy #mobs_size
+    bne loop
+    ; no empty spot for mob found
+    rts
+spawn:
+    jsr rand_mob
     rts
 .endproc

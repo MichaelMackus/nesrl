@@ -7,6 +7,7 @@ max_height = 24
 maxmobs    = 20
 
 ; main.s
+.globalzp turn
 .globalzp controller1
 .globalzp controller1release
 .globalzp nmis
@@ -56,6 +57,7 @@ maxmobs    = 20
 
 ; ai.s
 .global mob_ai
+.global mob_spawner
 
 ; lighting.s
 .globalzp sight_distance
