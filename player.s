@@ -3,6 +3,7 @@
 .export initialize_player
 .export player_regen
 .export player_dmg
+.export award_exp
 
 .segment "ZEROPAGE"
 
@@ -26,6 +27,8 @@ stats: .res .sizeof(PlayerStats)
     sta stats+PlayerStats::exp
     lda #10
     sta stats+PlayerStats::maxhp
+    lda #0
+    sta stats+PlayerStats::power
     rts
 .endproc
 
@@ -52,8 +55,116 @@ done:
 .endproc
 
 ; todo generate damage for player based on level & equipment
+; clobbers: x
 .proc player_dmg
     ; for now, just generate random number 1-6
     jsr d6
+    rts
+.endproc
+
+; award exp to player for mob at index y
+; clobbers: all registers if level up
+.proc award_exp
+    lda mobs+Mob::type, y
+    cmp #Mobs::goblin
+    beq goblin
+    cmp #Mobs::orc
+    beq orc
+    cmp #Mobs::ogre
+    beq ogre
+    cmp #Mobs::dragon
+    beq dragon
+    ; error
+    rts
+goblin:
+    lda #1
+    clc
+    adc stats+PlayerStats::exp
+    sta stats+PlayerStats::exp
+    jsr check_level
+    rts
+orc:
+    lda #2
+    clc
+    adc stats+PlayerStats::exp
+    sta stats+PlayerStats::exp
+    jsr check_level
+    rts
+ogre:
+    lda #5
+    clc
+    adc stats+PlayerStats::exp
+    sta stats+PlayerStats::exp
+    jsr check_level
+    rts
+dragon:
+    lda #10
+    clc
+    adc stats+PlayerStats::exp
+    sta stats+PlayerStats::exp
+    jsr check_level
+    rts
+.endproc
+
+; award exp to player for mob at index y
+; clobbers: all registers if level up
+.proc check_level
+    lda stats+PlayerStats::level
+    cmp #4
+    bcc check_level3
+    cmp #6
+    bcc check_level5
+    cmp #8
+    bcc check_level7
+    cmp #10
+    bcc check_level9
+    ; no more leveling at level 10
+    rts
+check_level3:
+    ; level player up every 10 goblins
+    lda stats+PlayerStats::exp
+    cmp #10
+    bcs levelup
+    rts
+check_level5:
+    ; level player up every 20 goblins
+    lda stats+PlayerStats::exp
+    cmp #20
+    bcs levelup
+    rts
+check_level7:
+    ; level player up every 50 goblins
+    lda stats+PlayerStats::exp
+    cmp #50
+    bcs levelup
+    rts
+check_level9:
+    ; level player up every 100 goblins
+    lda stats+PlayerStats::exp
+    cmp #100
+    bcs levelup
+    rts
+
+; *ding*!
+levelup:
+    inc stats+PlayerStats::level
+    ; level up message
+    lda #Messages::levelup
+    jsr push_msg
+    ; gain 5 max hp every level
+    lda stats+PlayerStats::maxhp
+    clc
+    adc #5
+    sta stats+PlayerStats::maxhp
+    ; reset hp to max
+    sta mobs + Mob::hp
+    ; gain 1 power
+    inc stats+PlayerStats::power
+    ; reset exp to zero
+    lda #0
+    sta stats+PlayerStats::exp
+    ; ensure we buffer the changes
+    lda #1
+    sta need_buffer
     rts
 .endproc

@@ -71,6 +71,7 @@ maxmobs    = 20
 .global initialize_player
 .global player_regen
 .global player_dmg
+.global award_exp
 
 ; generate.s
 .global generate

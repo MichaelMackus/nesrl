@@ -59,6 +59,8 @@ shift_messages:
     beq load_hurt
     cmp #Messages::kill
     beq load_kill
+    cmp #Messages::levelup
+    beq load_levelup
 load_blank:
     ; default condition
     lda #<txt_blank
@@ -82,6 +84,12 @@ load_kill:
     lda #<txt_kill
     sta str_pointer
     lda #>txt_kill
+    sta str_pointer+1
+    rts
+load_levelup:
+    lda #<txt_lvlup
+    sta str_pointer
+    lda #>txt_lvlup
     sta str_pointer+1
     rts
 .endproc
@@ -112,3 +120,4 @@ txt_kill:   .asciiz "It died!"
 txt_heal:   .asciiz "You healed for "
 txt_scroll: .asciiz "You read the scroll"
 txt_quaff:  .asciiz "*gulp*" ; todo need asterisk
+txt_lvlup:  .asciiz "You leveled up!"

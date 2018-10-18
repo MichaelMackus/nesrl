@@ -129,12 +129,18 @@ attack_mob:
     ; done
     rts
 mob_killed:
+    tya
+    pha
     ; push damage message, uses x register above
     lda #Messages::hit
     jsr push_msg
     ; push kill message
     lda #Messages::kill
     jsr push_msg
+    ; award exp
+    pla
+    tay
+    jsr award_exp
     ; done
     rts
 input_done:

@@ -6,6 +6,7 @@
     heal
     scroll
     quaff
+    levelup
 .endenum
 
 .struct Message
@@ -36,4 +37,5 @@
     level .byte
     exp   .byte
     maxhp .byte
+    power .byte
 .endstruct
