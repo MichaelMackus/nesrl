@@ -3,6 +3,8 @@
 .export rand_passable
 .export is_passable
 .export within_bounds
+.export update_seen
+.export was_seen
 .export get_byte_mask
 .export get_byte_offset
 
@@ -22,7 +24,7 @@ tmp:         .res 1
 .segment "BSS"
 
 tiles:       .res maxtiles ; represents a 256x240 walkable grid in bits, 1 = walkable; 0 = impassable
-; todo probably want to keep track of seen tiles so we can re-draw them
+seen:        .res maxtiles
 
 .segment "CODE"
 
@@ -66,6 +68,34 @@ randx:
     lda #1
     rts
 is_passable_success:
+    lda #0
+    rts
+.endproc
+
+; update the seen tile at xpos and ypos
+; clobbers: tmp, x,  and y
+; updates: seen
+.proc update_seen
+    jsr get_byte_offset
+    tay
+    jsr get_byte_mask
+    ora seen, y
+    sta seen, y
+.endproc
+
+; was the tile seen before?
+; clobbers: tmp, x,  and y
+; out: 0 if seen
+.proc was_seen
+    jsr get_byte_offset
+    tay
+    jsr get_byte_mask
+    and seen, y
+    bne success
+    ; failure
+    lda #1
+    rts
+success:
     lda #0
     rts
 .endproc

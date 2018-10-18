@@ -41,6 +41,8 @@ maxmobs    = 20
 .global within_bounds
 .global get_byte_mask
 .global get_byte_offset
+.global update_seen
+.global was_seen
 
 ; mob.s
 .globalzp mob_size
@@ -55,9 +57,8 @@ maxmobs    = 20
 ; ai.s
 .global mob_ai
 
-; path.s
+; lighting.s
 .globalzp sight_distance
-.global seen
 .global can_see
 
 ; player.s

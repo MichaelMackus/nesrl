@@ -10,14 +10,11 @@ prevx: .res 1
 prevy: .res 1
 i:     .res 1 ; used for increment in loop, to prevent use of stack
 
-.segment "BSS"
-
-seen:    .res maxtiles
-
 .segment "CODE"
 
 ; check if mob can see tile
 ; todo on diagonals, probably want to check diagonal closest to player on each increment, might prevent false positives
+; todo can sometimes see through walls if exactly +2 spaces away..?
 ;
 ; xpos: destination tile x (unmodified)
 ; ypos: destination tile y (unmodified)
@@ -93,12 +90,6 @@ success:
     sta xpos
     lda prevy
     sta ypos
-    ; update seen with success
-    jsr get_byte_offset
-    tay
-    jsr get_byte_mask
-    ora seen, y
-    sta seen, y
     ; success result
     lda #0
     rts

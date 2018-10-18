@@ -53,6 +53,7 @@ x_repeat:
     jsr can_see
     bne not_seen
     ; it's seen!
+    jsr update_seen
     jsr get_bg_tile
     sta $2007
     jmp continue_loop
@@ -234,6 +235,30 @@ render_mobs:
 render_mobs_loop:
     jsr is_alive
     bne clear_mob
+    lda mobs + Mob::coords + Coord::xcoord, y
+    sta xpos
+    lda mobs + Mob::coords + Coord::ycoord, y
+    sta ypos
+    ; check if we can see mob
+    tya
+    pha
+    txa
+    pha
+    ldy #0
+    jsr can_see
+    beq render_mob
+    pla
+    tax
+    pla
+    tay
+    ; nope, hide mob
+    jmp clear_mob
+
+render_mob:
+    pla
+    tax
+    pla
+    tay
     lda mobs + Mob::coords + Coord::ycoord, y
     asl
     asl

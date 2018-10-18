@@ -111,13 +111,12 @@ tile_loop:
     jsr can_see
     beq draw_seen
     ; draw seen tile, if already seen
-    jsr get_byte_offset
-    tay
-    jsr get_byte_mask
-    and seen, y
+    jsr was_seen
     ; no tile was seen, draw bg
-    beq tile_bg
+    bne tile_bg
 draw_seen:
+    ; update seen tile
+    jsr update_seen
     ; success, draw tile
     ldx xpos
     ldy ypos
