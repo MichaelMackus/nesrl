@@ -87,8 +87,8 @@ skipy:
     ; success!
     beq success
 check_passable:
-    ; check if passable
-    jsr is_passable
+    ; check if floor
+    jsr is_floor
     bne fail
     ; check increment
     inc i

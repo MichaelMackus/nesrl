@@ -1,6 +1,7 @@
 .include "global.inc"
 
 .export rand_passable
+.export is_floor
 .export is_passable
 .export within_bounds
 .export update_seen
@@ -55,7 +56,26 @@ randx:
     rts
 .endproc
 
-; check if tile passable
+; check if tile is floor (doesn't check mobs)
+; out: 0 if passable
+; clobbers: tmp, y, and x
+.proc is_floor
+    jsr get_byte_offset
+    tay
+    jsr get_byte_mask
+    and tiles, y
+    bne tile_passable
+    jmp fail
+tile_passable:
+    ; success!
+    lda #0
+    rts
+fail:
+    lda #1
+    rts
+.endproc
+
+; check if tile passable (checks mobs)
 ; out: 0 if passable
 ; clobbers: tmp, y, and x
 .proc is_passable

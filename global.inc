@@ -38,6 +38,7 @@ maxmobs    = 20
 .globalzp down_x
 .globalzp down_y
 .global rand_passable
+.global is_floor
 .global is_passable
 .global randxy
 .global within_bounds
