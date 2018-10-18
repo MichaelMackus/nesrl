@@ -64,7 +64,9 @@ maxmobs    = 20
 .global can_see
 
 ; player.s
+.globalzp stats
 .global initialize_player
+.global player_regen
 
 ; generate.s
 .global generate

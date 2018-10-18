@@ -32,3 +32,8 @@
     type   .byte ; one of Mobs enum
 .endstruct
 
+.struct PlayerStats
+    level .byte
+    exp   .byte
+    maxhp .byte
+.endstruct

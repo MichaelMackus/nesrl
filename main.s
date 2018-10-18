@@ -173,6 +173,7 @@ playgame:
     jsr handle_input
     jsr mob_ai
     jsr mob_spawner
+    jsr player_regen
 
 playgame_noinput:
     ; update sprite OAM data
