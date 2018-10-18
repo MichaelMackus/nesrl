@@ -83,6 +83,7 @@ player_dead:
     pla
     tay
     jmp render_death
+    rts
 mob_index = tmp
 move_mob:
     ; move mob random dir
