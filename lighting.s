@@ -9,6 +9,7 @@ desty: .res 1
 prevx: .res 1
 prevy: .res 1
 i:     .res 1 ; used for increment in loop, to prevent use of stack
+sight: .res 1 ; used to set sight for mobs (mobs can see further in dungeon)
 
 .segment "CODE"
 
@@ -18,7 +19,7 @@ i:     .res 1 ; used for increment in loop, to prevent use of stack
 ;
 ; xpos: destination tile x (unmodified)
 ; ypos: destination tile y (unmodified)
-; y: mob index (unmodified)
+; y: mob index (modified)
 ;
 ; out: 0 if can see
 ; clobbers: x and y register
@@ -35,6 +36,19 @@ i:     .res 1 ; used for increment in loop, to prevent use of stack
     sta xpos
     lda mobs + Mob::coords + Coord::ycoord, y
     sta ypos
+    lda mobs + Mob::type, y
+    cmp Mobs::player
+    bne set_mob_sight
+    ; set player sight radius
+    lda #sight_distance
+    sta sight
+    jmp continue
+set_mob_sight:
+    ; set mob sight radius (+1 from player)
+    lda #sight_distance+1
+    sta sight
+
+continue:
     ; set increment
     lda #0
     sta i
@@ -79,7 +93,7 @@ check_passable:
     ; check increment
     inc i
     lda i
-    cmp #sight_distance
+    cmp sight
     beq fail
     ; re-try loop until we get to destination *or* impassable
     jmp loop

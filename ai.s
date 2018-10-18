@@ -10,7 +10,8 @@ tmp:  .res 1
 .segment "CODE"
 
 ; update mob pos randomly, and attack player
-; todo move towards player if can see
+; moves towards player if can see
+; NOTE: mobs see further than player, so its a little challenging
 .proc mob_ai
     ldy #mob_size
 mob_ai_loop:
@@ -86,12 +87,22 @@ player_dead:
     rts
 mob_index = tmp
 move_mob:
+    ; first check if can see player
+    sty mob_index
+    lda mobs + Mob::coords + Coord::xcoord
+    sta xpos
+    lda mobs + Mob::coords + Coord::ycoord
+    sta ypos
+    jsr can_see
+    bne move_random
+    jmp move_towards_player
+move_random:
+    ldy mob_index
     ; move mob random dir
     lda mobs + Mob::coords + Coord::xcoord, y
     sta xpos
     lda mobs + Mob::coords + Coord::ycoord, y
     sta ypos
-    sty mob_index
     jsr d4
     cmp #1
     beq move_mob_up
@@ -153,6 +164,98 @@ continue_mob_ai:
     jmp mob_ai_loop
 done_ai_loop:
     rts
+move_towards_player:
+    ldy mob_index
+    ; xpos and ypos have position of player
+    lda ypos
+    pha
+    lda xpos
+    pha
+try_x:
+    cmp mobs+Mob::coords+Coord::xcoord, y
+    bcc try_left
+cont_try_x:
+    cmp mobs+Mob::coords+Coord::xcoord, y
+    beq skip_right
+    bcs try_right
+skip_right:
+    pla ; remove player x from stack
+    pla ; player y pos
+    pha
+    jmp try_y
+try_left:
+    lda mobs+Mob::coords+Coord::xcoord, y
+    sta xpos
+    lda mobs+Mob::coords+Coord::ycoord, y
+    sta ypos
+    dec xpos
+    jsr is_passable
+    beq finish_x_move
+    ; nope, continue trying
+    ldy mob_index
+    pla ; player x
+    pha
+    jmp cont_try_x
+try_right:
+    lda mobs+Mob::coords+Coord::xcoord, y
+    sta xpos
+    lda mobs+Mob::coords+Coord::ycoord, y
+    sta ypos
+    inc xpos
+    jsr is_passable
+    beq finish_x_move
+    ; nope, continue trying
+    ldy mob_index
+    pla ; remove player x from stack
+    pla ; player y
+    pha
+    jmp try_y
+try_y:
+    cmp mobs+Mob::coords+Coord::ycoord, y
+    bcc try_up
+cont_try_y:
+    cmp mobs+Mob::coords+Coord::ycoord, y
+    beq skip_down
+    bcs try_down
+skip_down:
+    pla ; remove player y from stack
+    jmp continue_mob_ai ; don't move, try next mob
+try_up:
+    lda mobs+Mob::coords+Coord::xcoord, y
+    sta xpos
+    lda mobs+Mob::coords+Coord::ycoord, y
+    sta ypos
+    dec ypos
+    jsr is_passable
+    beq finish_move
+    ; nope, continue trying
+    ldy mob_index
+    pla ; player y
+    pha
+    jmp cont_try_y
+try_down:
+    lda mobs+Mob::coords+Coord::xcoord, y
+    sta xpos
+    lda mobs+Mob::coords+Coord::ycoord, y
+    sta ypos
+    inc ypos
+    jsr is_passable
+    beq finish_move
+    ; nope, done trying
+    ldy mob_index
+    pla ; remove player y from stack
+    jmp continue_mob_ai
+finish_x_move:
+    pla ; remove player x from stack
+finish_move:
+    pla ; remove player y from stack
+    ldy mob_index
+    lda xpos
+    sta mobs+Mob::coords+Coord::xcoord, y
+    lda ypos
+    sta mobs+Mob::coords+Coord::ycoord, y
+    ; continue AI
+    jmp continue_mob_ai
 .endproc
 
 ; should be called each time turn in order to spawn mobs randomly
