@@ -240,13 +240,15 @@ write_message_str:
     jsr buffer_amount
     ldx draw_length
 fill_loop:
+    cpx #message_strlen
+    beq finish_buffer
     ; done, fill with blank spaces
     lda #$00
     sta draw_buffer, y
     inx
     iny
-    cpx #message_strlen
-    bne fill_loop
+    jmp fill_loop
+finish_buffer:
     ; store a length of zero at end, to ensure we can get next index
     lda #$00
     sta draw_buffer, y
