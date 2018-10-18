@@ -155,14 +155,12 @@ gen_2_mob:
     jmp gen_orc
 gen_3_mob:
     jsr d4
-    cmp #4
-    bcs gen_dragon
     cmp #3
     bcs gen_ogre
     jmp gen_orc
 gen_4_mob:
     jsr d4
-    cmp #3
+    cmp #4
     bcs gen_dragon
     cmp #2
     bcs gen_ogre

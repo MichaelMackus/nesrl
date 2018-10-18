@@ -130,21 +130,21 @@ check_level3:
     bcs levelup
     rts
 check_level5:
-    ; level player up every 20 goblins
-    lda stats+PlayerStats::exp
-    cmp #20
-    bcs levelup
-    rts
-check_level7:
     ; level player up every 50 goblins
     lda stats+PlayerStats::exp
     cmp #50
     bcs levelup
     rts
-check_level9:
+check_level7:
     ; level player up every 100 goblins
     lda stats+PlayerStats::exp
     cmp #100
+    bcs levelup
+    rts
+check_level9:
+    ; level player up every 200 goblins
+    lda stats+PlayerStats::exp
+    cmp #200
     bcs levelup
     rts
 
