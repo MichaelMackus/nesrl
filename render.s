@@ -83,6 +83,9 @@ render_status:
     lda dlevel
     jsr render_num
 
+    ; buffer our messages, todo this shouldn't be necessary
+    jsr buffer_messages
+
     ; render the buffer
     jsr render_buffer
 
