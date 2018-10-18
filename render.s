@@ -4,7 +4,6 @@
 .export regenerate
 .export render_escape
 .export render_win
-.export update_sprites
 
 .segment "ZEROPAGE"
 
@@ -206,79 +205,6 @@ waitnmi:
     sta $2005
     sta $2005
     rts
-.endproc
-
-.proc update_sprites
-; render the player sprite
-render_mobs:
-    lda #0
-    tay
-    tax
-render_mobs_loop:
-    jsr is_alive
-    bne clear_mob
-    lda mobs + Mob::coords + Coord::xcoord, y
-    sta xpos
-    lda mobs + Mob::coords + Coord::ycoord, y
-    sta ypos
-    ; check if we can see mob
-    tya
-    pha
-    txa
-    pha
-    ldy #0
-    jsr can_see
-    beq render_mob
-    pla
-    tax
-    pla
-    tay
-    ; nope, hide mob
-    jmp clear_mob
-
-render_mob:
-    pla
-    tax
-    pla
-    tay
-    lda mobs + Mob::coords + Coord::ycoord, y
-    asl
-    asl
-    asl
-    clc
-    adc #$07 ; +8 (skip first row), and -1 (sprite data delayed 1 scanline)
-    sta $0200, x
-    tya
-    jsr get_mob_tile
-    sta $0201, x
-    lda #%00000000
-    sta $0202, x
-    lda mobs + Mob::coords + Coord::xcoord, y
-    asl
-    asl
-    asl
-    sta $0203, x
-continue_mobs_loop:
-    txa
-    clc
-    adc #$04
-    tax
-    tya
-    clc
-    adc #mob_size
-    tay
-    cmp #mobs_size
-    bne render_mobs_loop
-
-done_mobs:
-    rts
-
-clear_mob:
-    ; set sprite x and y to off screen
-    lda #$FF
-    sta $0200, x
-    sta $0203, x
-    jmp continue_mobs_loop
 .endproc
 
 ; render padded num 0-99
