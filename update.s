@@ -160,11 +160,10 @@ done:
 
 .endproc
 
-; todo max hp
 .proc buffer_hp
     jsr next_index
     ; length
-    lda #$02 ; HP always 2 chars wide
+    lda #$05 ; HP always 7 chars wide
     sta draw_buffer, y
     iny
     ; ppu addresses
@@ -177,20 +176,26 @@ done:
     ; add leading space (for spacing up with other elements)
     lda mobs + Mob::hp
     cmp #10
-    bcc buffer_space
+    bcs tens
+space:
+    lda #$00
+    sta draw_buffer, y
+    iny
+    lda mobs + Mob::hp
     ; buffer tens place
-continue_buffer:
+tens:
+    jsr buffer_num
+    ; add " / " for max HP, todo need slash char, for now using comma
+    lda #$0C
+    sta draw_buffer, y
+    iny
+    ; render max hp
+    lda stats + PlayerStats::maxhp
     jsr buffer_num
     ; finish buffer
     lda #$00
     sta draw_buffer, y
     rts
-buffer_space:
-    lda #$00
-    sta draw_buffer, y
-    iny
-    lda mobs + Mob::hp
-    jmp continue_buffer
 .endproc
 
 ; buffer the messages to draw buffer

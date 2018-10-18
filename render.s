@@ -89,8 +89,8 @@ render_status:
     sta $2007
     sta $2007
     ; render hp
-    lda mobs + Mob::hp
-    jsr render_num
+    jsr buffer_hp
+    jsr render_buffer
 
     ; dlvl
     bit $2002
