@@ -54,11 +54,14 @@ done:
     rts
 .endproc
 
-; todo generate damage for player based on level & equipment
+; generate damage for player based on level todo equipment?
 ; clobbers: x
 .proc player_dmg
-    ; for now, just generate random number 1-6
+    ; generate random number 1-6
     jsr d6
+    ; add the player's power
+    clc
+    adc stats+PlayerStats::power
     rts
 .endproc
 
