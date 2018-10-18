@@ -16,6 +16,7 @@ endy:  .res 1 ; for buffer seen loop
 endx:  .res 1 ; for buffer seen loop
 draw_y:   .res 1 ; current draw buffer index
 draw_ppu: .res 2 ; current draw ppu addr
+draw_length: .res 1
 
 .segment "CODE"
 
@@ -227,6 +228,7 @@ write_message_str:
     ldx tmp
     jsr update_message_str
     jsr buffer_str
+    sta draw_length
     ; add damage/amount
     ldx tmp
     jsr buffer_amount

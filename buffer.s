@@ -20,7 +20,6 @@
 
 .include "global.inc"
 
-.export next_index
 .export buffer_num
 .export buffer_str
 .export render_buffer
@@ -30,7 +29,6 @@
 ; todo increase once we free up some zeropage mem
 max_buffer_size = 120
 draw_buffer: .res max_buffer_size
-draw_length: .res 1
 str_pointer: .res 2 ; pointer for buffering of strings
 
 tmp: .res 1
@@ -87,9 +85,10 @@ str_loop:
     jmp str_loop
 done:
     ; restore y and return write length
-    sty draw_length
+    sty tmp
     txa
     tay
+    lda tmp
     rts
 .endproc
 
