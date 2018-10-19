@@ -11,9 +11,11 @@
 
 mob_size  = .sizeof(Mob)
 mobs_size = .sizeof(Mob)*maxmobs
+dmg:        .res 1 ; tmp var for damage calculation
+
+.segment "BSS"
 
 mobs:      .res mobs_size
-dmg:       .res 1 ; tmp var for damage calculation
 
 .segment "CODE"
 

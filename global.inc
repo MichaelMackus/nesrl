@@ -18,6 +18,7 @@ maxmobs    = 20
 .globalzp max_messages
 .globalzp messages
 .globalzp message_strlen
+.globalzp message_size
 .global push_msg
 .global update_message_str
 .global has_amount
@@ -50,7 +51,7 @@ maxmobs    = 20
 ; mob.s
 .globalzp mob_size
 .globalzp mobs_size
-.globalzp mobs
+.global mobs
 .global mob_at
 .global damage_mob
 .global kill_mob
