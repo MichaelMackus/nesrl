@@ -170,7 +170,8 @@ done_update_player:
     sta tmp
     ldy #mob_size
     ldx #0
-; todo ensure mob isn't on space with player or other mob
+; generate mobs
+; rand_mob generates a mob each time it is called
 generate_mobs:
     txa
     pha
@@ -196,6 +197,23 @@ clear_mobs_loop:
     tay
     cmp #mobs_size
     bne clear_mobs_loop
+    ; for features loop
+    ldx #00
+; generate random dungeon features
+; rand_feature has a *chance* to generate feature each time called
+generate_features:
+    txa
+    pha
+    jsr rand_floor
+    jsr rand_feature
+    ; todo if features, store in features array
+    ; todo test this by rendering features
+    pla
+    clc
+    adc #.sizeof(Feature)
+    tax
+    cpx #maxfeatures/2 * .sizeof(Feature) ; leave room for drops, since they count as "features" for now
+    bne generate_features
     ; done
     rts
 

@@ -46,3 +46,42 @@
     maxhp .byte
     power .byte
 .endstruct
+
+.enum ItemTypes
+    none
+    potion
+    scroll
+.endenum
+
+.enum Potions
+    heal
+    fullheal
+    poison
+    confusion
+    power
+.endenum
+.enum Scrolls
+    teleport
+    mapping
+    fire
+    fear
+    amnesia
+.endenum
+
+.struct Item
+    appearance .word ; pointer to appearance string
+    item       .byte ; one of above item enums
+    type       .byte
+.endstruct
+
+.enum Features
+    none
+    chest
+    item_potion
+    item_scroll
+.endenum
+
+.struct Feature
+    coords     .tag Coord
+    type       .byte
+.endstruct

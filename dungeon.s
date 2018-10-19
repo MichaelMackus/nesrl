@@ -1,6 +1,7 @@
 .include "global.inc"
 
 .export rand_passable
+.export rand_floor
 .export is_floor
 .export is_passable
 .export within_bounds
@@ -26,6 +27,7 @@ tmp:         .res 1
 
 tiles:       .res maxtiles ; represents a 256x240 walkable grid in bits, 1 = walkable; 0 = impassable
 seen:        .res maxtiles
+features:    .res .sizeof(Feature)*maxfeatures
 
 .segment "CODE"
 
@@ -132,6 +134,16 @@ success:
     jsr randxy
     jsr is_passable
     bne rand_passable
+    rts
+.endproc
+
+; rand floor xy
+; clobbers: tmp, x,  and y
+; todo ensure we don't hit endless loop if out of x,y
+.proc rand_floor
+    jsr randxy
+    jsr is_floor
+    bne rand_floor
     rts
 .endproc
 

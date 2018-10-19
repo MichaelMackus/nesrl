@@ -1,10 +1,11 @@
 .include "scopes.inc"
 
 ; global constants
-maxtiles   = 96
-max_width  = 32
-max_height = 24
-maxmobs    = 20
+maxtiles    = 96
+max_width   = 32
+max_height  = 24
+maxmobs     = 20
+maxfeatures = 20
 
 ; main.s
 .globalzp turn
@@ -39,6 +40,7 @@ maxmobs    = 20
 .globalzp down_x
 .globalzp down_y
 .global rand_passable
+.global rand_floor
 .global is_floor
 .global is_passable
 .global randxy
@@ -112,3 +114,8 @@ maxmobs    = 20
 ; input.s
 .global readcontroller
 .global handle_input
+
+; item.s
+.globalzp feature
+.globalzp item
+.global rand_feature
