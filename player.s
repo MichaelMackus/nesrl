@@ -12,8 +12,8 @@ stats: .res .sizeof(PlayerStats)
 
 .segment "BSS"
 
-max_items = 100
-items: .res .sizeof(Item)*max_items
+max_inventory = 100
+inventory: .res .sizeof(Item)*max_inventory
 
 .segment "CODE"
 
