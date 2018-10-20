@@ -45,8 +45,10 @@ x_repeat:
     stx xpos
     sty ypos
     ldy #0
+.ifndef WIZARD
     jsr can_see
     bne render_bg
+.endif
     jsr get_bg_tile
     sta $2007
     jmp continue_loop
