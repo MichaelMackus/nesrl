@@ -193,24 +193,11 @@ within_bounds_fail:
 ; clobbers: tmp and x
 .proc get_byte_mask
     lda xpos
-    sta tmp
-    lda #0
-    lsr tmp
-    ror
-    lsr tmp
-    ror
-    lsr tmp
-    ror
-    ; now fill in zeroes
-    ror
-    ror
-    ror
-    ror
-    ror
+    ; get 3 lowest bits (number 0-7)
+    and #%00000111
     ; now, we have the remainder (bit 0-7)
     sta tmp
-    lda #0
-    tax
+    ldx #0
     sec
 get_byte_mask_loop:
     ror
