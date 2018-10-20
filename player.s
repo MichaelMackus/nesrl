@@ -10,6 +10,11 @@
 tmp:   .res 1
 stats: .res .sizeof(PlayerStats)
 
+.segment "BSS"
+
+max_items = 100
+items: .res .sizeof(Item)*max_items
+
 .segment "CODE"
 
 ; initialize player mob
@@ -33,6 +38,7 @@ stats: .res .sizeof(PlayerStats)
 .endproc
 
 ; regen player every 8 turns
+; todo figure out better way for later regen, perhaps resting?
 .proc player_regen
     lda turn
     lsr
