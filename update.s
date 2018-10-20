@@ -120,8 +120,6 @@ draw_seen:
     ; update seen tile
     jsr update_seen
     ; success, draw tile
-    ldx xpos
-    ldy ypos
     jsr get_bg_tile
     ldy draw_y
     sta draw_buffer, y

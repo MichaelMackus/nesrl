@@ -1,13 +1,11 @@
 .include "global.inc"
 
+.export feature_at
 .export rand_feature
 .export rand_drop
 
 .segment "ZEROPAGE"
 
-; for random generation
-feature:    .res .sizeof(Feature)
-item:       .res .sizeof(Item)
 ; store map of item -> appearance
 potion_map: .res 5 ; amount of potions
 scroll_map: .res 5 ; amount of scrolls
@@ -19,14 +17,43 @@ items:       .res .sizeof(ItemDrop)*maxdrops
 
 .segment "CODE"
 
-; generate random dungeon feature at x and y register
+; get feature at xpos and ypos
+; out: 0 on success
+; updates: y register to feature index
+.proc feature_at
+    ldy #0
+loop:
+    lda features + Feature::coords + Coord::xcoord, y
+    cmp xpos
+    bne continue
+    lda features + Feature::coords + Coord::ycoord, y
+    cmp ypos
+    beq success
+continue:
+    tya
+    clc
+    adc #.sizeof(Feature)
+    cmp #maxfeatures * .sizeof(Feature)
+    tay
+    bne loop
+    ; failure
+    lda #1
+    rts
+success:
+    lda #0
+    rts
+.endproc
+
+; generate random dungeon feature at xpos and ypos
+; stores feature in features array at index y
+;
 ; clobbers: x
 .proc rand_feature
     lda xpos
-    sta feature + Feature::coords + Coord::xcoord
+    sta features + Feature::coords + Coord::xcoord, y
     ; for some reason, if we lda twice we get grey screen bug
     lda ypos
-    sta feature + Feature::coords + Coord::ycoord
+    sta features + Feature::coords + Coord::ycoord, y
     ; random number 0-255
     jsr prng
     ; roughly 2% chance to spawn chest
@@ -34,15 +61,15 @@ items:       .res .sizeof(ItemDrop)*maxdrops
     bcc chest
     ; failure
     lda #Features::none
-    sta feature+Feature::type
+    sta features + Feature::type, y
     rts
 chest:
     lda #Features::chest
-    sta feature+Feature::type
+    sta features + Feature::type, y
     rts
 .endproc
 
-; generate random drop
+; generate random drop at index y
 ;
 ; in: rarity (1-10) (todo doesn't do anything atm)
 .proc rand_drop
@@ -52,12 +79,12 @@ chest:
     jmp rand_scroll
 .endproc
 
-; store random potion in item var
+; store random potion in items var at index y
 ; clobbers x and accum
 .proc rand_potion
     ; prepare item
     lda #ItemTypes::potion
-    sta item+Item::type
+    sta items+Item::type, y
     ; generate random potion
     jsr d6
     cmp #1
@@ -77,50 +104,50 @@ chest:
 pot_1:
 pot_2:
     lda #Potions::heal
-    sta item+Item::item
+    sta items+Item::item, y
     jsr item_appearance
     rts
 ; full healing pot
 pot_3:
     lda #Potions::fullheal
-    sta item+Item::item
+    sta items+Item::item, y
     jsr item_appearance
     rts
 ; poison pot
 pot_4:
     lda #Potions::poison
-    sta item+Item::item
+    sta items+Item::item, y
     jsr item_appearance
     rts
 ; confusion pot
 pot_5:
     lda #Potions::confusion
-    sta item+Item::item
+    sta items+Item::item, y
     jsr item_appearance
     rts
 ; power pot
 pot_6:
     lda #Potions::power
-    sta item+Item::item
+    sta items+Item::item, y
     jsr item_appearance
     rts
 .endproc
 
-; todo store random scroll in item var
+; todo store random scroll in items var at index y
 ; clobbers x and accum
 .proc rand_scroll
 .endproc
 
-; loads the item appearance pointer
+; loads the item appearance pointer of items var at index y
 ; todo lookup in map first, otherwise randomize appearance
 .proc item_appearance
-    lda item+Item::type
+    lda items+Item::type, y
     cmp #ItemTypes::potion
     beq potion_appearance
     ; todo scrolls
     rts
 potion_appearance:
-    lda item+Item::item
+    lda items+Item::item, y
     cmp #Potions::heal
     beq heal
     cmp #Potions::fullheal
@@ -134,33 +161,33 @@ potion_appearance:
     rts
 heal:
     lda #<txt_heal
-    sta item+Item::appearance
+    sta items+Item::appearance, y
     lda #>txt_heal
-    sta item+Item::appearance+1
+    sta items+Item::appearance+1, y
     rts
 fullheal:
     lda #<txt_fullheal
-    sta item+Item::appearance
+    sta items+Item::appearance, y
     lda #>txt_fullheal
-    sta item+Item::appearance+1
+    sta items+Item::appearance+1, y
     rts
 poison:
     lda #<txt_poison
-    sta item+Item::appearance
+    sta items+Item::appearance, y
     lda #>txt_poison
-    sta item+Item::appearance+1
+    sta items+Item::appearance+1, y
     rts
 confusion:
     lda #<txt_confusion
-    sta item+Item::appearance
+    sta items+Item::appearance, y
     lda #>txt_confusion
-    sta item+Item::appearance+1
+    sta items+Item::appearance+1, y
     rts
 power:
     lda #<txt_power
-    sta item+Item::appearance
+    sta items+Item::appearance, y
     lda #>txt_power
-    sta item+Item::appearance+1
+    sta items+Item::appearance+1, y
     rts
 .endproc
 

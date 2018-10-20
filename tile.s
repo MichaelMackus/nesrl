@@ -9,11 +9,12 @@
 
 .segment "CODE"
 
-; updates register a with the tile corresponding to 
-; coords from registers x and y
-; clobbers y
+; updates register a with the tile corresponding to xpos and ypos
+; clobbers: x and y
 .proc get_bg_tile
 check_upstair:
+    ldx xpos
+    ldy ypos
     cpx up_x
     bne check_downstair
     cpy up_y
@@ -25,9 +26,21 @@ check_downstair:
     cpx down_x
     bne tile
     cpy down_y
-    bne tile
+    bne check_feature
     lda #$3F
     rts
+check_feature:
+    jsr feature_at
+    bne tile
+    ; success! feature in register y
+    cmp #Features::chest
+    beq chest
+chest:
+    lda #$91
+    rts
+    ; no feature found
+    jmp tile
+; todo check_item:
 tile:
     ; finally, display tile
     jsr get_byte_offset
@@ -37,8 +50,11 @@ tile:
     bne floor
 bg:
     lda #$00
+    ;lda #$60 ; todo only display wall if is_touching floor
     rts
 floor:
+    ;lda #$62
+    ;lda #$84
     lda #$82
     rts
 .endproc

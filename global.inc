@@ -117,7 +117,8 @@ maxdrops    = 20
 .global handle_input
 
 ; item.s
-.globalzp feature
-.globalzp item
+.globalzp features
+.globalzp items
+.global feature_at
 .global rand_feature
 .global rand_drop

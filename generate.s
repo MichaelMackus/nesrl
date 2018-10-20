@@ -201,20 +201,38 @@ clear_mobs_loop:
     cmp #mobs_size
     bne clear_mobs_loop
     ; for features loop
-    ldx #00
+    ldy #00
 ; generate random dungeon features
 ; rand_feature has a *chance* to generate feature each time called
 generate_features:
-    txa
+    tya
     pha
     jsr rand_floor
-    jsr rand_feature
     pla
+    tay
+    jsr rand_feature
+    ; increment y by Feature size
+    tya
     clc
     adc #.sizeof(Feature)
-    tax
-    cpx #maxfeatures * .sizeof(Feature) ; leave room for drops, since they count as "features" for now
+    tay
+    cpy #maxfeatures * .sizeof(Feature) ; leave room for drops, since they count as "features" for now
     bne generate_features
+    ldx #0
+; todo generate random items in dungeon
+;generate_items:
+;    txa
+;    pha
+;    jsr rand_floor
+;    ldx xpos
+;    ldy ypos
+;    jsr rand_feature
+;    pla
+;    clc
+;    adc #.sizeof(Feature)
+;    tax
+;    cpx #maxfeatures * .sizeof(Feature) ; leave room for drops, since they count as "features" for now
+;    bne generate_features
     ; done
     rts
 
