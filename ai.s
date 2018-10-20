@@ -6,7 +6,6 @@
 .segment "ZEROPAGE"
 
 tmp:      .res 1
-airesult: .res 1 ; store and'ed AI result
 
 .segment "CODE"
 
@@ -14,8 +13,6 @@ airesult: .res 1 ; store and'ed AI result
 ; moves towards player if can see
 ; NOTE: mobs see further than player, so its a little challenging
 .proc mob_ai
-    lda #AIResult::none
-    sta airesult
     ldy #mob_size
 mob_ai_loop:
     tya
@@ -60,10 +57,6 @@ attack_player:
     ; remember y to stack
     tya
     pha
-    ; update result
-    lda #AIResult::attack
-    ora airesult
-    sta airesult
     ; use damage calc for mob
     jsr mob_dmg
     ldy #0 ; player index
@@ -84,10 +77,6 @@ attack_player:
     tay
     jmp continue_mob_ai
 player_dead:
-    ; update result
-    lda #AIResult::player_killed
-    ora airesult
-    sta airesult
     ; dead
     pla ; todo ensure this is appropriate
     tay
@@ -255,10 +244,6 @@ try_down:
 finish_x_move:
     pla ; remove player x from stack
 finish_move:
-    ; update result
-    lda #AIResult::move
-    ora airesult
-    sta airesult
     pla ; remove player y from stack
     ldy mob_index
     lda xpos

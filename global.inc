@@ -64,7 +64,6 @@ maxdrops    = 20
 .global mob_dmg
 
 ; ai.s
-.globalzp airesult
 .global mob_ai
 .global mob_spawner
 

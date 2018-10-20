@@ -174,21 +174,11 @@ playgame:
     beq win_dungeon
     cmp #InputResult::move
     beq update_seen
-    cmp #InputResult::death
-    beq game_over
 
 ai:
     jsr mob_ai
+    jsr check_game_over
 
-    ; check AI result & update game's state
-    lda airesult
-    and #AIResult::player_killed
-    bne game_over
-    lda airesult
-    and #AIResult::attack
-    beq continue_playing
-
-continue_playing:
     jsr mob_spawner
     jsr player_regen
 
@@ -230,13 +220,6 @@ escape_dungeon:
     jsr render_escape
     jmp done
 
-; update state to end & render game over
-game_over:
-    lda #GameState::end
-    sta gamestate
-    jsr render_death
-    jmp done
-
 ; update state to win
 win_dungeon:
     lda #GameState::win
@@ -248,6 +231,17 @@ win_dungeon:
 update_seen:
     jsr buffer_seen
     jmp ai
+
+; ensure player alive, otherwise display Game Over screen
+check_game_over:
+    lda mobs + Mob::hp
+    beq game_over
+    rts
+game_over:
+    lda #GameState::end
+    sta gamestate
+    jsr render_death
+    rts
 
 
 .segment "RODATA"
