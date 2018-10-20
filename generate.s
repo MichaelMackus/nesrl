@@ -74,6 +74,8 @@ random_dir_loop:
     lda tmp
     sta direction
     ldx #$00
+    txa
+    pha
 
 ; pick random length
 random_length:
@@ -83,7 +85,8 @@ random_length:
     bcs random_length ; greater than max_length
 length_done:
     sta tunnel_len
-
+    pla
+    tax
 check_dir:
     lda direction
     jsr update_pos
