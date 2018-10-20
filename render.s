@@ -30,23 +30,38 @@ generate_ppu:
     sta $2006
     ldx #$00 ; counter for background sprite position
     ldy #$00
+; clear first line
+clear_line:
+    sta $2007
+    inx
+    cpx #$20
+    bne clear_line
+    ldx #$00
 ; loop through x and y
 y_repeat:
-    cpy #max_height+1 ; +1 to ensure we clear first line
-    beq render_seen
+    cpy #max_height ; +1 to ensure we clear first line
+    beq render_status
 x_repeat:
-    ; clear tiles
+    stx xpos
+    sty ypos
+    ldy #0
+    jsr can_see
+    bne render_bg
+    jsr get_bg_tile
+    sta $2007
+    jmp continue_loop
+render_bg:
     lda #$00
     sta $2007
 continue_loop:
+    ldx xpos
+    ldy ypos
     inx
     cpx #max_width
     bne x_repeat
     iny
     ldx #$00
     jmp y_repeat
-render_seen:
-    jsr buffer_seen
 ; render status messages
 render_status:
     ; hp
