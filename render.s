@@ -1,7 +1,6 @@
 .include "global.inc"
 
 .export render
-.export regenerate
 .export render_escape
 .export render_win
 
@@ -94,6 +93,8 @@ render_done:
     cmp nmis
     beq render_done
 
+    jsr update_sprites
+
     ; update scrolling
     bit $2002
     lda #$00
@@ -103,16 +104,6 @@ render_done:
     ; tell PPU to render BG & sprites
     lda #%00011010 ; note: need second bit in order to show background on left side of screen
     sta $2001
-    rts
-.endproc
-
-; re-generate next dungeon level
-.proc regenerate
-    lda nmis
-    sta seed
-    jsr generate
-    ; render the dungeon
-    jsr render
     rts
 .endproc
 

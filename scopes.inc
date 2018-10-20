@@ -5,6 +5,23 @@
     win
 .endenum
 
+.enum InputResult
+    none
+    move
+    attack
+    new_dlevel
+    escape
+    death
+    win
+.endenum
+
+.enum AIResult
+    none = %00000000
+    move = %00000001
+    attack = %00000010
+    player_killed = %00000100
+.endenum
+
 .enum Messages
     none
     hit

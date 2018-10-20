@@ -16,8 +16,6 @@ maxdrops    = 20
 .globalzp controller1
 .globalzp controller1release
 .globalzp nmis
-.globalzp gamestate
-.globalzp need_buffer
 
 ; message.s
 .globalzp max_messages
@@ -66,6 +64,7 @@ maxdrops    = 20
 .global mob_dmg
 
 ; ai.s
+.globalzp airesult
 .global mob_ai
 .global mob_spawner
 
@@ -101,7 +100,6 @@ maxdrops    = 20
 
 ; render.s
 .global render
-.global regenerate
 .global render_escape
 .global render_death
 .global render_win

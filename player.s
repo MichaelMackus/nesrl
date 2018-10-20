@@ -53,9 +53,6 @@ items: .res .sizeof(Item)*max_items
     beq done
     ; do regen
     inc mobs + Mob::hp
-    ; ensure buffer gets re-drawn
-    lda #1
-    sta need_buffer
 done:
     rts
 .endproc
@@ -172,8 +169,5 @@ levelup:
     ; reset exp to zero
     lda #0
     sta stats+PlayerStats::exp
-    ; ensure we buffer the changes
-    lda #1
-    sta need_buffer
     rts
 .endproc

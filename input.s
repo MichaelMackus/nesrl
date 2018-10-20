@@ -3,6 +3,10 @@
 .export readcontroller
 .export handle_input
 
+.segment "ZEROPAGE"
+
+input_result: .res 1
+
 .segment "CODE"
 
 .proc handle_input
@@ -11,9 +15,6 @@
     beq check_movement
     jmp handle_action
 check_movement:
-    ; ensure we update buffer
-    lda #1
-    sta need_buffer
     ; update player pos to memory
     lda mobs + Mob::coords + Coord::xcoord
     sta xpos
@@ -32,8 +33,8 @@ check_movement:
     lda controller1release
     and #%00001000  ; up
     bne attempt_up
-    ; no input - don't need to update buffer after all
-    dec need_buffer
+    ; no input
+    lda #InputResult::none
     rts
 attempt_left:
     dec xpos
@@ -54,6 +55,7 @@ attempt_up:
 .endproc
 
 ; handle a button
+; returns InputResult for handling of input
 .proc handle_action
 check_dstair:
     ldx mobs + Mob::coords + Coord::xcoord
@@ -67,7 +69,7 @@ check_dstair:
     lda dlevel
     cmp #10 ; todo custom win condition
     beq win
-    jsr regenerate
+    lda #InputResult::new_dlevel
     rts
 check_upstair:
     ldx mobs + Mob::coords + Coord::xcoord
@@ -81,28 +83,29 @@ check_upstair:
     lda dlevel
     cmp #0
     beq escape
-    jsr regenerate
+    lda #InputResult::new_dlevel
     rts
 escape:
     jsr render_escape
     ; escape dungeon
-    lda #GameState::end
-    sta gamestate
+    lda #InputResult::escape
     rts
 win:
     jsr render_win
     ; win dungeon
-    lda #GameState::win
-    sta gamestate
+    lda #InputResult::win
     rts
 input_done:
+    lda #InputResult::none
     rts
 .endproc
 
 ; attempt move at xpos, ypos
+; returns InputResult for handling of input
 .proc attempt_move
     jsr within_bounds
     beq do_move
+    lda #InputResult::none
     rts
 do_move:
     jsr mob_at
@@ -114,6 +117,7 @@ do_move:
     sta mobs+Mob::coords+Coord::xcoord
     lda ypos
     sta mobs+Mob::coords+Coord::ycoord
+    lda #InputResult::move
     rts
 attack_mob:
     ; use damage calc for player
@@ -127,6 +131,7 @@ attack_mob:
     lda #Messages::hit
     jsr push_msg
     ; done
+    lda #InputResult::attack
     rts
 mob_killed:
     tya
@@ -142,8 +147,10 @@ mob_killed:
     tay
     jsr award_exp
     ; done
+    lda #InputResult::attack
     rts
 input_done:
+    lda #InputResult::none
     rts
 .endproc
 

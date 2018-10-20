@@ -10,7 +10,6 @@ controller1release: .res 1
 nmis:        .res 1            ; how many nmis have passed
 tmp:         .res 1
 need_draw:   .res 1            ; do we need to draw draw buffer?
-need_buffer: .res 1            ; do we need to update the draw buffer?
 
 .segment "HEADER"
 
@@ -41,12 +40,12 @@ init_memory:
     ; initialize vars to zero
     lda #GameState::start
     sta gamestate
+    lda #0
     sta controller1
     sta controller1release
     sta dlevel
     sta draw_buffer
     sta need_draw
-    sta need_buffer
     sta turn
     inc turn ; set turn to 1
     jsr initialize_player
@@ -154,53 +153,56 @@ start_screen:
     lda controller1release
     and #%00010000 ; start
     beq done
-    jsr regenerate
     lda #GameState::playing
     sta gamestate
-    jmp done
-
-escape_dungeon:
-    jmp done
+    jmp regenerate
 
 playgame:
     ; update turn when input is made
     lda controller1release
-    beq playgame_noinput
-
-    ; increment turn counter
+    beq done
     inc turn
 
-    jsr handle_input ; todo sometimes death message not rendering properly
+    jsr handle_input
+
+    ; check input result & update game's state
+    cmp #InputResult::new_dlevel
+    beq regenerate
+    cmp #InputResult::escape
+    beq escape_dungeon
+    cmp #InputResult::win
+    beq win_dungeon
+    cmp #InputResult::move
+    beq update_seen
+    cmp #InputResult::death
+    beq game_over
+
+ai:
     jsr mob_ai
 
-    ; check gamestate, to ensure we're still playing
-    lda gamestate
-    cmp #GameState::playing
-    bne skip_buffer
+    ; check AI result & update game's state
+    lda airesult
+    and #AIResult::player_killed
+    bne game_over
+    lda airesult
+    and #AIResult::attack
+    beq continue_playing
 
+continue_playing:
     jsr mob_spawner
     jsr player_regen
 
-playgame_noinput:
-    ; update sprite OAM data
-    jsr update_sprites
-
-done:
-    ; check for new messages
-    lda need_buffer
-    beq wait_nmi
-    ; update draw buffer with messages
+    ; update messages buffer and hp every time, todo figure out better way
     jsr buffer_messages
     jsr buffer_hp
-    jsr buffer_seen
-    ; stop further buffering
-    lda #0
-    sta need_buffer
     ; notify nmi to draw the buffer
     lda #1
     sta need_draw
 
-skip_buffer:
+    ; update sprite OAM data
+    jsr update_sprites
+
+done:
     lda nmis
 wait_nmi:
     cmp nmis
@@ -209,6 +211,43 @@ wait_nmi:
     ; endless game loop
     jmp main
 
+
+; state updates
+
+; re-generate next dungeon level
+regenerate:
+    lda nmis
+    sta seed
+    jsr generate
+    ; render the dungeon
+    jsr render
+    jmp done
+
+; update state to end & render escape
+escape_dungeon:
+    lda #GameState::end
+    sta gamestate
+    jsr render_escape
+    jmp done
+
+; update state to end & render game over
+game_over:
+    lda #GameState::end
+    sta gamestate
+    jsr render_death
+    jmp done
+
+; update state to win
+win_dungeon:
+    lda #GameState::win
+    sta gamestate
+    jsr render_win
+    jmp done
+
+; ensure buffer is updated when new tiles seen
+update_seen:
+    jsr buffer_seen
+    jmp ai
 
 
 .segment "RODATA"
