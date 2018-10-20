@@ -30,6 +30,7 @@ generate_ppu:
     lda #$00
     sta $2006
     ldx #$00 ; counter for background sprite position
+    ldy #$00
 ; loop through x and y
 y_repeat:
     cpy #max_height+1 ; +1 to ensure we clear first line

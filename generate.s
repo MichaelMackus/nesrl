@@ -205,8 +205,6 @@ generate_features:
     txa
     pha
     jsr rand_floor
-    ldx xpos
-    ldy ypos
     jsr rand_feature
     pla
     clc

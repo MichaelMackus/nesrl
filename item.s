@@ -20,12 +20,13 @@ items:       .res .sizeof(ItemDrop)*maxdrops
 .segment "CODE"
 
 ; generate random dungeon feature at x and y register
+; clobbers: x
 .proc rand_feature
-    ; todo bug when loading xpos or ypos???
-    ;lda xpos
-    stx feature + Feature::coords + Coord::xcoord
-    ;lda ypos
-    sty feature + Feature::coords + Coord::ycoord
+    lda xpos
+    sta feature + Feature::coords + Coord::xcoord
+    ; for some reason, if we lda twice we get grey screen bug
+    lda ypos
+    sta feature + Feature::coords + Coord::ycoord
     ; random number 0-255
     jsr prng
     ; roughly 2% chance to spawn chest
