@@ -8,6 +8,9 @@ maxmobs     = 20
 maxfeatures = 20
 maxdrops    = 20
 
+; math.s
+.global divide
+
 ; main.s
 .globalzp turn
 .globalzp controller1

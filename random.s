@@ -49,8 +49,12 @@ d2_eq:
 ; generate random value from 1-3
 d3:
     jsr prng
-    and #%00000011
-    beq d3 ; don't accept zero
+    ; divide result by 3
+    ldx #3
+    jsr divide
+    ; add 1 to remainder get 1-3
+    clc
+    adc #1
     rts
 
 ; generate random value from 1-4
@@ -64,10 +68,12 @@ d4:
 ; generate random value from 1-6
 d6:
     jsr prng
-    and #%00000111
-    beq d6 ; don't generate zero
-    cmp #7
-    beq d6 ; don't generate 7
+    ; divide result by 6
+    ldx #6
+    jsr divide
+    ; add 1 to remainder get 1-6
+    clc
+    adc #1
     rts
 
 ; generate random value from 1-8
@@ -81,10 +87,10 @@ d8:
 ; generate random value from 1-12
 d12:
     jsr prng
-    and #%00001111
-    cmp #12
-    bcs d12 ; try again since we have a number >= 12
-    ; all good, increment by 1 for result
+    ; divide result by 12
+    ldx #12
+    jsr divide
+    ; add 1 to remainder get 1-12
     clc
-    adc #$01
+    adc #1
     rts
