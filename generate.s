@@ -205,14 +205,14 @@ generate_features:
     txa
     pha
     jsr rand_floor
+    ldx xpos
+    ldy ypos
     jsr rand_feature
-    ; todo if features, store in features array
-    ; todo test this by rendering features
     pla
     clc
     adc #.sizeof(Feature)
     tax
-    cpx #maxfeatures/2 * .sizeof(Feature) ; leave room for drops, since they count as "features" for now
+    cpx #maxfeatures * .sizeof(Feature) ; leave room for drops, since they count as "features" for now
     bne generate_features
     ; done
     rts

@@ -25,12 +25,13 @@ scroll_map: .res 5 ; amount of scrolls
 
 .segment "CODE"
 
-; generate random dungeon feature at xpos and ypos
+; generate random dungeon feature at x and y register
 .proc rand_feature
-    lda xpos
-    sta feature + Feature::coords + Coord::xcoord
-    lda ypos
-    sta feature + Feature::coords + Coord::ycoord
+    ; todo bug when loading xpos or ypos???
+    ;lda xpos
+    stx feature + Feature::coords + Coord::xcoord
+    ;lda ypos
+    sty feature + Feature::coords + Coord::ycoord
     ; random number 0-255
     jsr prng
     ; roughly 2% chance to spawn chest
