@@ -85,15 +85,14 @@ render_status:
     ; buffer our messages, todo this shouldn't be necessary
     jsr buffer_messages
 
-    ; render the buffer
+    ; render the buffer & update our sprites
     jsr render_buffer
+    jsr update_sprites
 
     lda nmis
 render_done:
     cmp nmis
     beq render_done
-
-    jsr update_sprites
 
     ; update scrolling
     bit $2002
