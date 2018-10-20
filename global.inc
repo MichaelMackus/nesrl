@@ -6,6 +6,7 @@ max_width   = 32
 max_height  = 24
 maxmobs     = 20
 maxfeatures = 20
+maxdrops    = 20
 
 ; main.s
 .globalzp turn
@@ -119,3 +120,4 @@ maxfeatures = 20
 .globalzp feature
 .globalzp item
 .global rand_feature
+.global rand_drop

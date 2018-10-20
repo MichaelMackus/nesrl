@@ -1,18 +1,7 @@
-; Due to storage & palette constraints of the NES, we only store the dungeon
-; feature on the dungeon tile. Once the player picks up the item, the feature
-; gets randomized into a real item with feature_to_item. This way, we only need
-; to store coords of features in the dungeon, and the full item struct only
-; gets stored in the player's inventory. This works, since only the Player can
-; use items in this game.
-;
-; TODO this won't work if we want to allow more than 1 item/feature in 1 tile
-; TODO for example, if a chest is on a tile, we can't put a monster drop there
-
 .include "global.inc"
 
 .export rand_feature
 .export rand_drop
-.export feature_to_item
 
 .segment "ZEROPAGE"
 
@@ -22,6 +11,11 @@ item:       .res .sizeof(Item)
 ; store map of item -> appearance
 potion_map: .res 5 ; amount of potions
 scroll_map: .res 5 ; amount of scrolls
+
+.segment "BSS"
+
+features:    .res .sizeof(Feature)*maxfeatures
+items:       .res .sizeof(ItemDrop)*maxdrops
 
 .segment "CODE"
 
@@ -37,12 +31,6 @@ scroll_map: .res 5 ; amount of scrolls
     ; roughly 2% chance to spawn chest
     cmp #5
     bcc chest
-    ; additional 2% potion
-    cmp #11
-    bcc potion
-    ; additional 2% chance to spawn scroll
-    cmp #15
-    bcc scroll
     ; failure
     lda #Features::none
     sta feature+Feature::type
@@ -51,22 +39,16 @@ chest:
     lda #Features::chest
     sta feature+Feature::type
     rts
-potion:
-    lda #Features::item_potion
-    sta feature+Feature::type
-    rts
-scroll:
-    lda #Features::item_scroll
-    sta feature+Feature::type
-    rts
 .endproc
 
-; generate random mob drop feature at xpos and ypos
+; generate random drop
+;
+; in: rarity (1-10) (todo doesn't do anything atm)
 .proc rand_drop
-.endproc
-
-; generate random item from the feature
-.proc feature_to_item
+    jsr d2
+    cmp #1
+    beq rand_potion
+    jmp rand_scroll
 .endproc
 
 ; store random potion in item var

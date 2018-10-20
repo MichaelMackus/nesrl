@@ -27,7 +27,6 @@ tmp:         .res 1
 
 tiles:       .res maxtiles ; represents a 256x240 walkable grid in bits, 1 = walkable; 0 = impassable
 seen:        .res maxtiles
-features:    .res .sizeof(Feature)*maxfeatures
 
 .segment "CODE"
 

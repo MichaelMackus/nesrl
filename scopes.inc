@@ -74,11 +74,14 @@
     type       .byte
 .endstruct
 
+.struct ItemDrop
+    coords     .tag Coord
+    item       .tag Item
+.endstruct
+
 .enum Features
     none
     chest
-    item_potion
-    item_scroll
 .endenum
 
 .struct Feature
