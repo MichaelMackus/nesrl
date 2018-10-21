@@ -1,4 +1,5 @@
 ; functions related to PPU scrolling
+; todo scrolling functions currently assume scroll is always on 8 pixel boundary
 
 ; in: dividend
 ; x: divisor
@@ -8,6 +9,10 @@
 .exportzp ppu_addr
 .exportzp scroll
 .exportzp base_nt
+.export scroll_right
+.export scroll_left
+.export scroll_up
+.export scroll_down
 .export iny_ppu
 .export dey_ppu
 .export inx_ppu
@@ -25,6 +30,83 @@ scroll:   .res 2 ; x, y
 base_nt:  .res 1 ; mask for controller base NT bits
 
 .segment "CODE"
+
+; scroll right by 1 column
+.proc scroll_right
+    lda scroll
+    clc
+    adc #$08
+    beq flip_page
+    sta scroll
+    rts
+flip_page:
+    ; flip the x page
+    lda base_nt
+    eor #%00000001
+    sta base_nt
+    ; set scroll to 8, simulating right scroll
+    lda #8
+    sta scroll
+    rts
+.endproc
+
+; scroll left by 1 column
+.proc scroll_left
+    lda scroll
+    sec
+    sbc #$08
+    bcc flip_page
+    sta scroll
+    rts
+flip_page:
+    ; flip the x page
+    lda base_nt
+    eor #%00000001
+    sta base_nt
+    ; set scroll to 256 - 8, simulating left scroll
+    lda #256 - 8
+    sta scroll
+    rts
+.endproc
+
+; scroll up by 1 column
+.proc scroll_up
+    lda scroll + 1
+    sec
+    sbc #$08
+    bcc flip_page
+    sta scroll + 1
+    rts
+flip_page:
+    ; flip the y page
+    lda base_nt
+    eor #%00000010
+    sta base_nt
+    ; set scroll to 240 - 8, simulating up scroll
+    lda #240 - 8
+    sta scroll + 1
+    rts
+.endproc
+
+; scroll down by 1 column
+.proc scroll_down
+    lda scroll + 1
+    clc
+    adc #$08
+    cmp #240
+    bcs flip_page
+    sta scroll + 1
+    rts
+flip_page:
+    ; flip the y page
+    lda base_nt
+    eor #%00000010
+    sta base_nt
+    ; set scroll to 8, simulating down scroll
+    lda #8
+    sta scroll + 1
+    rts
+.endproc
 
 ; increment PPU address by 1 rows, handles wrapping to first NT addr
 ;

@@ -10,6 +10,15 @@ maxdrops    = 20
 
 ; math.s
 .global divide
+
+; scroll.s
+.globalzp ppu_addr
+.globalzp scroll
+.globalzp base_nt
+.global scroll_right
+.global scroll_left
+.global scroll_up
+.global scroll_down
 .global inx_ppu
 .global dex_ppu
 .global iny_ppu
@@ -31,6 +40,7 @@ maxdrops    = 20
 .global has_amount
 
 ; update.s
+.global init_buffer
 .global buffer_tiles
 .global buffer_messages
 .global buffer_hp
