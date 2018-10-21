@@ -41,14 +41,14 @@ y_last_nt  = $28
 x_first_nt = $20
 x_last_nt  = $24
 
-; increment PPU address by 2 rows, handles wrapping to first NT addr
+; increment PPU address by 1 rows, handles wrapping to first NT addr
 ;
 ; x: low byte
 ; y: high byte
 .proc iny_ppu
 .endproc
 
-; decrement PPU address by 2 rows, handles wrapping to last NT addr
+; decrement PPU address by 1 rows, handles wrapping to last NT addr
 ; updates x and y registers with new NT addr
 ;
 ; x: high byte
@@ -61,7 +61,7 @@ x_last_nt  = $24
     ; decrement low byte by one row (32 tiles)
     lda ppu_addr+1
     sec
-    sbc #$40
+    sbc #$20
     sta ppu_addr+1
     ; done
     jmp done
@@ -81,10 +81,6 @@ done:
 .proc inc_ppu_high
 .endproc
 
-; increment PPU low address by 2 rows, wrapping to 00 on end of NT
-.proc inc_ppu_low
-.endproc
-
 ; decrement PPU high address by 1, wrapping to first PPU high address
 .proc dey_ppu_high
     ; handle nametable wrapping
@@ -96,7 +92,7 @@ done:
     ; not start of first or start of last, decrement by 1
     dec ppu_addr
     ; set low byte to last row of prev addr
-    lda #$C0
+    lda #$E0
     sta ppu_addr + 1
     jmp done
 wrap_prev_nt:
@@ -108,15 +104,11 @@ wrap_last_nt:
     sta ppu_addr
 wrap_prev_lowbyte:
     ; set low byte to $80, last row in NT
-    lda #$80
+    lda #$A0
     sta ppu_addr + 1
 done:
     ; update x and y
     ldx ppu_addr
     ldy ppu_addr + 1
     rts
-.endproc
-
-; decrement PPU low address by 2 rows, wrapping to 00 on end of NT
-.proc dey_ppu_low
 .endproc
