@@ -5,6 +5,9 @@
 ; out: remainder of modulus
 .import mod
 
+.exportzp ppu_addr
+.exportzp scroll
+.exportzp base_nt
 .export iny_ppu
 .export dey_ppu
 .export inx_ppu
@@ -17,7 +20,9 @@ x_last_nt  = $24
 
 .segment "ZEROPAGE"
 
-ppu_addr: .res 2
+ppu_addr: .res 2 ; high byte, low byte
+scroll:   .res 2 ; x, y
+base_nt:  .res 1 ; mask for controller base NT bits
 
 .segment "CODE"
 
@@ -26,8 +31,6 @@ ppu_addr: .res 2
 ; x: low byte
 ; y: high byte
 .proc iny_ppu
-    stx ppu_addr
-    sty ppu_addr+1
     lda ppu_addr+1
     cmp #$A0
     beq iny_ppu_high ; last row for low byte
@@ -37,10 +40,6 @@ ppu_addr: .res 2
     adc #$20
     sta ppu_addr+1
     ; done
-    jmp done
-done:
-    ldx ppu_addr
-    ldy ppu_addr + 1
     rts
 .endproc
 
@@ -50,8 +49,6 @@ done:
 ; x: high byte
 ; y: low byte
 .proc dey_ppu
-    stx ppu_addr
-    sty ppu_addr+1
     lda ppu_addr+1
     beq dey_ppu_high ; zero
     ; decrement low byte by one row (32 tiles)
@@ -60,16 +57,11 @@ done:
     sbc #$20
     sta ppu_addr+1
     ; done
-    jmp done
-done:
-    ldx ppu_addr
-    ldy ppu_addr + 1
     rts
 .endproc
 
+; clobbers: x
 .proc inx_ppu
-    stx ppu_addr
-    sty ppu_addr+1
     ; if remainder of division is #$1F (31), wrap to next NT
     lda ppu_addr+1
     ldx #$20
@@ -79,14 +71,11 @@ done:
     ; increment low byte by one row (32 tiles)
     inc ppu_addr+1
     ; done
-done:
-    ldx ppu_addr
-    ldy ppu_addr + 1
     rts
 .endproc
+
+; clobbers: x
 .proc dex_ppu
-    stx ppu_addr
-    sty ppu_addr+1
     ; if remainder of division is #$00, wrap to prev NT
     lda ppu_addr+1
     ldx #$20
@@ -96,9 +85,6 @@ done:
     ; decrement low byte by one row (32 tiles)
     dec ppu_addr+1
     ; done
-done:
-    ldx ppu_addr
-    ldy ppu_addr + 1
     rts
 .endproc
 
@@ -125,10 +111,7 @@ set_lowbyte:
     ; set low byte to $00, first row in NT
     lda #$00
     sta ppu_addr + 1
-done:
-    ; update x and y
-    ldx ppu_addr
-    ldy ppu_addr + 1
+    ; done
     rts
 .endproc
 
@@ -159,8 +142,6 @@ wrap_prev_lowbyte:
     sta ppu_addr + 1
 done:
     ; update x and y
-    ldx ppu_addr
-    ldy ppu_addr + 1
     rts
 .endproc
 
@@ -185,10 +166,7 @@ set_lowbyte:
     sec
     sbc #$1F
     sta ppu_addr + 1
-done:
-    ; update x and y
-    ldx ppu_addr
-    ldy ppu_addr + 1
+    ; done
     rts
 .endproc
 
@@ -213,10 +191,7 @@ set_lowbyte:
     clc
     adc #$1F
     sta ppu_addr + 1
-done:
-    ; update x and y
-    ldx ppu_addr
-    ldy ppu_addr + 1
+    ; done
     rts
 .endproc
 
