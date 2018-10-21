@@ -34,6 +34,10 @@ done:
     rts
 .endproc
 
+; PPU increment & decrement setup, todo handle incy and incx
+first_nt = $20
+last_nt  = $28
+
 ; increment PPU address by 2 rows, handles wrapping to first NT addr
 ;
 ; x: low byte
@@ -58,40 +62,6 @@ done:
     sta ppu_addr+1
     ; done
     jmp done
-dec_ppu_high:
-    ; handle nametable wrapping
-    ; if high byte divisible by 4, wrap to end of prev NT
-    lda ppu_addr
-    ldx #4
-    jsr divide
-    beq wrap_prev_nt
-    ; not divisible by 4 - decrement high byte & set low byte
-    dec ppu_addr
-    ; set low byte to last row of prev addr
-    lda #$C0
-    sta ppu_addr + 1
-    ; done
-    jmp done
-wrap_prev_nt:
-    ; if first nametable, wrap to last NT
-    lda #$20
-    cmp ppu_addr
-    beq wrap_last_nt
-    ; otherwise, subtract 4 from high byte
-    lda ppu_addr
-    sec
-    sbc #$04
-    sta ppu_addr
-    jmp wrap_prev_lowbyte
-wrap_last_nt:
-    lda #$2F
-    sta ppu_addr
-wrap_prev_lowbyte:
-    ; set low byte to $A0, last row in NT
-    lda #$80
-    sta ppu_addr + 1
-    jmp done
-
 done:
     ldx ppu_addr
     ldy ppu_addr + 1
@@ -108,6 +78,34 @@ done:
 
 ; decrement PPU high address by 1, wrapping to first PPU high address
 .proc dec_ppu_high
+    ; handle nametable wrapping
+    lda ppu_addr
+    cmp #first_nt
+    beq wrap_last_nt
+    cmp #last_nt
+    beq wrap_prev_nt
+    ; not start of first or start of last, decrement by 1
+    dec ppu_addr
+    ; set low byte to last row of prev addr
+    lda #$C0
+    sta ppu_addr + 1
+    jmp done
+wrap_prev_nt:
+    lda #first_nt + $03
+    sta ppu_addr
+    jmp wrap_prev_lowbyte
+wrap_last_nt:
+    lda #last_nt + $03
+    sta ppu_addr
+wrap_prev_lowbyte:
+    ; set low byte to $80, last row in NT
+    lda #$80
+    sta ppu_addr + 1
+done:
+    ; update x and y
+    ldx ppu_addr
+    ldy ppu_addr + 1
+    rts
 .endproc
 
 ; decrement PPU low address by 2 rows, wrapping to 00 on end of NT
