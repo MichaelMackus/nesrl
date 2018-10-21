@@ -28,13 +28,23 @@ generate_ppu:
     lda #%00000000 ; note: need second bit in order to show background on left side of screen
     sta $2001
 
-    bit $2002
-    ; prep ppu for first nametable write
-    lda #$20
-    sta $2006
+    ; initialize defaults for scrolling functionality
     lda #$00
+    sta base_nt
+    sta scroll
+    sta scroll + 1
+    lda #$20
+    sta ppu_addr
+    lda #$00
+    sta ppu_addr + 1
+
+    ; update PPUADDR
+    bit $2002
+    lda ppu_addr
     sta $2006
-    ldx #$00 ; counter for background sprite position
+    lda ppu_addr + 1
+    sta $2006
+
 draw_dungeon:
     ; start x = player's xpos - 16
     ; end   x = player's xpos + 16
@@ -85,11 +95,6 @@ y_repeat:
     cmp endy
     beq tiles_done ; greater than or equal
 x_repeat:
-.ifndef WIZARD
-    ldy #0
-    jsr can_see
-    bne render_bg
-.endif
     jsr get_bg_metatile
     sta $2007
     jmp continue_loop
@@ -148,17 +153,24 @@ tiles_done:
 ;
 ;    ; render the buffer & update our sprites
 ;    jsr render_buffer
+
+render_done:
     jsr update_sprites
 
     lda nmis
-render_done:
+render_wait:
     cmp nmis
-    beq render_done
+    beq render_wait
 
+    ; update the NT page
+    lda #%10000000
+    ora base_nt
+    sta $2000
     ; update scrolling
     bit $2002
-    lda #$00
+    lda scroll
     sta $2005
+    lda scroll + 1
     sta $2005
 
     ; tell PPU to render BG & sprites
