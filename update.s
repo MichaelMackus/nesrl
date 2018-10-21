@@ -292,11 +292,23 @@ update_buffer_amount:
 .endproc
 
 .proc update_sprites
-; render the player sprite
-render_mobs:
+render_player:
+    ; render the player in the center of the screen
+    ; todo this has to be figured out exactly so we can render
+    ; everything else correctly
+    lda #15 * 8 ; y pos
+    sta $0200
     lda #0
-    tay
-    tax
+    jsr get_mob_tile
+    sta $0201
+    lda #%00000000
+    sta $0202, x
+    lda #16 * 8 ; x pos
+    sta $0203
+    rts
+render_mobs:
+    ldx #4
+    ldy #mob_size
 render_mobs_loop:
     jsr is_alive
     bne clear_mob
@@ -323,6 +335,7 @@ render_mob:
     tax
     pla
     tay
+    ; todo multiply x & y by 2 in order to get metax
     lda mobs + Mob::coords + Coord::ycoord, y
     asl
     asl

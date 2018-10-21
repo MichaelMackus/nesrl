@@ -92,6 +92,9 @@ maxdrops    = 20
 .global d12
 
 ; tile.s
+.globalzp metaxpos
+.globalzp metaypos
+.global get_bg_metatile
 .global get_bg_tile
 .global get_mob_tile
 .global get_str_tile

@@ -8,9 +8,15 @@
 
 tmp: .res 1
 
+screen_width  = 32
+screen_height = 30
+startx: .res 1
+endx:   .res 1
+endy:   .res 1
+
 .segment "CODE"
 
-; render the dungeon level
+; render the dungeon level on the current screen
 .proc render
     lda nmis
 wait_nmi:
@@ -29,81 +35,119 @@ generate_ppu:
     lda #$00
     sta $2006
     ldx #$00 ; counter for background sprite position
-    ldy #$00
-; clear first line
-clear_line:
-    sta $2007
-    inx
-    cpx #$20
-    bne clear_line
-    ldx #$00
+draw_dungeon:
+    ; start x = player's xpos - 16
+    ; end   x = player's xpos + 16
+    lda mobs + Mob::coords + Coord::xcoord
+    asl ; multiply by 2 for metax
+    cmp #screen_width / 2
+    bcc force_x
+    sec
+    sbc #screen_width / 2
+    sta startx
+    sta metaxpos
+    lda mobs + Mob::coords + Coord::xcoord
+    asl ; multiply by 2 for metax
+    clc
+    adc #screen_width / 2
+    sta endx
+set_y:
+    ; start y = player's ypos - 15
+    ; end   y = player's xpos + 15
+    lda mobs + Mob::coords + Coord::ycoord
+    asl ; multiply by 2 for metay
+    cmp #screen_width / 2
+    bcc force_y
+    sec
+    sbc #screen_height / 2
+    sta metaypos
+    lda mobs + Mob::coords + Coord::ycoord
+    asl ; multiply by 2 for metay
+    clc
+    adc #screen_height / 2
+    sta endy
+    jmp y_repeat
+force_x:
+    lda #0
+    sta startx
+    sta metaxpos
+    lda #screen_width
+    sta endx
+    jmp set_y
+force_y:
+    lda #0
+    sta metaypos
+    lda #screen_height
+    sta endy
 ; loop through x and y
 y_repeat:
-    cpy #max_height ; +1 to ensure we clear first line
-    beq render_status
+    lda metaypos
+    cmp endy
+    beq tiles_done ; greater than or equal
 x_repeat:
-    stx xpos
-    sty ypos
-    ldy #0
 .ifndef WIZARD
+    ldy #0
     jsr can_see
     bne render_bg
 .endif
-    jsr get_bg_tile
+    jsr get_bg_metatile
     sta $2007
     jmp continue_loop
 render_bg:
     lda #$00
     sta $2007
+
 continue_loop:
-    ldx xpos
-    ldy ypos
-    inx
-    cpx #max_width
-    bne x_repeat
-    iny
-    ldx #$00
+    inc metaxpos
+    lda metaxpos
+    cmp endx
+    beq continue_y ; greater than or equal
+    jmp x_repeat
+continue_y:
+    inc metaypos
+    lda startx
+    sta metaxpos
     jmp y_repeat
-; render status messages
-render_status:
-    ; hp
-    bit $2002
-    lda #$23
-    sta $2006
-    lda #$21
-    sta $2006
-    lda #<txt_hp
-    sta str_pointer
-    lda #>txt_hp
-    sta str_pointer+1
-    jsr render_str
-    ; spacing to line up with dlvl
-    lda #$00
-    sta $2007
-    sta $2007
-    ; render hp
-    jsr buffer_hp
-
-    ; dlvl
-    bit $2002
-    lda #$23
-    sta $2006
-    lda #$61
-    sta $2006
-    lda #<txt_dlvl
-    sta str_pointer
-    lda #>txt_dlvl
-    sta str_pointer+1
-    jsr render_str
-    ; render current dlevel
-    lda dlevel
-    jsr render_num
-
-    ; buffer our messages, todo this shouldn't be necessary
-    jsr buffer_messages
-
-    ; render the buffer & update our sprites
-    jsr render_buffer
+; todo render status messages
+tiles_done:
+;    ; hp
+;    bit $2002
+;    lda #$23
+;    sta $2006
+;    lda #$21
+;    sta $2006
+;    lda #<txt_hp
+;    sta str_pointer
+;    lda #>txt_hp
+;    sta str_pointer+1
+;    jsr render_str
+;    ; spacing to line up with dlvl
+;    lda #$00
+;    sta $2007
+;    sta $2007
+;    ; render hp
+;    jsr buffer_hp
+;
+;    ; dlvl
+;    bit $2002
+;    lda #$23
+;    sta $2006
+;    lda #$61
+;    sta $2006
+;    lda #<txt_dlvl
+;    sta str_pointer
+;    lda #>txt_dlvl
+;    sta str_pointer+1
+;    jsr render_str
+;    ; render current dlevel
+;    lda dlevel
+;    jsr render_num
+;
+;    ; buffer our messages, todo this shouldn't be necessary
+;    jsr buffer_messages
+;
+;    ; render the buffer & update our sprites
+;    jsr render_buffer
     jsr update_sprites
 
     lda nmis

@@ -2,12 +2,33 @@
 
 .include "global.inc"
 
+.export get_bg_metatile
 .export get_bg_tile
 .export get_mob_tile
 .export get_str_tile
 .export get_num_tile
 
+.segment "ZEROPAGE"
+
+metaxpos: .res 1
+metaypos: .res 1
+
 .segment "CODE"
+
+; gets bg metatile in metaxpos and metaypos
+; clobbers: x and y
+.proc get_bg_metatile
+    ; divide metax and metay by 2 to get tile offset
+    lda metaxpos
+    lsr
+    sta xpos
+    lda metaypos
+    lsr
+    sta ypos
+    ; get the bg tile
+    jsr get_bg_tile
+    rts
+.endproc
 
 ; updates register a with the tile corresponding to xpos and ypos
 ; clobbers: x and y
