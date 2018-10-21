@@ -136,6 +136,8 @@ d12_dmg:
     sta mobs + Mob::coords + Coord::xcoord, y
     lda ypos
     sta mobs + Mob::coords + Coord::ycoord, y
+    lda #Direction::right
+    sta mobs + Mob::direction, y
     ; generate random mob type
     lda dlevel
     cmp #3

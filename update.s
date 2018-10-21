@@ -18,6 +18,7 @@ endx:  .res 1 ; for buffer seen loop
 draw_y:   .res 1 ; current draw buffer index
 draw_ppu: .res 2 ; current draw ppu addr
 draw_length: .res 1
+cur_tile: .res 1 ; for drawing sprites
 
 .segment "CODE"
 
@@ -295,43 +296,141 @@ update_buffer_amount:
 ; render the player in the center of the screen, unless there are no
 ; more tiles in that direction
 render_player:
-    ; ensure y coord is at center of screen
+    lda #0
+    jsr get_mob_tile
+    sta cur_tile
+    ldx #$00
+    ldy #$00
+render_player_loop:
+    ; update sprite y pos
+    jsr get_player_y
+    sta $0200, x
+set_player_tile:
+    lda cur_tile
+    sta $0201, x
+    ; todo when flipped, need to switch x/y
+    jsr get_dir_attribute
+    sta $0202, x
+    ; update sprite x pos
+    jsr get_player_x
+    sta $0203, x
+    ; continue loop
+    iny
+    cpy #4
+    bne continue_loop ; done
+    jmp render_mobs
+continue_loop:
+    txa
+    clc
+    adc #$04
+    tax
+    ; increment mob tile
+    cpy #2
+    beq next_tile_row
+    inc cur_tile
+    jmp render_player_loop
+next_tile_row:
+    ; increment to next row
+    lda cur_tile
+    clc
+    adc #$F ; add 15 to get to next row
+    sta cur_tile
+    jmp render_player_loop
+
+; getters for mob x & y based on screen pos
+get_player_y:
     lda mobs + Mob::coords + Coord::ycoord
     asl
     cmp #screen_height / 2
-    bcc update_player_y
+    bcc get_player_moby
     lda #screen_height/2 * 8 ; y pos
-    sta $0200
-set_player_tile:
-    lda #0
-    jsr get_mob_tile
-    sta $0201
-    lda #%00000000
-    sta $0202
-    ; ensure x coord is at center of screen
+    jmp adjust_player_y
+get_player_moby:
+    ; multiply by 8 for pixels
+    asl
+    asl
+    asl
+adjust_player_y:
+    ; increment based on y value
+    pha
+    lda mobs + Mob::direction
+    cmp #Direction::down
+    beq adjust_player_y_inverse
+    pla
+    cpy #2
+    beq increase_y
+    cpy #3
+    beq increase_y
+    rts
+increase_y:
+    ; increase sprite row
+    clc
+    adc #$08
+    rts
+adjust_player_y_inverse:
+    pla
+    cpy #0
+    beq increase_y
+    cpy #1
+    beq increase_y
+    rts
+get_player_x:
     lda mobs + Mob::coords + Coord::xcoord
     asl
     cmp #screen_width / 2
-    bcc update_player_x
-    lda #16 * 8 ; x pos
-    sta $0203
-    rts ; todo remove
-    jmp render_mobs
-update_player_y:
+    bcc get_player_mobx
+    lda #screen_width/2 * 8 ; x pos
+    jmp adjust_player_x
+get_player_mobx:
     ; multiply by 8 for pixels
     asl
     asl
     asl
-    sta $0200
-    jmp set_player_tile
-update_player_x:
-    ; multiply by 8 for pixels
-    asl
-    asl
-    asl
-    sta $0203
-    rts ; todo remove
+adjust_player_x:
+    ; increment based on x value
+    pha
+    lda mobs + Mob::direction
+    cmp #Direction::left
+    beq adjust_player_x_inverse
+    pla
+    cpy #1
+    beq increase_x
+    cpy #3
+    beq increase_x
+    rts
+increase_x:
+    ; increase sprite row
+    clc
+    adc #$08
+    rts
+adjust_player_x_inverse:
+    pla
+    cpy #0
+    beq increase_x
+    cpy #2
+    beq increase_x
+    rts
+
+get_dir_attribute:
+    lda mobs + Mob::direction
+    cmp #Direction::up
+    beq get_normal_attribute
+    cmp #Direction::right
+    beq get_normal_attribute
+    cmp #Direction::down
+    beq flip_vertical_attribute
+    ; left - flip horizontal
+    lda #%01000000
+    rts
+get_normal_attribute:
+    lda #%00000000
+    rts
+flip_vertical_attribute:
+    lda #%10000000
+    rts
+
 render_mobs:
+    rts ; todo remove
     ldx #4
     ldy #mob_size
 render_mobs_loop:

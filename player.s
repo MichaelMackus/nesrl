@@ -25,6 +25,9 @@ inventory: .res .sizeof(Item)*max_inventory
     ; initialize tile type
     lda #Mobs::player
     sta mobs+Mob::type
+    ; initialize direction
+    lda #Direction::right
+    sta mobs+Mob::direction
     ; initialize stats
     lda #1
     sta stats+PlayerStats::level
