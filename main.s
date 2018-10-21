@@ -172,19 +172,19 @@ playgame:
     beq escape_dungeon
     cmp #InputResult::win
     beq win_dungeon
-    cmp #InputResult::move
-    beq update_seen
+    ;cmp #InputResult::move
+    ;beq update_seen
 
 ai:
-    jsr mob_ai
+    ;jsr mob_ai
     jsr check_game_over
 
-    jsr mob_spawner
+    ;jsr mob_spawner
     jsr player_regen
 
     ; update messages buffer and hp every time, todo figure out better way
-    jsr buffer_messages
-    jsr buffer_hp
+    ;jsr buffer_messages
+    ;jsr buffer_hp
     ; notify nmi to draw the buffer
     lda #1
     sta need_draw
