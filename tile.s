@@ -84,7 +84,7 @@ floor:
 ; in: mob index
 ; out: tile
 .proc get_mob_tile
-    ; todo branch based on type
+    ; branch based on mob type
     tay
     lda mobs + Mob::type, y
     cmp #Mobs::player
@@ -101,7 +101,15 @@ floor:
     lda #$01
     rts
 player_tile:
-    lda #$A1
+    lda mobs+Mob::direction
+    cmp #Direction::up
+    beq player_uptile
+    cmp #Direction::down
+    beq player_uptile
+    lda #$A0
+    rts
+player_uptile:
+    lda #$AA
     rts
 goblin_tile:
     lda #$47
