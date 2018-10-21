@@ -1,8 +1,10 @@
 ; basic math functions
 
 .export divide
-.export inc_ppu
-.export dec_ppu
+.export iny_ppu
+.export dey_ppu
+.export inx_ppu
+.export dex_ppu
 
 .segment "ZEROPAGE"
 
@@ -34,15 +36,16 @@ done:
     rts
 .endproc
 
-; PPU increment & decrement setup, todo handle incy and incx
-first_nt = $20
-last_nt  = $28
+y_first_nt = $20
+y_last_nt  = $28
+x_first_nt = $20
+x_last_nt  = $24
 
 ; increment PPU address by 2 rows, handles wrapping to first NT addr
 ;
 ; x: low byte
 ; y: high byte
-.proc inc_ppu
+.proc iny_ppu
 .endproc
 
 ; decrement PPU address by 2 rows, handles wrapping to last NT addr
@@ -50,11 +53,11 @@ last_nt  = $28
 ;
 ; x: high byte
 ; y: low byte
-.proc dec_ppu
+.proc dey_ppu
     stx ppu_addr
     sty ppu_addr+1
     lda ppu_addr+1
-    beq dec_ppu_high ; zero
+    beq dey_ppu_high ; zero
     ; decrement low byte by one row (32 tiles)
     lda ppu_addr+1
     sec
@@ -68,6 +71,12 @@ done:
     rts
 .endproc
 
+; todo
+.proc inx_ppu
+.endproc
+.proc dex_ppu
+.endproc
+
 ; increment PPU high address by 1, wrapping to first PPU high address
 .proc inc_ppu_high
 .endproc
@@ -77,12 +86,12 @@ done:
 .endproc
 
 ; decrement PPU high address by 1, wrapping to first PPU high address
-.proc dec_ppu_high
+.proc dey_ppu_high
     ; handle nametable wrapping
     lda ppu_addr
-    cmp #first_nt
+    cmp #y_first_nt
     beq wrap_last_nt
-    cmp #last_nt
+    cmp #y_last_nt
     beq wrap_prev_nt
     ; not start of first or start of last, decrement by 1
     dec ppu_addr
@@ -91,11 +100,11 @@ done:
     sta ppu_addr + 1
     jmp done
 wrap_prev_nt:
-    lda #first_nt + $03
+    lda #y_first_nt + $03
     sta ppu_addr
     jmp wrap_prev_lowbyte
 wrap_last_nt:
-    lda #last_nt + $03
+    lda #y_last_nt + $03
     sta ppu_addr
 wrap_prev_lowbyte:
     ; set low byte to $80, last row in NT
@@ -109,5 +118,5 @@ done:
 .endproc
 
 ; decrement PPU low address by 2 rows, wrapping to 00 on end of NT
-.proc dec_ppu_low
+.proc dey_ppu_low
 .endproc
