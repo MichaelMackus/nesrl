@@ -46,6 +46,22 @@ x_last_nt  = $24
 ; x: low byte
 ; y: high byte
 .proc iny_ppu
+    stx ppu_addr
+    sty ppu_addr+1
+    lda ppu_addr+1
+    cmp #$A0
+    beq iny_ppu_high ; last row for low byte
+    ; decrement low byte by one row (32 tiles)
+    lda ppu_addr+1
+    clc
+    adc #$20
+    sta ppu_addr+1
+    ; done
+    jmp done
+done:
+    ldx ppu_addr
+    ldy ppu_addr + 1
+    rts
 .endproc
 
 ; decrement PPU address by 1 rows, handles wrapping to last NT addr
@@ -78,7 +94,33 @@ done:
 .endproc
 
 ; increment PPU high address by 1, wrapping to first PPU high address
-.proc inc_ppu_high
+.proc iny_ppu_high
+    ; handle nametable wrapping
+    lda ppu_addr
+    cmp #y_first_nt + 3
+    beq wrap_last_nt
+    cmp #y_last_nt + 3
+    beq wrap_first_nt
+    ; not start of first or start of last, increment by 1
+    inc ppu_addr
+    ; set low byte to first row
+    jmp set_lowbyte
+wrap_first_nt:
+    lda #y_first_nt
+    sta ppu_addr
+    jmp set_lowbyte
+wrap_last_nt:
+    lda #y_last_nt
+    sta ppu_addr
+set_lowbyte:
+    ; set low byte to $00, first row in NT
+    lda #$00
+    sta ppu_addr + 1
+done:
+    ; update x and y
+    ldx ppu_addr
+    ldy ppu_addr + 1
+    rts
 .endproc
 
 ; decrement PPU high address by 1, wrapping to first PPU high address
@@ -88,14 +130,14 @@ done:
     cmp #y_first_nt
     beq wrap_last_nt
     cmp #y_last_nt
-    beq wrap_prev_nt
+    beq wrap_first_nt
     ; not start of first or start of last, decrement by 1
     dec ppu_addr
     ; set low byte to last row of prev addr
     lda #$E0
     sta ppu_addr + 1
     jmp done
-wrap_prev_nt:
+wrap_first_nt:
     lda #y_first_nt + $03
     sta ppu_addr
     jmp wrap_prev_lowbyte
