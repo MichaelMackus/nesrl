@@ -3,9 +3,11 @@
 ;   byte    0 = length of data (0 = no more data)
 ;   byte    1 = high byte of target PPU address
 ;   byte    2 = low byte of target PPU address
-;   bytes 3-X = the data to draw (number of bytes determined by the length)
+;   byte    3 = set to 1 if incrementing PPU VRAM vertically
+;   bytes 4-X = the data to draw (number of bytes determined by the length)
 ; 
 ; If the drawing buffer contains the following data:
+; NOTE: this doesn't have the additional byte 3 above
 ; 
 ;  05 20 16 CA AB 00 EF 05 01 2C 01 00 00 
 ;   | \___/ \____________/  | \___/  |  |
@@ -53,6 +55,8 @@ update_ppuaddr:
     iny
     ; set ppu addr, high byte then low byte
     iny
+    iny
+    ; for vram increment flag
     iny
     ; add tmp to y for next index
     tya
@@ -161,6 +165,12 @@ update_ppuaddr:
     lda draw_buffer, y
     sta $2006
     iny
+    ; set vram increment bit
+    lda draw_buffer, y
+    iny
+    asl ; shift VRAM increment bit to left
+    ora #%10000000 ; default
+    sta $2000
 vram_loop:
     cpx tmp
     beq next

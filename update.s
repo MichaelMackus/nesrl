@@ -5,7 +5,7 @@
 .include "global.inc"
 
 .export buffer_hp
-.export buffer_seen
+.export buffer_tiles
 .export buffer_messages
 .export update_sprites
 
@@ -22,10 +22,12 @@ cur_tile: .res 1 ; for drawing sprites
 
 .segment "CODE"
 
+; todo update rest of code to work with new byte (vram increment flag)
+
 ; update draw buffer with seen bg tiles
 ;
 ; clobbers: all registers, xpos, and ypos
-.proc buffer_seen
+.proc buffer_tiles
     ; load player xpos and ypos
     lda mobs + Mob::coords + Coord::xcoord
     sta xpos
@@ -100,6 +102,10 @@ loop_start_buffer:
     sta draw_buffer, y
     iny
     lda draw_ppu+1
+    sta draw_buffer, y
+    iny
+    ; store VRAM increment to buffer
+    lda #0
     sta draw_buffer, y
     iny
 

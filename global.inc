@@ -27,7 +27,7 @@ maxdrops    = 20
 .global has_amount
 
 ; update.s
-.global buffer_seen
+.global buffer_tiles
 .global buffer_messages
 .global buffer_hp
 .global update_sprites

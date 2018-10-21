@@ -172,8 +172,8 @@ playgame:
     beq escape_dungeon
     cmp #InputResult::win
     beq win_dungeon
-    ;cmp #InputResult::move
-    ;beq update_seen
+    cmp #InputResult::move
+    beq update_tiles
 
 ai:
     ;jsr mob_ai
@@ -228,8 +228,8 @@ win_dungeon:
     jmp done
 
 ; ensure buffer is updated when new tiles seen
-update_seen:
-    jsr buffer_seen
+update_tiles:
+    jsr buffer_tiles
     jmp ai
 
 ; ensure player alive, otherwise display Game Over screen
