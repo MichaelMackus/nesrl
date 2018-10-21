@@ -292,20 +292,45 @@ update_buffer_amount:
 .endproc
 
 .proc update_sprites
+; render the player in the center of the screen, unless there are no
+; more tiles in that direction
 render_player:
-    ; render the player in the center of the screen
-    ; todo this has to be figured out exactly so we can render
-    ; everything else correctly
-    lda #15 * 8 ; y pos
+    ; ensure y coord is at center of screen
+    lda mobs + Mob::coords + Coord::ycoord
+    asl
+    cmp #screen_height / 2
+    bcc update_player_y
+    lda #screen_height/2 * 8 ; y pos
     sta $0200
+set_player_tile:
     lda #0
     jsr get_mob_tile
     sta $0201
     lda #%00000000
-    sta $0202, x
+    sta $0202
+    ; ensure x coord is at center of screen
+    lda mobs + Mob::coords + Coord::xcoord
+    asl
+    cmp #screen_width / 2
+    bcc update_player_x
     lda #16 * 8 ; x pos
     sta $0203
-    rts
+    rts ; todo remove
+    jmp render_mobs
+update_player_y:
+    ; multiply by 8 for pixels
+    asl
+    asl
+    asl
+    sta $0200
+    jmp set_player_tile
+update_player_x:
+    ; multiply by 8 for pixels
+    asl
+    asl
+    asl
+    sta $0203
+    rts ; todo remove
 render_mobs:
     ldx #4
     ldy #mob_size

@@ -101,6 +101,8 @@ maxdrops    = 20
 .global get_num_tile
 
 ; render.s
+.globalzp screen_width
+.globalzp screen_height
 .global render
 .global render_escape
 .global render_death
