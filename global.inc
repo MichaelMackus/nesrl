@@ -10,6 +10,10 @@ maxdrops    = 20
 
 ; math.s
 .global divide
+.global inx_ppu
+.global dex_ppu
+.global iny_ppu
+.global dey_ppu
 
 ; main.s
 .globalzp turn

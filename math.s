@@ -87,13 +87,42 @@ done:
     rts
 .endproc
 
-; todo
 .proc inx_ppu
+    stx ppu_addr
+    sty ppu_addr+1
+    ; if remainder of division is #$1F (31), wrap to next NT
+    lda ppu_addr+1
+    ldx #$20
+    jsr divide
+    cmp #$1F
+    beq inx_ppu_nt
+    ; increment low byte by one row (32 tiles)
+    inc ppu_addr+1
+    ; done
+done:
+    ldx ppu_addr
+    ldy ppu_addr + 1
+    rts
 .endproc
 .proc dex_ppu
+    stx ppu_addr
+    sty ppu_addr+1
+    ; if remainder of division is #$00, wrap to prev NT
+    lda ppu_addr+1
+    ldx #$20
+    jsr divide
+    cmp #$0
+    beq dex_ppu_nt
+    ; decrement low byte by one row (32 tiles)
+    dec ppu_addr+1
+    ; done
+done:
+    ldx ppu_addr
+    ldy ppu_addr + 1
+    rts
 .endproc
 
-; increment PPU high address by 1, wrapping to first PPU high address
+; increment PPU high address by 1, updating address to next NT if appropriate
 .proc iny_ppu_high
     ; handle nametable wrapping
     lda ppu_addr
@@ -123,7 +152,7 @@ done:
     rts
 .endproc
 
-; decrement PPU high address by 1, wrapping to first PPU high address
+; decrement PPU high address by 1, updating address to previous NT if appropriate
 .proc dey_ppu_high
     ; handle nametable wrapping
     lda ppu_addr
@@ -154,3 +183,60 @@ done:
     ldy ppu_addr + 1
     rts
 .endproc
+
+; increment PPU nametable horizontally
+.proc inx_ppu_nt
+    ; handle nametable wrapping
+    lda ppu_addr
+    cmp x_last_nt
+    bcs dec_nt
+    ; increment nametable
+    clc
+    adc #$04
+    sta ppu_addr
+    jmp set_lowbyte
+dec_nt:
+    sec
+    sbc #$04
+    sta ppu_addr
+set_lowbyte:
+    ; subtract $1F from low byte to go to start x of next NT
+    lda ppu_addr + 1
+    sec
+    sbc #$1F
+    sta ppu_addr + 1
+done:
+    ; update x and y
+    ldx ppu_addr
+    ldy ppu_addr + 1
+    rts
+.endproc
+
+; decrement PPU nametable horizontally
+.proc dex_ppu_nt
+    ; handle nametable wrapping
+    lda ppu_addr
+    cmp x_last_nt
+    bcs dec_nt
+    ; increment nametable
+    clc
+    adc #$04
+    sta ppu_addr
+    jmp set_lowbyte
+dec_nt:
+    sec
+    sbc #$04
+    sta ppu_addr
+set_lowbyte:
+    ; add $to from low byte to go to end x of next NT
+    lda ppu_addr + 1
+    clc
+    adc #$1F
+    sta ppu_addr + 1
+done:
+    ; update x and y
+    ldx ppu_addr
+    ldy ppu_addr + 1
+    rts
+.endproc
+
