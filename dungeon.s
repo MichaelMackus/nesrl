@@ -12,8 +12,6 @@
 
 .segment "ZEROPAGE"
 
-min_bound  = 1  ; minimum number of spaces from edge
-
 dlevel:      .res 1
 xpos:        .res 1
 ypos:        .res 1
