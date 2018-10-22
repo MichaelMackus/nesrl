@@ -1,4 +1,6 @@
-objs = scroll.o math.o item.o update.o lighting.o ai.o player.o buffer.o tile.o message.o mob.o dungeon.o generate.o random.o render.o input.o main.o
+objs = scroll.o math.o item.o lighting.o ai.o player.o buffer.o tile.o \
+	message.o mob.o dungeon.o generate.o random.o \
+	screen.o update.o render.o input.o main.o
 
 run: simplerl
 	fceux simplerl.nes

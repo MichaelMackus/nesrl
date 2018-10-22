@@ -8,11 +8,6 @@
 .export get_str_tile
 .export get_num_tile
 
-.segment "ZEROPAGE"
-
-metaxpos: .res 1
-metaypos: .res 1
-
 .segment "CODE"
 
 ; gets bg metatile in metaxpos and metaypos

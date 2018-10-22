@@ -106,17 +106,23 @@ maxdrops    = 20
 .global d12
 
 ; tile.s
-.globalzp metaxpos
-.globalzp metaypos
 .global get_bg_metatile
 .global get_bg_tile
 .global get_mob_tile
 .global get_str_tile
 .global get_num_tile
 
-; render.s
+; screen.s
 .globalzp screen_width
 .globalzp screen_height
+.globalzp metaxpos
+.globalzp metaypos
+.global get_first_col
+.global get_last_col
+.global get_first_row
+.global get_last_row
+
+; render.s
 .global render
 .global render_escape
 .global render_death
