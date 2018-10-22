@@ -50,13 +50,6 @@ cur_tile:    .res 1 ; for drawing sprites
     lda mobs + Mob::coords + Coord::ycoord
     sta ypos
 
-    ; update xpos and ypos depending on player dir
-    jsr update_coords
-
-    tiles_done = tmp
-    lda #0
-    sta tiles_done
-
     jsr can_scroll_dir
     bne skip_buffer
     jmp start_buffer
@@ -64,6 +57,13 @@ skip_buffer:
     rts
 
 start_buffer:
+    ; update scroll metaxpos and metaypos depending on player dir
+    jsr update_offsets
+    lda xoffset
+    sta metaxpos
+    lda yoffset
+    sta metaypos
+
     ; update ppu & scroll depending on player direction
     lda mobs + Mob::direction
     jsr update_ppuaddr
@@ -141,32 +141,13 @@ continue_loop:
     ldx cur_tile
     ; check draw length
     cpx draw_length
-    beq next
+    beq done
     jmp buffer_tile_loop
 
-next:
+done:
     ; write zero length for next buffer write
     lda #$00
     sta draw_buffer, y
-    lda mobs + Mob::direction
-    cmp #Direction::left
-    beq increase_col
-    cmp #Direction::right
-    beq increase_col
-    jsr iny_ppu
-    jmp wrap
-increase_col:
-    jsr inx_ppu
-wrap:
-    jsr wrap_coords
-    lda tiles_done ; check if we're done
-    cmp #1
-    beq done
-    inc tiles_done
-    ; buffer one more time
-    jsr continue_buffer
-
-done:
     rts
 
 
@@ -522,33 +503,26 @@ clear_mob:
     ;beq update_up
 update_up:
     jsr scroll_up
-    jsr scroll_up
-    jsr dey_ppu
     jsr dey_ppu
     rts
 update_down:
-    jsr scroll_down
     jsr scroll_down
     jsr iny_ppu
     rts
 update_left:
     jsr scroll_left
-    jsr scroll_left
-    jsr dex_ppu
     jsr dex_ppu
     rts
 update_right:
-    jsr scroll_right
     jsr scroll_right
     jsr inx_ppu
     rts
 .endproc
 
 ; update metaxpos and metaypos depending on player dir for the bg tile
-; todo check last_dir
 ;
 ; in: scroll dir
-.proc update_coords
+.proc update_offsets
     cmp #Direction::right
     beq update_right
     cmp #Direction::left
@@ -558,66 +532,16 @@ update_right:
     ;cmp #Direction::up
     ;beq update_up
 update_up:
-    jsr get_first_row
-    sta metaypos
-    dec metaypos
-    dec metaypos
-    jsr get_first_col
-    sta metaxpos
+    dec yoffset
     rts
 update_down:
-    jsr get_last_row
-    sta metaypos
-    inc metaypos
-    jsr get_first_col
-    sta metaxpos
+    inc yoffset
     rts
 update_left:
-    jsr get_first_row
-    sta metaypos
-    dec metaxpos
-    dec metaxpos
-    jsr get_first_col
-    sta metaxpos
+    dec xoffset
     rts
 update_right:
-    jsr get_first_row
-    sta metaypos
-    inc metaxpos
-    jsr get_last_col
-    sta metaxpos
-    rts
-.endproc
-
-; wrap coords to next row/col
-.proc wrap_coords
-    cmp #Direction::right
-    beq update_right
-    cmp #Direction::left
-    beq update_left
-    cmp #Direction::down
-    beq update_down
-    ;cmp #Direction::up
-    ;beq update_up
-update_up:
-    inc metaypos
-    jsr get_first_col
-    sta metaxpos
-    rts
-update_down:
-    inc metaypos
-    jsr get_first_col
-    sta metaxpos
-    rts
-update_left:
-    jsr get_first_row
-    sta metaypos
-    inc metaxpos
-    rts
-update_right:
-    jsr get_first_row
-    sta metaypos
-    inc metaxpos
+    inc xoffset
     rts
 .endproc
 

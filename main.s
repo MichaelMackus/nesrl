@@ -236,6 +236,8 @@ win_dungeon:
 
 ; ensure buffer is updated when new tiles seen
 update_tiles:
+    ; do twice - 1 for each actual row of tiles
+    jsr buffer_tiles
     jsr buffer_tiles
     jmp ai
 
