@@ -2,6 +2,7 @@
 
 .include "global.inc"
 
+.export init_offsets
 .export get_mob_xoffset
 .export get_mob_yoffset
 .export can_scroll_horizontal
@@ -25,13 +26,19 @@ yoffset:  .res 1
 
 .segment "CODE"
 
+; initialize xoffset and yoffset
+.proc init_offsets
+    jsr get_first_col
+    sta xoffset
+    jsr get_first_row
+    sta yoffset
+    rts
+.endproc
+
 ; get mob offset from left edge
 ;
 ; y: mob index to calculate
 .proc get_mob_xoffset
-    ; todo perhaps make persistent?
-    jsr get_first_col
-    sta xoffset
     ; todo remove when figure out buffer updates
     cpy #0
     bne get_offset_xpos
@@ -52,9 +59,6 @@ get_offset_xpos:
 ;
 ; y: mob index to calculate
 .proc get_mob_yoffset
-    ; todo perhaps make persistent?
-    jsr get_first_row
-    sta yoffset
     ; todo remove when figure out buffer updates
     cpy #0
     bne get_offset_ypos

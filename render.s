@@ -28,6 +28,9 @@ generate_ppu:
     ; initialize defaults for scrolling functionality
     jsr init_buffer
 
+    ; initialize scroll offsets
+    jsr init_offsets
+
     ; update PPUADDR
     bit $2002
     lda ppu_addr
