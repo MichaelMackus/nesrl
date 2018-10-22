@@ -119,6 +119,10 @@ min_bound   = 1  ; minimum number of spaces from edge
 .globalzp screen_height
 .globalzp metaxpos
 .globalzp metaypos
+.global get_mob_xoffset
+.global get_mob_yoffset
+.global can_scroll_horizontal
+.global can_scroll_vertical
 .global get_first_col
 .global get_last_col
 .global get_first_row

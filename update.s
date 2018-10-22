@@ -57,7 +57,7 @@ cur_tile:    .res 1 ; for drawing sprites
     lda #0
     sta tiles_done
 
-    jsr within_scroll_bounds
+    jsr can_scroll_dir
     bne skip_buffer
     jmp start_buffer
 skip_buffer:
@@ -320,7 +320,6 @@ render_player_loop:
 set_player_tile:
     lda cur_tile
     sta $0201, x
-    ; todo when flipped, need to switch x/y
     jsr get_dir_attribute
     sta $0202, x
     ; update sprite x pos
@@ -351,17 +350,15 @@ next_tile_row:
 
 ; getters for mob x & y based on screen pos
 get_player_y:
-    lda mobs + Mob::coords + Coord::ycoord
-    asl
-    cmp #screen_height / 2
-    bcc get_player_moby
-    lda #screen_height/2 * 8 ; y pos
-    jmp adjust_player_y
-get_player_moby:
+    sty tmp
+    ldy #0
+    jsr get_mob_yoffset
     ; multiply by 8 for pixels
     asl
     asl
     asl
+    ; need y for adjustments
+    ldy tmp
 adjust_player_y:
     ; increment based on y value
     pha
@@ -387,17 +384,15 @@ adjust_player_y_inverse:
     beq increase_y
     rts
 get_player_x:
-    lda mobs + Mob::coords + Coord::xcoord
-    asl
-    cmp #screen_width / 2
-    bcc get_player_mobx
-    lda #screen_width/2 * 8 ; x pos
-    jmp adjust_player_x
-get_player_mobx:
+    sty tmp
+    ldy #0
+    jsr get_mob_xoffset
     ; multiply by 8 for pixels
     asl
     asl
     asl
+    ; need y for adjustments
+    ldy tmp
 adjust_player_x:
     ; increment based on x value
     pha
@@ -629,7 +624,7 @@ update_right:
 ; check mob dir to ensure we can scroll in that dir
 ;
 ; output: 0 if success
-.proc within_scroll_bounds
+.proc can_scroll_dir
     lda mobs + Mob::direction
     cmp #Direction::right
     beq check_right
@@ -640,30 +635,12 @@ update_right:
     ;cmp #Direction::up
     ;beq check_up
 check_up:
-    jsr get_first_row
-    cmp #2
-    bcc failure
-    jmp success
 check_down:
-    jsr get_last_row
-    cmp #(max_height - 2) * 2
-    bcs failure
-    jmp success
-check_left:
-    jsr get_first_col
-    cmp #2
-    bcc failure
-    jmp success
-check_right:
-    jsr get_last_col
-    cmp #(max_width - 2) * 2
-    bcs failure
-    jmp success
-failure:
-    lda #1
+    jsr can_scroll_vertical
     rts
-success:
-    lda #0
+check_left:
+check_right:
+    jsr can_scroll_horizontal
     rts
 .endproc
 
