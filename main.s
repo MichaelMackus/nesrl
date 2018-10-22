@@ -44,7 +44,6 @@ init_memory:
     sta controller1
     sta controller1release
     sta dlevel
-    sta draw_buffer
     sta need_draw
     sta turn
     inc turn ; set turn to 1
@@ -116,9 +115,9 @@ render_draw_buffer:
     sta need_draw
 
     ; update base ppu addr
-    ;lda base_nt
-    ;ora #%10000000 ; default
-    ;sta $2000
+    lda base_nt
+    ora #%10000000 ; default
+    sta $2000
 
     ; update scroll
     bit $2002
@@ -217,8 +216,6 @@ regenerate:
     lda nmis
     sta seed
     jsr generate
-    ; initialize buffer
-    jsr init_buffer
     ; render the dungeon
     jsr render
     jmp done

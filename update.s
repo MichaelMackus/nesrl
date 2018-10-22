@@ -26,6 +26,15 @@ cur_tile:    .res 1 ; for drawing sprites
     ; set to up since by default the dungeon is generated in first NT
     lda #Direction::up
     sta last_dir
+    lda #0
+    sta draw_buffer
+    sta scroll
+    sta scroll+1
+    sta base_nt
+    sta ppu_addr+1
+    lda #$20
+    sta ppu_addr
+    rts
 .endproc
 
 ; todo update rest of code to work with new byte (vram increment flag)

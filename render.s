@@ -26,14 +26,7 @@ generate_ppu:
     sta $2001
 
     ; initialize defaults for scrolling functionality
-    lda #$00
-    sta base_nt
-    sta scroll
-    sta scroll + 1
-    lda #$20
-    sta ppu_addr
-    lda #$00
-    sta ppu_addr + 1
+    jsr init_buffer
 
     ; update PPUADDR
     bit $2002
