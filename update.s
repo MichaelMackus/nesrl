@@ -15,7 +15,6 @@ tmp:         .res 1
 starty:      .res 1 ; for buffer seen loop
 startx:      .res 1 ; for buffer seen loop
 draw_y:      .res 1 ; current draw buffer index
-draw_ppu:    .res 2 ; current draw ppu addr for bg scrolling
 last_dir:    .res 1 ; last scroll direction for bg scrolling
 draw_length: .res 1
 cur_tile:    .res 1 ; for drawing sprites
@@ -31,7 +30,6 @@ cur_tile:    .res 1 ; for drawing sprites
 
 ; todo update rest of code to work with new byte (vram increment flag)
 
-; todo write 2 rows by default
 ; update draw buffer with new bg tiles
 ; this assumes scrolling in direction of player movement
 ;
@@ -43,17 +41,25 @@ cur_tile:    .res 1 ; for drawing sprites
     lda mobs + Mob::coords + Coord::ycoord
     sta ypos
 
+    ; update xpos and ypos depending on player dir
+    jsr update_coords
+
+    tiles_done = tmp
+    lda #0
+    sta tiles_done
+
     jsr within_scroll_bounds
     bne skip_buffer
-    jmp continue_buffer
+    jmp start_buffer
 skip_buffer:
     rts
 
-continue_buffer:
+start_buffer:
     ; update ppu & scroll depending on player direction
     lda mobs + Mob::direction
-    jsr update_ppuaddr_dir
+    jsr update_ppuaddr
 
+continue_buffer:
     ; get next y index
     jsr next_index
 
@@ -64,11 +70,11 @@ continue_buffer:
     cmp #Direction::left
     beq len_30
     ; going up or down, len = 32
-    lda #32 * 2
+    lda #32
     sta draw_length
     jmp buffer_start
 len_30:
-    lda #30 * 2
+    lda #30
     sta draw_length
 
 buffer_start:
@@ -99,11 +105,6 @@ inc_vertically:
     iny
 
 buffer_tiles:
-    ; todo will need to do this once per row, since ppuaddr might change each time
-    ; update xpos and ypos depending on player dir
-    jsr update_coords
-    ; increment coords to next row/col
-    jsr wrap_coords
     ldx #$00
     stx cur_tile
 buffer_tile_loop:
@@ -121,30 +122,42 @@ buffer_tile_loop:
     beq inc_metay
     ; inc metax
     inc metaxpos
-    cmp #screen_width
-    bcc continue_loop
-    ; wrap to next row
-    jsr wrap_coords
     jmp continue_loop
 inc_metay:
     ; inc metay
     inc metaypos
-    cmp #screen_height
-    bcc continue_loop
-    ; wrap to next row
-    jsr wrap_coords
     jmp continue_loop
 continue_loop:
+    inc cur_tile
     ldx cur_tile
-    inx
-    stx cur_tile
     ; check draw length
     cpx draw_length
-    beq done
+    beq next
     jmp buffer_tile_loop
-done:
+
+next:
+    ; write zero length for next buffer write
     lda #$00
     sta draw_buffer, y
+    lda mobs + Mob::direction
+    cmp #Direction::left
+    beq increase_col
+    cmp #Direction::right
+    beq increase_col
+    jsr iny_ppu
+    jmp wrap
+increase_col:
+    jsr inx_ppu
+wrap:
+    jsr wrap_coords
+    lda tiles_done ; check if we're done
+    cmp #1
+    beq done
+    inc tiles_done
+    ; buffer one more time
+    jsr continue_buffer
+
+done:
     rts
 
 
@@ -494,7 +507,7 @@ clear_mob:
 ; todo detect end of dungeon
 ;
 ; in: scroll dir
-.proc update_ppuaddr_dir
+.proc update_ppuaddr
     cmp #Direction::right
     beq update_right
     cmp #Direction::left
@@ -513,7 +526,6 @@ update_down:
     jsr scroll_down
     jsr scroll_down
     jsr iny_ppu
-    jsr iny_ppu
     rts
 update_left:
     jsr scroll_left
@@ -524,7 +536,6 @@ update_left:
 update_right:
     jsr scroll_right
     jsr scroll_right
-    jsr inx_ppu
     jsr inx_ppu
     rts
 .endproc
@@ -545,30 +556,36 @@ update_right:
 update_up:
     jsr get_first_row
     sta metaypos
+    dec metaypos
+    dec metaypos
     jsr get_first_col
     sta metaxpos
     rts
 update_down:
     jsr get_last_row
     sta metaypos
+    inc metaypos
     jsr get_first_col
     sta metaxpos
     rts
 update_left:
     jsr get_first_row
     sta metaypos
+    dec metaxpos
+    dec metaxpos
     jsr get_first_col
     sta metaxpos
     rts
 update_right:
     jsr get_first_row
     sta metaypos
+    inc metaxpos
     jsr get_last_col
     sta metaxpos
     rts
 .endproc
 
-; wrap coords to next row
+; wrap coords to next row/col
 .proc wrap_coords
     cmp #Direction::right
     beq update_right
@@ -579,7 +596,7 @@ update_right:
     ;cmp #Direction::up
     ;beq update_up
 update_up:
-    dec metaypos
+    inc metaypos
     jsr get_first_col
     sta metaxpos
     rts
@@ -591,47 +608,12 @@ update_down:
 update_left:
     jsr get_first_row
     sta metaypos
-    dec metaxpos
+    inc metaxpos
     rts
 update_right:
     jsr get_first_row
     sta metaypos
     inc metaxpos
-    rts
-.endproc
-
-; get the ppu addr for xpos and ypos and store in draw_ppu
-; todo test this
-.proc update_ppuaddr
-    lda #$20
-    sta draw_ppu
-    lda #$20
-    sta draw_ppu+1
-    ldx #0
-    ldy #0
-loop:
-    cpy ypos
-    bne inc_ppu
-    cpx xpos
-    bne inc_ppu
-    jmp done
-inc_ppu:
-    inc draw_ppu+1
-    lda draw_ppu+1
-    bne loop_next
-    ; increment ppu high byte
-    inc draw_ppu
-loop_next:
-    inx
-    cpx #$20
-    bne loop
-    ldx #$0
-    iny
-    ; ensure y didn't overflow
-    cpy #$00
-    beq done
-    jmp loop
-done:
     rts
 .endproc
 
