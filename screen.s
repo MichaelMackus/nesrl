@@ -54,7 +54,7 @@ force_x:
     ; start y = player's ypos - 15
     lda mobs + Mob::coords + Coord::ycoord
     asl ; multiply by 2 for metay
-    cmp #screen_width / 2
+    cmp #screen_height / 2
     bcc force_y
     sec
     sbc #screen_height / 2
@@ -70,7 +70,7 @@ force_y:
     ; end   y = player's xpos + 15
     lda mobs + Mob::coords + Coord::ycoord
     asl ; multiply by 2 for metay
-    cmp #screen_width / 2
+    cmp #screen_height / 2
     bcc force_y
     clc
     adc #screen_height / 2

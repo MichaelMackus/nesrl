@@ -7,6 +7,8 @@ max_height  = 24
 maxmobs     = 20
 maxfeatures = 20
 maxdrops    = 20
+min_bound   = 1  ; minimum number of spaces from edge
+
 
 ; math.s
 .global divide

@@ -11,20 +11,29 @@
 
 .segment "ZEROPAGE"
 
-tmp:   .res 1
-prevx: .res 1 ; for buffer seen loop
-endy:  .res 1 ; for buffer seen loop
-endx:  .res 1 ; for buffer seen loop
-draw_y:   .res 1 ; current draw buffer index
-draw_ppu: .res 2 ; current draw ppu addr
+tmp:         .res 1
+starty:      .res 1 ; for buffer seen loop
+startx:      .res 1 ; for buffer seen loop
+draw_y:      .res 1 ; current draw buffer index
+draw_ppu:    .res 2 ; current draw ppu addr for bg scrolling
+last_dir:    .res 1 ; last scroll direction for bg scrolling
 draw_length: .res 1
-cur_tile: .res 1 ; for drawing sprites
+cur_tile:    .res 1 ; for drawing sprites
 
 .segment "CODE"
 
+; initialize buffers
+.proc init_buffer
+    ; set to up since by default the dungeon is generated in first NT
+    lda #Direction::up
+    sta last_dir
+.endproc
+
 ; todo update rest of code to work with new byte (vram increment flag)
 
-; update draw buffer with seen bg tiles
+; todo write 2 rows by default
+; update draw buffer with new bg tiles
+; this assumes scrolling in direction of player movement
 ;
 ; clobbers: all registers, xpos, and ypos
 .proc buffer_tiles
@@ -33,136 +42,111 @@ cur_tile: .res 1 ; for drawing sprites
     sta xpos
     lda mobs + Mob::coords + Coord::ycoord
     sta ypos
-    ; get current byte offset & mask
-    jsr get_byte_offset
-    tay
-    jsr get_byte_mask
 
-    ; update endx and endy
-    lda ypos
-    clc
-    adc #sight_distance + 1 ; increment by 1 for player
-    sta endy
-    lda xpos
-    clc
-    adc #sight_distance + 1 ; increment by 1 for player
-    sta endx
+    jsr within_scroll_bounds
+    bne skip_buffer
+    jmp continue_buffer
+skip_buffer:
+    rts
 
-    ; initialize draw_length
-    lda #sight_distance*2 + 1 ; increment by 1 for player
-    sta draw_length
+continue_buffer:
+    ; update ppu & scroll depending on player direction
+    lda mobs + Mob::direction
+    jsr update_ppuaddr_dir
 
-    ; set ypos to ypos - 2, and xpos to xpos - 2
-update_ypos:
-    lda ypos
-    sec
-    sbc #sight_distance
-    bcc fix_overflow_ypos ; detect overflow
-    sta ypos
-update_xpos:
-    lda xpos
-    sec
-    sbc #sight_distance
-    bcc fix_overflow_xpos ; detect overflow
-    sta xpos
-    sta prevx
-    jmp loop
-
-fix_overflow_ypos:
-    lda #0
-    sta ypos
-    jmp update_xpos
-fix_overflow_xpos:
-    lda #0
-    sta xpos
-    sta prevx
-    ; update draw_length
-    lda mobs + Mob::coords + Coord::xcoord
-    clc
-    adc #sight_distance+1 ; increment by 1 for player
-    sta draw_length
-
-loop:
-    lda ypos
-    cmp #max_height
-    bcc loop_start_buffer
-    jmp done
-loop_start_buffer:
-    ; write draw buffer length of sight distance
+    ; get next y index
     jsr next_index
+
+    ; write length to ppu
+    lda mobs + Mob::direction
+    cmp #Direction::right
+    beq len_30
+    cmp #Direction::left
+    beq len_30
+    ; going up or down, len = 32
+    lda #32 * 2
+    sta draw_length
+    jmp buffer_start
+len_30:
+    lda #30 * 2
+    sta draw_length
+
+buffer_start:
     lda draw_length
     sta draw_buffer, y
     iny
+    lda ppu_addr
+    sta draw_buffer, y
+    iny
+    lda ppu_addr + 1
+    sta draw_buffer, y
+    iny
+    ; write ppuctrl byte, updating increment depending on direction
+    lda mobs + Mob::direction
+    cmp #Direction::right
+    beq inc_vertically
+    cmp #Direction::left
+    beq inc_vertically
+    ; increment horizontally
+    lda base_nt
+    sta draw_buffer, y
+    iny
+    jmp buffer_tiles
+inc_vertically:
+    lda base_nt
+    ora #%00000100 ; increment going down
+    sta draw_buffer, y
+    iny
+
+buffer_tiles:
+    ; todo will need to do this once per row, since ppuaddr might change each time
+    ; update xpos and ypos depending on player dir
+    jsr update_coords
+    ; increment coords to next row/col
+    jsr wrap_coords
+    ldx #$00
+    stx cur_tile
+buffer_tile_loop:
     sty draw_y
-    ; update ppu addr pointer, todo just need to inc by 32 each time for y
-    jsr update_ppuaddr
-    ; store ppu addr to buffer
-    ldy draw_y
-    lda draw_ppu
-    sta draw_buffer, y
-    iny
-    lda draw_ppu+1
-    sta draw_buffer, y
-    iny
-    ; store VRAM increment to buffer
-    lda #0
-    sta draw_buffer, y
-    iny
-
-   ; now we're ready to draw tile data
-tile_loop:
-    sty draw_y
-    ; ensure xpos and ypos is valid
-    jsr within_bounds
-    bne tile_bg
-    ; check if we can see
-    ldy #0
-    jsr can_see
-    beq draw_seen
-    ; draw seen tile, if already seen
-    jsr was_seen
-    ; no tile was seen, draw bg
-    bne tile_bg
-draw_seen:
-    ; update seen tile
-    jsr update_seen
-    ; success, draw tile
-    jsr get_bg_tile
+    ; get the tiles at the ppu_addr location
+    jsr get_bg_metatile
     ldy draw_y
     sta draw_buffer, y
     iny
-    jmp loop_nextx
-tile_bg:
-    ldy draw_y
-    lda #$00
-    sta draw_buffer, y
-    iny
-
-loop_nextx:
-    inc xpos
-    lda xpos
-    cmp endx
-    beq loop_donex
-    jmp tile_loop
-
-loop_donex:
-    ; reset x
-    lda prevx
-    sta xpos
-loop_next:
-    ; store zero length at end
-    lda #$00
-    sta draw_buffer, y
-    iny
-    ; increment y & ensure we're not done
-    inc ypos
-    lda ypos
-    cmp endy
+    ; increment xpos or ypos depending on player dir
+    lda mobs + Mob::direction
+    cmp #Direction::right
+    beq inc_metay
+    cmp #Direction::left
+    beq inc_metay
+    ; inc metax
+    inc metaxpos
+    cmp #screen_width
+    bcc continue_loop
+    ; wrap to next row
+    jsr wrap_coords
+    jmp continue_loop
+inc_metay:
+    ; inc metay
+    inc metaypos
+    cmp #screen_height
+    bcc continue_loop
+    ; wrap to next row
+    jsr wrap_coords
+    jmp continue_loop
+continue_loop:
+    ldx cur_tile
+    inx
+    stx cur_tile
+    ; check draw length
+    cpx draw_length
     beq done
-    jmp loop
- 
+    jmp buffer_tile_loop
 done:
+    lda #$00
+    sta draw_buffer, y
     rts
+
 
 .endproc
 
@@ -505,6 +489,117 @@ clear_mob:
 .endproc
 
 
+; increase or decrease ppuaddr depending on scroll dir
+; todo check last_dir
+; todo detect end of dungeon
+;
+; in: scroll dir
+.proc update_ppuaddr_dir
+    cmp #Direction::right
+    beq update_right
+    cmp #Direction::left
+    beq update_left
+    cmp #Direction::down
+    beq update_down
+    ;cmp #Direction::up
+    ;beq update_up
+update_up:
+    jsr scroll_up
+    jsr scroll_up
+    jsr dey_ppu
+    jsr dey_ppu
+    rts
+update_down:
+    jsr scroll_down
+    jsr scroll_down
+    jsr iny_ppu
+    jsr iny_ppu
+    rts
+update_left:
+    jsr scroll_left
+    jsr scroll_left
+    jsr dex_ppu
+    jsr dex_ppu
+    rts
+update_right:
+    jsr scroll_right
+    jsr scroll_right
+    jsr inx_ppu
+    jsr inx_ppu
+    rts
+.endproc
+
+; update metaxpos and metaypos depending on player dir for the bg tile
+; todo check last_dir
+;
+; in: scroll dir
+.proc update_coords
+    cmp #Direction::right
+    beq update_right
+    cmp #Direction::left
+    beq update_left
+    cmp #Direction::down
+    beq update_down
+    ;cmp #Direction::up
+    ;beq update_up
+update_up:
+    jsr get_first_row
+    sta metaypos
+    jsr get_first_col
+    sta metaxpos
+    rts
+update_down:
+    jsr get_last_row
+    sta metaypos
+    jsr get_first_col
+    sta metaxpos
+    rts
+update_left:
+    jsr get_first_row
+    sta metaypos
+    jsr get_first_col
+    sta metaxpos
+    rts
+update_right:
+    jsr get_first_row
+    sta metaypos
+    jsr get_last_col
+    sta metaxpos
+    rts
+.endproc
+
+; wrap coords to next row
+.proc wrap_coords
+    cmp #Direction::right
+    beq update_right
+    cmp #Direction::left
+    beq update_left
+    cmp #Direction::down
+    beq update_down
+    ;cmp #Direction::up
+    ;beq update_up
+update_up:
+    dec metaypos
+    jsr get_first_col
+    sta metaxpos
+    rts
+update_down:
+    inc metaypos
+    jsr get_first_col
+    sta metaxpos
+    rts
+update_left:
+    jsr get_first_row
+    sta metaypos
+    dec metaxpos
+    rts
+update_right:
+    jsr get_first_row
+    sta metaypos
+    inc metaxpos
+    rts
+.endproc
+
 ; get the ppu addr for xpos and ypos and store in draw_ppu
 ; todo test this
 .proc update_ppuaddr
@@ -537,6 +632,47 @@ loop_next:
     beq done
     jmp loop
 done:
+    rts
+.endproc
+
+; check mob dir to ensure we can scroll in that dir
+;
+; output: 0 if success
+.proc within_scroll_bounds
+    lda mobs + Mob::direction
+    cmp #Direction::right
+    beq check_right
+    cmp #Direction::left
+    beq check_left
+    cmp #Direction::down
+    beq check_down
+    ;cmp #Direction::up
+    ;beq check_up
+check_up:
+    jsr get_first_row
+    cmp #2
+    bcc failure
+    jmp success
+check_down:
+    jsr get_last_row
+    cmp #(max_height - 2) * 2
+    bcs failure
+    jmp success
+check_left:
+    jsr get_first_col
+    cmp #2
+    bcc failure
+    jmp success
+check_right:
+    jsr get_last_col
+    cmp #(max_width - 2) * 2
+    bcs failure
+    jmp success
+failure:
+    lda #1
+    rts
+success:
+    lda #0
     rts
 .endproc
 

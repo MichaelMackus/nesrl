@@ -55,6 +55,7 @@ init_memory:
     jsr push_msg
     lda Messages::none
     jsr push_msg
+    jsr init_buffer
 
 clear_oam:
     lda #$FF
@@ -114,9 +115,16 @@ render_draw_buffer:
     lda #$00
     sta need_draw
 
+    ; update base ppu addr
+    ;lda base_nt
+    ;ora #%10000000 ; default
+    ;sta $2000
+
     ; update scroll
-    lda #$00
+    bit $2002
+    lda scroll
     sta $2005
+    lda scroll + 1
     sta $2005
 
 continue_nmi:
@@ -209,6 +217,8 @@ regenerate:
     lda nmis
     sta seed
     jsr generate
+    ; initialize buffer
+    jsr init_buffer
     ; render the dungeon
     jsr render
     jmp done
