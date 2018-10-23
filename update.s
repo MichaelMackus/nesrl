@@ -7,6 +7,7 @@
 .export buffer_hp
 .export buffer_tiles
 .export buffer_messages
+.export buffer_debug
 .export update_sprites
 
 .segment "ZEROPAGE"
@@ -15,7 +16,7 @@ tmp:         .res 1
 starty:      .res 1 ; for buffer seen loop
 startx:      .res 1 ; for buffer seen loop
 draw_y:      .res 1 ; current draw buffer index
-last_dir:    .res 1 ; last scroll direction for bg scrolling
+last_dir:    .res 2 ; last scroll direction (x, y) for bg scrolling
 draw_length: .res 1
 cur_tile:    .res 1 ; for drawing sprites
 
@@ -24,8 +25,10 @@ cur_tile:    .res 1 ; for drawing sprites
 ; initialize buffers
 .proc init_buffer
     ; set to up since by default the dungeon is generated in first NT
-    lda #Direction::up
+    lda #Direction::left
     sta last_dir
+    lda #Direction::up
+    sta last_dir+1
     lda #0
     sta draw_buffer
     sta scroll
@@ -50,6 +53,9 @@ cur_tile:    .res 1 ; for drawing sprites
     lda mobs + Mob::coords + Coord::ycoord
     sta ypos
 
+    ; todo update & fix sprite offsets
+
+; todo figure out can_scroll_dir
     jsr can_scroll_dir
     bne skip_buffer
     jmp start_buffer
@@ -58,11 +64,11 @@ skip_buffer:
 
 start_buffer:
     ; update scroll metaxpos and metaypos depending on player dir
-    jsr update_offsets
-    lda xoffset
+    jsr get_first_col
     sta metaxpos
-    lda yoffset
+    jsr get_first_row
     sta metaypos
+    jsr update_coords
 
     ; update ppu & scroll depending on player direction
     lda mobs + Mob::direction
@@ -145,6 +151,21 @@ continue_loop:
     jmp buffer_tile_loop
 
 done:
+    ; update last_dir
+    lda mobs + Mob::direction
+    cmp #Direction::up
+    beq last_dir_plus1
+    cmp #Direction::down
+    beq last_dir_plus1
+    ; left or right, store in first byte
+    sta last_dir
+    ; write zero length for next buffer write
+    lda #$00
+    sta draw_buffer, y
+    rts
+last_dir_plus1:
+    ; up or down, store in last byte
+    sta last_dir + 1
     ; write zero length for next buffer write
     lda #$00
     sta draw_buffer, y
@@ -188,6 +209,44 @@ tens:
     ; finish buffer
     lda #$00
     sta draw_buffer, y
+    rts
+.endproc
+
+.proc buffer_debug
+    jsr next_index
+    ; length
+    lda #$17
+    sta draw_buffer, y
+    iny
+    ; ppu addresses
+    lda ppu_addr
+    sta draw_buffer, y
+    iny
+    lda ppu_addr + 1
+    sta draw_buffer, y
+    iny
+    ; ppu switch
+    lda #0
+    sta draw_buffer, y
+    iny
+
+    lda ppu_addr
+    jsr buffer_num_hex
+    lda ppu_addr + 1
+    jsr buffer_num_hex
+
+    lda #$00
+    sta draw_buffer, y
+    iny
+
+    lda scroll
+    jsr buffer_num_hex
+    lda scroll + 1
+    jsr buffer_num_hex
+
+    lda #$00
+    sta draw_buffer, y
+
     rts
 .endproc
 
@@ -492,6 +551,7 @@ clear_mob:
 ; todo detect end of dungeon
 ;
 ; in: scroll dir
+; clobbers: x register
 .proc update_ppuaddr
     cmp #Direction::right
     beq update_right
@@ -503,16 +563,32 @@ clear_mob:
     ;beq update_up
 update_up:
     jsr scroll_up
+    lda #Direction::down
+    cmp last_dir+1
+    beq up_page
     jsr dey_ppu
+    rts
+; todo almost! need to figure out scroll value & flipping
+up_page:
+    jsr dey_ppu_nt
     rts
 update_down:
     jsr scroll_down
+    lda #Direction::up
+    cmp last_dir+1
+    beq down_page
     jsr iny_ppu
     rts
+; todo almost! need to figure out scroll value & flipping
+down_page:
+    jsr iny_ppu_nt
+    rts
+; todo ensure we are at left of page
 update_left:
     jsr scroll_left
     jsr dex_ppu
     rts
+; todo ensure we are at right of page
 update_right:
     jsr scroll_right
     jsr inx_ppu
@@ -522,7 +598,7 @@ update_right:
 ; update metaxpos and metaypos depending on player dir for the bg tile
 ;
 ; in: scroll dir
-.proc update_offsets
+.proc update_coords
     cmp #Direction::right
     beq update_right
     cmp #Direction::left
@@ -532,39 +608,16 @@ update_right:
     ;cmp #Direction::up
     ;beq update_up
 update_up:
-    dec yoffset
+    dec metaypos
     rts
 update_down:
-    inc yoffset
+    inc metaypos
     rts
 update_left:
-    dec xoffset
+    dec metaxpos
     rts
 update_right:
-    inc xoffset
-    rts
-.endproc
-
-; check mob dir to ensure we can scroll in that dir
-;
-; output: 0 if success
-.proc can_scroll_dir
-    lda mobs + Mob::direction
-    cmp #Direction::right
-    beq check_right
-    cmp #Direction::left
-    beq check_left
-    cmp #Direction::down
-    beq check_down
-    ;cmp #Direction::up
-    ;beq check_up
-check_up:
-check_down:
-    jsr can_scroll_vertical
-    rts
-check_left:
-check_right:
-    jsr can_scroll_horizontal
+    inc metaxpos
     rts
 .endproc
 

@@ -23,8 +23,12 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global scroll_down
 .global inx_ppu
 .global dex_ppu
+.global inx_ppu_nt
+.global dex_ppu_nt
 .global iny_ppu
 .global dey_ppu
+.global iny_ppu_nt
+.global dey_ppu_nt
 
 ; main.s
 .globalzp turn
@@ -46,6 +50,7 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global buffer_tiles
 .global buffer_messages
 .global buffer_hp
+.global buffer_debug
 .global update_sprites
 
 ; dungeon.s
@@ -113,6 +118,7 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global get_mob_tile
 .global get_str_tile
 .global get_num_tile
+.global get_hex_tile
 
 ; screen.s
 .globalzp screen_width
@@ -124,8 +130,7 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global init_offsets
 .global get_mob_xoffset
 .global get_mob_yoffset
-.global can_scroll_horizontal
-.global can_scroll_vertical
+.global can_scroll_dir
 .global get_first_col
 .global get_last_col
 .global get_first_row
@@ -144,6 +149,7 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global next_index
 .global buffer_str
 .global buffer_num
+.global buffer_num_hex
 .global render_buffer
 
 ; input.s

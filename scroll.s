@@ -1,5 +1,6 @@
 ; functions related to PPU scrolling
 ; todo scrolling functions currently assume scroll is always on 8 pixel boundary
+; todo inc & dec nt functions should just do that, the page should be set in the inc/dec ppu functions
 
 ; in: dividend
 ; x: divisor
@@ -14,9 +15,13 @@
 .export scroll_up
 .export scroll_down
 .export iny_ppu
+.export iny_ppu_nt
 .export dey_ppu
+.export dey_ppu_nt
 .export inx_ppu
+.export inx_ppu_nt
 .export dex_ppu
+.export dex_ppu_nt
 
 y_first_nt = $20
 y_last_nt  = $28
@@ -44,8 +49,8 @@ flip_page:
     lda base_nt
     eor #%00000001
     sta base_nt
-    ; set scroll to 8, simulating right scroll
-    lda #8
+    ; set scroll to 0, simulating right scroll
+    lda #0
     sta scroll
     rts
 .endproc
@@ -102,8 +107,8 @@ flip_page:
     lda base_nt
     eor #%00000010
     sta base_nt
-    ; set scroll to 8, simulating down scroll
-    lda #8
+    ; set scroll to 0, simulating down scroll
+    lda #0
     sta scroll + 1
     rts
 .endproc
@@ -113,9 +118,24 @@ flip_page:
 ; x: low byte
 ; y: high byte
 .proc iny_ppu
+    lda ppu_addr
+    ; todo won't work for x scroll
+    cmp #y_first_nt + 3
+    beq check_last_page
+    cmp #y_last_nt + 3
+    beq check_last_page
+    jmp check_last_row
+check_last_page:
+    ; special case on +3
     lda ppu_addr+1
     cmp #$A0
+    beq iny_ppu_high
+    jmp finish
+check_last_row:
+    lda ppu_addr+1
+    cmp #$E0
     beq iny_ppu_high ; last row for low byte
+finish:
     ; decrement low byte by one row (32 tiles)
     lda ppu_addr+1
     clc
@@ -163,67 +183,106 @@ flip_page:
     ldx #$20
     jsr mod
     cmp #$0
-    beq dex_ppu_nt
+    beq dec_nt
     ; decrement low byte by one row (32 tiles)
     dec ppu_addr+1
     ; done
     rts
+dec_nt:
+    jmp dex_ppu_nt
 .endproc
 
 ; increment PPU high address by 1, updating address to next NT if appropriate
 .proc iny_ppu_high
     ; handle nametable wrapping
+    ; todo fix with x scroll
     lda ppu_addr
     cmp #y_first_nt + 3
-    beq wrap_last_nt
+    beq inc_nt
     cmp #y_last_nt + 3
-    beq wrap_first_nt
+    beq inc_nt
     ; not start of first or start of last, increment by 1
     inc ppu_addr
-    ; set low byte to first row
-    jmp set_lowbyte
-wrap_first_nt:
-    lda #y_first_nt
-    sta ppu_addr
-    jmp set_lowbyte
-wrap_last_nt:
-    lda #y_last_nt
-    sta ppu_addr
-set_lowbyte:
-    ; set low byte to $00, first row in NT
+    ; set low byte to $00, first row in page
     lda #$00
     sta ppu_addr + 1
     ; done
+    rts
+inc_nt:
+    ; subtract 3 first
+    sec
+    sbc #$03
+    sta ppu_addr
+    ; increment NT
+    jsr iny_ppu_nt
+    ; set low byte to $00, first row in NT
+    lda #$00
+    sta ppu_addr + 1
+    rts
+.endproc
+
+.proc iny_ppu_nt
+    ; first check if we can subtract (i.e. are we in last NT?)
+    lda ppu_addr
+    sec
+    sbc #$08
+    cmp #y_first_nt
+    bcc inc_nt ; unable to subtract if we're in first NT already
+    ; success!
+    sta ppu_addr
+    rts
+inc_nt:
+    lda ppu_addr
+    clc
+    adc #$08
+    sta ppu_addr
     rts
 .endproc
 
 ; decrement PPU high address by 1, updating address to previous NT if appropriate
 .proc dey_ppu_high
     ; handle nametable wrapping
+    ; todo fix with x scroll
     lda ppu_addr
     cmp #y_first_nt
-    beq wrap_last_nt
+    beq dec_nt
     cmp #y_last_nt
-    beq wrap_first_nt
+    beq dec_nt
     ; not start of first or start of last, decrement by 1
     dec ppu_addr
     ; set low byte to last row of prev addr
     lda #$E0
     sta ppu_addr + 1
-    jmp done
-wrap_first_nt:
-    lda #y_first_nt + $03
+    rts
+dec_nt:
+    ; add 3 first to get to last page
+    clc
+    adc #$03
     sta ppu_addr
-    jmp wrap_prev_lowbyte
-wrap_last_nt:
-    lda #y_last_nt + $03
-    sta ppu_addr
-wrap_prev_lowbyte:
-    ; set low byte to $80, last row in NT
+    ; decrement NT
+    jsr dey_ppu_nt
+    ; set low byte to $A0, last row in NT
     lda #$A0
     sta ppu_addr + 1
-done:
-    ; update x and y
+    rts
+.endproc
+
+.proc dey_ppu_nt
+    ; first check if we can subtract (i.e. are we in last NT?)
+    lda ppu_addr
+    sec
+    sbc #$08
+    cmp #y_first_nt
+    bcc inc_nt ; unable to subtract if we're in first NT already
+    ; success!
+    sta ppu_addr
+    rts
+inc_nt:
+    lda ppu_addr
+    clc
+    adc #$08
+    sta ppu_addr
+    ; done
     rts
 .endproc
 
@@ -237,6 +296,7 @@ done:
     clc
     adc #$04
     sta ppu_addr
+    ; todo don't set low byte
     jmp set_lowbyte
 dec_nt:
     sec
@@ -244,6 +304,7 @@ dec_nt:
     sta ppu_addr
 set_lowbyte:
     ; subtract $1F from low byte to go to start x of next NT
+    ; todo will this work with scrolling?
     lda ppu_addr + 1
     sec
     sbc #$1F
@@ -267,6 +328,7 @@ dec_nt:
     sec
     sbc #$04
     sta ppu_addr
+    ; todo don't set lowbyte
 set_lowbyte:
     ; add $to from low byte to go to end x of next NT
     lda ppu_addr + 1
