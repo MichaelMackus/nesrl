@@ -180,7 +180,7 @@ playgame:
     cmp #InputResult::win
     beq win_dungeon
     cmp #InputResult::move
-    beq update_tiles
+    beq player_moved
 
 ai:
     ;jsr mob_ai
@@ -235,7 +235,8 @@ win_dungeon:
     jmp done
 
 ; ensure buffer is updated when new tiles seen
-update_tiles:
+player_moved:
+    jsr update_sprite_offsets
     ; do twice - 1 for each actual row of tiles
     jsr buffer_tiles
     jsr buffer_tiles

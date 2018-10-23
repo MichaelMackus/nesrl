@@ -29,7 +29,7 @@ generate_ppu:
     jsr init_buffer
 
     ; initialize scroll offsets
-    jsr update_offsets
+    jsr update_sprite_offsets
 
     ; update PPUADDR
     bit $2002

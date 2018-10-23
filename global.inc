@@ -45,14 +45,6 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global update_message_str
 .global has_amount
 
-; update.s
-.global init_buffer
-.global buffer_tiles
-.global buffer_messages
-.global buffer_hp
-.global buffer_debug
-.global update_sprites
-
 ; dungeon.s
 .global tiles
 .globalzp dlevel
@@ -113,6 +105,8 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global d12
 
 ; tile.s
+.globalzp metaxpos
+.globalzp metaypos
 .global get_bg_metatile
 .global get_bg_tile
 .global get_mob_tile
@@ -123,18 +117,25 @@ min_bound   = 1  ; minimum number of spaces from edge
 ; screen.s
 .globalzp screen_width
 .globalzp screen_height
-.globalzp metaxpos
-.globalzp metaypos
-.globalzp xoffset
-.globalzp yoffset
-.global update_offsets
+.globalzp vertical_bound
+.globalzp horizontal_bound
 .global get_mob_xoffset
 .global get_mob_yoffset
-.global can_scroll_dir
 .global get_first_col
 .global get_last_col
 .global get_first_row
 .global get_last_row
+
+; sprite.s
+.global update_sprite_offsets
+.global update_sprites
+
+; update.s
+.global init_buffer
+.global buffer_tiles
+.global buffer_messages
+.global buffer_hp
+.global buffer_debug
 
 ; render.s
 .global render

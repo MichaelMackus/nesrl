@@ -8,7 +8,6 @@
 .export buffer_tiles
 .export buffer_messages
 .export buffer_debug
-.export update_sprites
 
 .segment "ZEROPAGE"
 
@@ -18,7 +17,7 @@ startx:      .res 1 ; for buffer seen loop
 draw_y:      .res 1 ; current draw buffer index
 last_dir:    .res 2 ; last scroll direction (x, y) for bg scrolling
 draw_length: .res 1
-cur_tile:    .res 1 ; for drawing sprites
+cur_tile = tmp
 
 .segment "CODE"
 
@@ -47,27 +46,14 @@ cur_tile:    .res 1 ; for drawing sprites
 ;
 ; clobbers: all registers, xpos, and ypos
 .proc buffer_tiles
-    ; load player xpos and ypos
-    lda mobs + Mob::coords + Coord::xcoord
-    sta xpos
-    lda mobs + Mob::coords + Coord::ycoord
-    sta ypos
-
-    ; todo update & fix sprite offsets
-
-; todo figure out can_scroll_dir
     jsr can_scroll_dir
-    bne skip_buffer
-    jmp start_buffer
-skip_buffer:
+    beq start_buffer
+    ; can't scroll, disable buffering
     rts
 
 start_buffer:
     ; update scroll metaxpos and metaypos depending on player dir
-    jsr get_first_col
-    sta metaxpos
-    jsr get_first_row
-    sta metaypos
+    lda mobs + Mob::direction
     jsr update_coords
 
     ; update ppu & scroll depending on player direction
@@ -344,207 +330,6 @@ update_buffer_amount:
     rts
 .endproc
 
-.proc update_sprites
-; render the player in the center of the screen, unless there are no
-; more tiles in that direction
-render_player:
-    lda #0
-    jsr get_mob_tile
-    sta cur_tile
-    ldx #$00
-    ldy #$00
-render_player_loop:
-    ; update sprite y pos
-    jsr get_player_y
-    sta $0200, x
-set_player_tile:
-    lda cur_tile
-    sta $0201, x
-    jsr get_dir_attribute
-    sta $0202, x
-    ; update sprite x pos
-    jsr get_player_x
-    sta $0203, x
-    ; continue loop
-    iny
-    cpy #4
-    bne continue_loop ; done
-    jmp render_mobs
-continue_loop:
-    txa
-    clc
-    adc #$04
-    tax
-    ; increment mob tile
-    cpy #2
-    beq next_tile_row
-    inc cur_tile
-    jmp render_player_loop
-next_tile_row:
-    ; increment to next row
-    lda cur_tile
-    clc
-    adc #$F ; add 15 to get to next row
-    sta cur_tile
-    jmp render_player_loop
-
-; getters for mob x & y based on screen pos
-get_player_y:
-    sty tmp
-    ldy #0
-    jsr get_mob_yoffset
-    ; multiply by 8 for pixels
-    asl
-    asl
-    asl
-    ; need y for adjustments
-    ldy tmp
-adjust_player_y:
-    ; increment based on y value
-    pha
-    lda mobs + Mob::direction
-    cmp #Direction::down
-    beq adjust_player_y_inverse
-    pla
-    cpy #2
-    beq increase_y
-    cpy #3
-    beq increase_y
-    rts
-increase_y:
-    ; increase sprite row
-    clc
-    adc #$08
-    rts
-adjust_player_y_inverse:
-    pla
-    cpy #0
-    beq increase_y
-    cpy #1
-    beq increase_y
-    rts
-get_player_x:
-    sty tmp
-    ldy #0
-    jsr get_mob_xoffset
-    ; multiply by 8 for pixels
-    asl
-    asl
-    asl
-    ; need y for adjustments
-    ldy tmp
-adjust_player_x:
-    ; increment based on x value
-    pha
-    lda mobs + Mob::direction
-    cmp #Direction::left
-    beq adjust_player_x_inverse
-    pla
-    cpy #1
-    beq increase_x
-    cpy #3
-    beq increase_x
-    rts
-increase_x:
-    ; increase sprite row
-    clc
-    adc #$08
-    rts
-adjust_player_x_inverse:
-    pla
-    cpy #0
-    beq increase_x
-    cpy #2
-    beq increase_x
-    rts
-
-get_dir_attribute:
-    lda mobs + Mob::direction
-    cmp #Direction::up
-    beq get_normal_attribute
-    cmp #Direction::right
-    beq get_normal_attribute
-    cmp #Direction::down
-    beq flip_vertical_attribute
-    ; left - flip horizontal
-    lda #%01000000
-    rts
-get_normal_attribute:
-    lda #%00000000
-    rts
-flip_vertical_attribute:
-    lda #%10000000
-    rts
-
-render_mobs:
-    rts ; todo remove
-    ldx #4
-    ldy #mob_size
-render_mobs_loop:
-    jsr is_alive
-    bne clear_mob
-    lda mobs + Mob::coords + Coord::xcoord, y
-    sta xpos
-    lda mobs + Mob::coords + Coord::ycoord, y
-    sta ypos
-    ; check if we can see mob
-    tya
-    pha
-    txa
-    pha
-    ldy #0
-    jsr can_see
-    beq render_mob
-    pla
-    tax
-    pla
-    tay
-    ; nope, hide mob
-    jmp clear_mob
-render_mob:
-    pla
-    tax
-    pla
-    tay
-    ; todo multiply x & y by 2 in order to get metax
-    lda mobs + Mob::coords + Coord::ycoord, y
-    asl
-    asl
-    asl
-    clc
-    adc #$07 ; +8 (skip first row), and -1 (sprite data delayed 1 scanline)
-    sta $0200, x
-    tya
-    jsr get_mob_tile
-    sta $0201, x
-    lda #%00000000
-    sta $0202, x
-    lda mobs + Mob::coords + Coord::xcoord, y
-    asl
-    asl
-    asl
-    sta $0203, x
-continue_mobs_loop:
-    txa
-    clc
-    adc #$04
-    tax
-    tya
-    clc
-    adc #mob_size
-    tay
-    cmp #mobs_size
-    bne render_mobs_loop
-done_mobs:
-    rts
-clear_mob:
-    ; set sprite x and y to off screen
-    lda #$FF
-    sta $0200, x
-    sta $0203, x
-    jmp continue_mobs_loop
-.endproc
-
 
 ; increase or decrease ppuaddr depending on scroll dir
 ; todo check last_dir
@@ -608,16 +393,82 @@ update_right:
     ;cmp #Direction::up
     ;beq update_up
 update_up:
-    dec metaypos
+    jsr get_first_col
+    sta metaxpos
+    jsr get_first_row
+    sta metaypos
     rts
 update_down:
-    inc metaypos
+    jsr get_first_col
+    sta metaxpos
+    jsr get_last_row
+    sta metaypos
     rts
 update_left:
-    dec metaxpos
+    jsr get_first_col
+    sta metaxpos
+    jsr get_last_row
+    sta metaypos
     rts
 update_right:
-    inc metaxpos
+    jsr get_last_col
+    sta metaxpos
+    jsr get_last_row
+    sta metaypos
     rts
 .endproc
 
+; check mob dir to ensure we can scroll in that dir
+;
+; output: 0 if success
+.proc can_scroll_dir
+    lda mobs + Mob::direction
+    cmp #Direction::right
+    beq check_right
+    cmp #Direction::left
+    beq check_left
+    cmp #Direction::down
+    beq check_down
+    ;cmp #Direction::up
+    ;beq check_up
+check_up:
+    lda mobs + Mob::coords + Coord::ycoord
+    asl
+    ; ensure we're not at top of dungeon
+    cmp #vertical_bound
+    bcc failure
+    ; edge case for walking up from bottom of dungeon
+    cmp #(max_height*2) - (screen_height-vertical_bound)
+    beq success ; edge case for going up
+    bcs failure
+    jmp success
+check_down:
+    lda mobs + Mob::coords + Coord::ycoord
+    asl
+    ; edge case for walking down from top of dungeon
+    cmp #vertical_bound
+    beq failure ; edge case for going down
+    bcc failure
+    ; ensure we're not at bottom of dungeon
+    cmp #(max_height*2) - (screen_height-vertical_bound)
+    bcs failure
+    jmp success
+
+; todo horizontal check
+check_left:
+check_right:
+    jsr get_first_col
+    ;cmp #min_bound*2
+    beq failure
+    jsr get_last_col
+    ;cmp #max_width * 2 - min_bound * 2
+    cmp #max_width * 2
+    bcs failure
+    jmp success
+failure:
+    lda #1
+    rts
+success:
+    lda #0
+    rts
+.endproc
