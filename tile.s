@@ -28,6 +28,9 @@
 ; updates register a with the tile corresponding to xpos and ypos
 ; clobbers: x and y
 .proc get_bg_tile
+    ; todo
+    ;jsr within_bounds
+    ;bne bg
 check_upstair:
     ldx xpos
     ldy ypos
@@ -144,5 +147,21 @@ blank:
     rts
 blank:
     lda #$00
+    rts
+.endproc
+
+; get hex number tile (for debugging)
+; in: hex number
+; out: tile
+.proc get_hex_tile
+    cmp #10
+    bcs hex
+    ; num
+    clc
+    adc #$10
+    rts
+hex:
+    clc
+    adc #$17
     rts
 .endproc

@@ -23,6 +23,7 @@
 .include "global.inc"
 
 .export buffer_num
+.export buffer_num_hex
 .export buffer_str
 .export render_buffer
 
@@ -131,6 +132,46 @@ render_ones:
     ; return length of written number
     lda tmp
     rts
+.endproc
+
+; add hex number to draw_buffer (for debugging)
+;
+; in: number
+; y: index of current draw buffer pos
+; clobbers: x
+.proc buffer_num_hex
+    ; first, render tens place for number
+    ldx #0
+    cmp #10
+    bcc render_ones_padded
+sixteens_loop:
+    cmp #$10
+    bcc render_sixteens
+    sec
+    sbc #$10
+    inx
+    jmp sixteens_loop
+render_sixteens:
+    pha ; remember ones
+    txa
+    jsr get_hex_tile
+    sta draw_buffer, y
+    iny
+    ; now, render ones place
+    pla
+render_ones:
+    jsr get_hex_tile
+    sta draw_buffer, y
+    iny
+    rts
+render_ones_padded:
+    pha
+    lda #$0
+    jsr get_hex_tile
+    sta draw_buffer, y
+    iny
+    pla
+    jmp render_ones
 .endproc
 
 ; Render the draw buffer.
