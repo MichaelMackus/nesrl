@@ -403,17 +403,19 @@ update_down:
     sta metaxpos
     jsr get_last_row
     sta metaypos
+    dec metaypos
     rts
 update_left:
     jsr get_first_col
     sta metaxpos
-    jsr get_last_row
+    jsr get_first_row
     sta metaypos
     rts
 update_right:
     jsr get_last_col
     sta metaxpos
-    jsr get_last_row
+    dec metaxpos
+    jsr get_first_row
     sta metaypos
     rts
 .endproc
@@ -439,7 +441,6 @@ check_up:
     bcc failure
     ; edge case for walking up from bottom of dungeon
     cmp #(max_height*2) - (screen_height-vertical_bound)
-    beq success ; edge case for going up
     bcs failure
     jmp success
 check_down:
@@ -451,6 +452,7 @@ check_down:
     bcc failure
     ; ensure we're not at bottom of dungeon
     cmp #(max_height*2) - (screen_height-vertical_bound)
+    beq success;  edge case for going down
     bcs failure
     jmp success
 
