@@ -127,7 +127,7 @@ min_bound   = 1  ; minimum number of spaces from edge
 .globalzp metaypos
 .globalzp xoffset
 .globalzp yoffset
-.global init_offsets
+.global update_offsets
 .global get_mob_xoffset
 .global get_mob_yoffset
 .global can_scroll_dir

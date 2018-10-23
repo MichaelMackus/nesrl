@@ -3,7 +3,7 @@
 
 .include "global.inc"
 
-.export init_offsets
+.export update_offsets
 .export get_mob_xoffset
 .export get_mob_yoffset
 .export can_scroll_dir
@@ -27,7 +27,7 @@ yoffset:  .res 1
 .segment "CODE"
 
 ; initialize xoffset and yoffset
-.proc init_offsets
+.proc update_offsets
     jsr get_first_col
     sta xoffset
     jsr get_first_row
@@ -36,6 +36,7 @@ yoffset:  .res 1
 .endproc
 
 ; get mob offset from left edge
+; todo fixme
 ;
 ; y: mob index to calculate
 .proc get_mob_xoffset
@@ -44,18 +45,19 @@ yoffset:  .res 1
 ;    bne get_offset_xpos
 ;    jsr can_scroll_horizontal
 ;    bne get_offset_xpos
-    lda #screen_width/2
-    rts
-;; calculate offset based on xpos & screen_width
-;get_offset_xpos:
-;    lda mobs + Mob::coords + Coord::xcoord, y
-;    asl ; multiply by 2
-;    sec
-;    sbc xoffset
+;    lda #screen_width/2
+;    rts
+; calculate offset based on xpos & screen_width
+get_offset_xpos:
+    lda mobs + Mob::coords + Coord::xcoord, y
+    asl ; multiply by 2
+    sec
+    sbc xoffset
     rts
 .endproc
 
 ; get mob offset from top edge
+; todo fixme
 ;
 ; y: mob index to calculate
 .proc get_mob_yoffset
@@ -64,14 +66,14 @@ yoffset:  .res 1
 ;    bne get_offset_ypos
 ;    jsr can_scroll_vertical
 ;    bne get_offset_ypos
-    lda #14 ; todo don't hardcode, need to line up with dungeon
-    rts
-;; calculate offset based on xpos & screen_width
-;get_offset_ypos:
-;    lda mobs + Mob::coords + Coord::ycoord, y
-;    asl ; multiply by 2
-;    sec
-;    sbc yoffset
+;    lda #14 ; todo don't hardcode, need to line up with dungeon
+;    rts
+; calculate offset based on xpos & screen_width
+get_offset_ypos:
+    lda mobs + Mob::coords + Coord::ycoord, y
+    asl ; multiply by 2
+    sec
+    sbc yoffset
     rts
 .endproc
 
@@ -89,22 +91,22 @@ yoffset:  .res 1
     ;cmp #Direction::up
     ;beq check_up
 check_up:
+check_down:
     ; can't scroll if we're past up minbound, or down maxbound
     jsr get_first_row
     ;cmp #min_bound*2
     beq failure
-    jmp success
-check_down:
+    ;jmp success
     jsr get_last_row
     ;cmp #max_height * 2 - min_bound * 2
     cmp #max_height * 2
     bcs failure
     jmp success
 check_left:
+check_right:
     jsr get_first_col
     ;cmp #min_bound*2
     beq failure
-check_right:
     jsr get_last_col
     ;cmp #max_width * 2 - min_bound * 2
     cmp #max_width * 2
@@ -151,13 +153,13 @@ force_endx:
 
 ; metay of first row on screen
 .proc get_first_row
-    ; start y = player's ypos - 15
+    ; start y = player's ypos - 14
     lda mobs + Mob::coords + Coord::ycoord
     asl ; multiply by 2 for metay
     cmp #14 ; todo don't hardcode
     bcc force_y
     ; check end of dungeon
-    cmp #(max_height * 2) - (screen_height / 2)
+    cmp #(max_height * 2) - 14
     bcs force_endy
     sec
     sbc #14 ; todo don't hardcode
