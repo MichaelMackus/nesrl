@@ -1,6 +1,7 @@
 ; procedures relating to updating the buffer
 ;
 ; todo probably want to have a proc for updating previously seen tiles to another tile
+; todo update rest of code to work with new byte (vram increment flag)
 
 .include "global.inc"
 
@@ -14,7 +15,6 @@ tmp:          .res 1
 starty:       .res 1 ; for buffer seen loop
 startx:       .res 1 ; for buffer seen loop
 draw_y:       .res 1 ; current draw buffer index
-last_dir:     .res 2 ; last scroll direction (x, y) for bg scrolling
 draw_length:  .res 1
 ppu_pos:      .res 1 ; for ppu_at_attribute procedure
 buffer_start: .res 1 ; start index for draw buffer
@@ -23,11 +23,6 @@ buffer_start: .res 1 ; start index for draw buffer
 
 ; initialize buffers
 .proc init_buffer
-    ; set to up since by default the dungeon is generated in first NT
-    lda #Direction::left
-    sta last_dir
-    lda #Direction::up
-    sta last_dir+1
     lda #0
     sta draw_buffer
     sta scroll
@@ -39,13 +34,7 @@ buffer_start: .res 1 ; start index for draw buffer
     rts
 .endproc
 
-; todo update rest of code to work with new byte (vram increment flag)
-
-; todo up & down won't work when moving left or right
-; todo this is because the vram increment won't cross the nametables
-; todo will have to update length & ppu addr dynamically in loop :(
-;
-; todo going right has a glitch in the amount of cycles it takes sometimes
+; todo going right (now *left?) has a glitch in the amount of cycles it takes sometimes, perhaps something to do with NT boundary
 ; update draw buffer with new bg tiles
 ; this assumes scrolling in direction of player movement
 ;
@@ -59,6 +48,16 @@ buffer_start: .res 1 ; start index for draw buffer
     rts
 
 start_buffer:
+    ; initialize ppuaddr for buffering
+    jsr init_ppuaddr
+    ; execute buffer update twice, for 16 pixels total
+    jsr buffer
+    jsr buffer
+    ; reset ppuaddr to origin
+    jsr reset_ppuaddr
+    rts
+
+buffer:
     ; update scroll metaxpos and metaypos depending on player dir
     lda mobs + Mob::direction
     jsr update_coords
@@ -67,7 +66,7 @@ start_buffer:
     lda mobs + Mob::direction
     jsr update_ppuaddr
 
-    ; calculate the position in the PPU
+    ; calculate the position in the PPU, todo should we do this before updating ppu?
     jsr calculate_ppu_pos
 
     ; get next y index
@@ -125,8 +124,7 @@ update_attribute:
     jmp continue_loop ; don't increment position since we never wrote tile data
 buffer_tile:
     ; get the tiles at the ppu_addr location
-    ;jsr get_bg_metatile
-    lda #$60
+    jsr get_bg_metatile
     ldy draw_y
     sta draw_buffer, y
     iny
@@ -153,27 +151,10 @@ continue_loop:
     jmp buffer_tile_loop
 
 done:
-    ; update last_dir
-    lda mobs + Mob::direction
-    cmp #Direction::up
-    beq last_dir_plus1
-    cmp #Direction::down
-    beq last_dir_plus1
-    ; left or right, store in first byte
-    sta last_dir
     ; write zero length for next buffer write
     lda #$00
     sta draw_buffer, y
     rts
-last_dir_plus1:
-    ; up or down, store in last byte
-    sta last_dir + 1
-    ; write zero length for next buffer write
-    lda #$00
-    sta draw_buffer, y
-    rts
-
-
 .endproc
 
 .proc buffer_hp
@@ -308,11 +289,56 @@ update_buffer_amount:
     rts
 .endproc
 
+; initialize the PPU address to point to start address for buffering
+; assumes ppuaddr is pointing to origin
+.proc init_ppuaddr
+    ; flip nametable if going right or down
+    lda mobs + Mob::direction
+    cmp #Direction::right
+    beq right_of_nt
+    cmp #Direction::down
+    beq bottom_of_nt
+    ; origin works for going left or up
+    rts
+right_of_nt:
+    ; flip nametable
+    jsr inx_ppu_nt
+    ; decrement x to get back to end of previous nametable
+    jsr dex_ppu
+    rts
+bottom_of_nt:
+    ; flip nametable
+    jsr iny_ppu_nt
+    ; decrement y to get back to end of previous nametable
+    jsr dey_ppu
+    rts
+.endproc
+
+; reset the PPU address to point to origin
+.proc reset_ppuaddr
+    ; first reset to origin of screen
+    lda mobs + Mob::direction
+    cmp #Direction::right
+    beq reset_right
+    cmp #Direction::down
+    beq reset_down
+    ; if we went left or up, we're already at origin of screen
+    rts
+reset_right:
+    ; flip nametable
+    jsr dex_ppu_nt
+    ; increase x to get to origin
+    jsr inx_ppu
+    rts
+reset_down:
+    ; flip nametable
+    jsr dey_ppu_nt
+    ; increase y to get to origin
+    jsr iny_ppu
+    rts
+.endproc
 
 ; increase or decrease ppuaddr depending on scroll dir
-; todo we have to check *all* last_dirs in each case...
-; todo possibly use a new scroll offset var?
-; todo until we do this, seeing 1 less tile on scroll left then up (because we're decrementing PPU twice on left scroll)
 ;
 ; in: scroll dir
 ; clobbers: x register
@@ -327,43 +353,19 @@ update_buffer_amount:
     ;beq update_up
 update_up:
     jsr scroll_up
-    lda #Direction::down
-    cmp last_dir+1
-    beq up_page
     jsr dey_ppu
-    rts
-up_page:
-    jsr dey_ppu_nt
     rts
 update_down:
     jsr scroll_down
-    lda #Direction::up
-    cmp last_dir+1
-    beq down_page
     jsr iny_ppu
-    rts
-down_page:
-    jsr iny_ppu_nt
     rts
 update_left:
     jsr scroll_left
-    lda #Direction::right
-    cmp last_dir
-    beq left_page
     jsr dex_ppu
-    rts
-left_page:
-    jsr dex_ppu_nt
     rts
 update_right:
     jsr scroll_right
-    lda #Direction::left
-    cmp last_dir
-    beq right_page
     jsr inx_ppu
-    rts
-right_page:
-    jsr inx_ppu_nt
     rts
 .endproc
 
@@ -587,7 +589,20 @@ start:
     pha
     lda ppu_addr + 1
     pha
+
+    ; increment ppu based on amount tiles written
+ppuloop:
     jsr inx_ppu
+    dec cur_tile
+    lda cur_tile
+    bne ppuloop
+    ; restore cur_tile
+    ldy buffer_start
+    lda draw_buffer, y
+    sta cur_tile
+    ldy draw_y
+    iny
+
     ; write new ppu address
     lda ppu_addr
     sta draw_buffer, y
