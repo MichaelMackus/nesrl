@@ -119,24 +119,25 @@ flip_page:
 ; y: high byte
 .proc iny_ppu
     lda ppu_addr
-    ; todo won't work for x scroll
-    cmp #y_first_nt + 3
-    beq check_last_page
-    cmp #y_last_nt + 3
+    ldx #4
+    jsr mod
+    ; if remainder of division is 3, we're on last page in NT
+    cmp #3
     beq check_last_page
     jmp check_last_row
 check_last_page:
-    ; special case on +3
+    ; special case on last page
     lda ppu_addr+1
     cmp #$A0
-    beq iny_ppu_high
+    bcs iny_ppu_high
     jmp finish
 check_last_row:
+    ; check if we're on last row of page
     lda ppu_addr+1
     cmp #$E0
-    beq iny_ppu_high ; last row for low byte
+    bcs iny_ppu_high ; last row for low byte
 finish:
-    ; decrement low byte by one row (32 tiles)
+    ; increment low byte by one row (32 tiles)
     lda ppu_addr+1
     clc
     adc #$20
@@ -152,7 +153,8 @@ finish:
 ; y: low byte
 .proc dey_ppu
     lda ppu_addr+1
-    beq dey_ppu_high ; zero
+    cmp #$20
+    bcc dey_ppu_high
     ; decrement low byte by one row (32 tiles)
     lda ppu_addr+1
     sec
@@ -169,14 +171,25 @@ finish:
     ldx #$20
     jsr mod
     cmp #$1F
-    beq inx_ppu_nt
+    beq inc_nt
     ; increment low byte by one row (32 tiles)
     inc ppu_addr+1
     ; done
     rts
+inc_nt:
+    jsr inx_ppu_nt
+    ; todo will this work on last page?
+    ; subtract $1F from low byte to go to start x of next NT
+    lda ppu_addr + 1
+    sec
+    sbc #$1F
+    sta ppu_addr + 1
+    rts
+    ; done
 .endproc
 
 ; clobbers: x
+; todo how to handle not overwriting attrs?
 .proc dex_ppu
     ; if remainder of division is #$00, wrap to prev NT
     lda ppu_addr+1
@@ -189,34 +202,83 @@ finish:
     ; done
     rts
 dec_nt:
-    jmp dex_ppu_nt
+    jsr dex_ppu_nt
+    ; todo this won't work if we're on last page, since then the 
+    ; todo update script will try adding +32 to 0xbf
+    ; add $1f to from low byte to go to end x of next NT
+    lda ppu_addr + 1
+    clc
+    adc #$1F
+    sta ppu_addr + 1
+    rts
+    ; done
 .endproc
 
 ; increment PPU high address by 1, updating address to next NT if appropriate
 .proc iny_ppu_high
-    ; handle nametable wrapping
-    ; todo fix with x scroll
+    ; handle nametable wrapping, incrementing nt if we're on last page
     lda ppu_addr
-    cmp #y_first_nt + 3
-    beq inc_nt
-    cmp #y_last_nt + 3
+    ldx #4
+    jsr mod
+    cmp #3
     beq inc_nt
     ; not start of first or start of last, increment by 1
     inc ppu_addr
-    ; set low byte to $00, first row in page
-    lda #$00
+    ; set low byte to first row in page using mod function to restore col
+    lda ppu_addr + 1
+    ldx #$20
+    jsr mod
     sta ppu_addr + 1
     ; done
     rts
 inc_nt:
     ; subtract 3 first
+    lda ppu_addr
     sec
     sbc #$03
     sta ppu_addr
     ; increment NT
     jsr iny_ppu_nt
-    ; set low byte to $00, first row in NT
-    lda #$00
+    ; set low byte to first row in page using mod function to restore col
+    lda ppu_addr + 1
+    ldx #$20
+    jsr mod
+    sta ppu_addr + 1
+    rts
+.endproc
+
+; decrement PPU high address by 1, updating address to previous NT if appropriate
+.proc dey_ppu_high
+    ; handle nametable wrapping, decrementing nt if we're on first page
+    lda ppu_addr
+    ldx #4
+    jsr mod
+    cmp #0 ; todo shouldn't be necessary, but otherwise bug
+    beq dec_nt
+    ; not start page, decrement by 1
+    dec ppu_addr
+    ; set low byte to last row of prev addr using mod function to restore col
+    lda ppu_addr + 1
+    ldx #$20
+    jsr mod
+    clc
+    adc #$E0
+    sta ppu_addr + 1
+    rts
+dec_nt:
+    ; add 3 first to get to last page
+    lda ppu_addr
+    clc
+    adc #$03
+    sta ppu_addr
+    ; decrement NT
+    jsr dey_ppu_nt
+    ; set low byte to last row of prev addr using mod function to restore col
+    lda ppu_addr + 1
+    ldx #$20
+    jsr mod
+    clc
+    adc #$A0
     sta ppu_addr + 1
     rts
 .endproc
@@ -239,103 +301,34 @@ inc_nt:
     rts
 .endproc
 
-; decrement PPU high address by 1, updating address to previous NT if appropriate
-.proc dey_ppu_high
-    ; handle nametable wrapping
-    ; todo fix with x scroll
-    lda ppu_addr
-    cmp #y_first_nt
-    beq dec_nt
-    cmp #y_last_nt
-    beq dec_nt
-    ; not start of first or start of last, decrement by 1
-    dec ppu_addr
-    ; set low byte to last row of prev addr
-    lda #$E0
-    sta ppu_addr + 1
-    rts
-dec_nt:
-    ; add 3 first to get to last page
-    clc
-    adc #$03
-    sta ppu_addr
-    ; decrement NT
-    jsr dey_ppu_nt
-    ; set low byte to $A0, last row in NT
-    lda #$A0
-    sta ppu_addr + 1
-    rts
-.endproc
-
 .proc dey_ppu_nt
-    ; first check if we can subtract (i.e. are we in last NT?)
-    lda ppu_addr
-    sec
-    sbc #$08
-    cmp #y_first_nt
-    bcc inc_nt ; unable to subtract if we're in first NT already
-    ; success!
-    sta ppu_addr
-    rts
-inc_nt:
-    lda ppu_addr
-    clc
-    adc #$08
-    sta ppu_addr
-    ; done
-    rts
+    jmp iny_ppu_nt
 .endproc
 
 ; increment PPU nametable horizontally
 .proc inx_ppu_nt
     ; handle nametable wrapping
+    ; todo not handling page!
     lda ppu_addr
-    cmp #x_last_nt
-    bcs dec_nt
-    ; increment nametable
-    clc
-    adc #$04
-    sta ppu_addr
-    ; todo don't set low byte
-    jmp set_lowbyte
-dec_nt:
+    ldx #8
+    jsr mod
+    cmp #4
+    bcc inc_nt
     sec
     sbc #$04
     sta ppu_addr
-set_lowbyte:
-    ; subtract $1F from low byte to go to start x of next NT
-    ; todo will this work with scrolling?
-    lda ppu_addr + 1
-    sec
-    sbc #$1F
-    sta ppu_addr + 1
-    ; done
+    rts
+inc_nt:
+    ; increment nametable
+    lda ppu_addr
+    clc
+    adc #$04
+    sta ppu_addr
     rts
 .endproc
 
 ; decrement PPU nametable horizontally
 .proc dex_ppu_nt
-    ; handle nametable wrapping
-    lda ppu_addr
-    cmp #x_last_nt
-    bcs dec_nt
-    ; increment nametable
-    clc
-    adc #$04
-    sta ppu_addr
-    jmp set_lowbyte
-dec_nt:
-    sec
-    sbc #$04
-    sta ppu_addr
-    ; todo don't set lowbyte
-set_lowbyte:
-    ; add $to from low byte to go to end x of next NT
-    lda ppu_addr + 1
-    clc
-    adc #$1F
-    sta ppu_addr + 1
-    ; done
-    rts
+    jmp inx_ppu_nt
 .endproc
 
