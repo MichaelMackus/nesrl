@@ -7,18 +7,17 @@
 .export buffer_hp
 .export buffer_tiles
 .export buffer_messages
-.export buffer_debug
 
 .segment "ZEROPAGE"
 
-tmp:         .res 1
-starty:      .res 1 ; for buffer seen loop
-startx:      .res 1 ; for buffer seen loop
-draw_y:      .res 1 ; current draw buffer index
-last_dir:    .res 2 ; last scroll direction (x, y) for bg scrolling
-draw_length: .res 1
-ppu_pos:     .res 1 ; for ppu_at_attribute procedure
-cur_tile = tmp
+tmp:          .res 1
+starty:       .res 1 ; for buffer seen loop
+startx:       .res 1 ; for buffer seen loop
+draw_y:       .res 1 ; current draw buffer index
+last_dir:     .res 2 ; last scroll direction (x, y) for bg scrolling
+draw_length:  .res 1
+ppu_pos:      .res 1 ; for ppu_at_attribute procedure
+buffer_start: .res 1 ; start index for draw buffer
 
 .segment "CODE"
 
@@ -52,6 +51,8 @@ cur_tile = tmp
 ;
 ; clobbers: all registers, xpos, and ypos
 .proc buffer_tiles
+    cur_tile = tmp
+
     jsr can_scroll_dir
     beq start_buffer
     ; can't scroll, disable buffering
@@ -66,19 +67,16 @@ start_buffer:
     lda mobs + Mob::direction
     jsr update_ppuaddr
 
-    ; calculate the row in the PPU, for attribute check
-    jsr calculate_ppu_row
+    ; calculate the position in the PPU
+    jsr calculate_ppu_pos
 
-continue_buffer:
     ; get next y index
     jsr next_index
+    sty buffer_start
 
     ; going up or down, len = 32
     lda #$20
     sta draw_length
-
-buffer_start:
-    lda draw_length
     sta draw_buffer, y
     iny
     lda ppu_addr
@@ -109,8 +107,16 @@ buffer_tiles:
     stx cur_tile
 buffer_tile_loop:
     sty draw_y
+    ; check to prevent attributes update (scrolling up or down)
     jsr ppu_at_attribute
+    beq update_attribute
+    ; check if we're past nametable boundary (scrolling left or right)
+    jsr ppu_at_next_nt
     bne buffer_tile
+    ; we're past NT boundary, update buffer and continue
+    jsr buffer_next_nt ; updates draw buffer and draw_y
+    jmp buffer_tile
+update_attribute:
     ; we're at the attribute table, write default attribute
     ; todo figure out attribute updates
     lda #$0
@@ -119,7 +125,8 @@ buffer_tile_loop:
     jmp continue_loop ; don't increment position since we never wrote tile data
 buffer_tile:
     ; get the tiles at the ppu_addr location
-    jsr get_bg_metatile
+    ;jsr get_bg_metatile
+    lda #$60
     ldy draw_y
     sta draw_buffer, y
     iny
@@ -137,6 +144,7 @@ inc_metay:
     inc metaypos
     jmp continue_loop
 continue_loop:
+    inc ppu_pos
     inc cur_tile
     ldx cur_tile
     ; check draw length
@@ -203,44 +211,6 @@ tens:
     ; finish buffer
     lda #$00
     sta draw_buffer, y
-    rts
-.endproc
-
-.proc buffer_debug
-    jsr next_index
-    ; length
-    lda #$17
-    sta draw_buffer, y
-    iny
-    ; ppu addresses
-    lda ppu_addr
-    sta draw_buffer, y
-    iny
-    lda ppu_addr + 1
-    sta draw_buffer, y
-    iny
-    ; ppu switch
-    lda #0
-    sta draw_buffer, y
-    iny
-
-    lda ppu_addr
-    jsr buffer_num_hex
-    lda ppu_addr + 1
-    jsr buffer_num_hex
-
-    lda #$00
-    sta draw_buffer, y
-    iny
-
-    lda scroll
-    jsr buffer_num_hex
-    lda scroll + 1
-    jsr buffer_num_hex
-
-    lda #$00
-    sta draw_buffer, y
-
     rts
 .endproc
 
@@ -340,7 +310,9 @@ update_buffer_amount:
 
 
 ; increase or decrease ppuaddr depending on scroll dir
-; todo do we have to check *all* last_dirs in each case?
+; todo we have to check *all* last_dirs in each case...
+; todo possibly use a new scroll offset var?
+; todo until we do this, seeing 1 less tile on scroll left then up (because we're decrementing PPU twice on left scroll)
 ;
 ; in: scroll dir
 ; clobbers: x register
@@ -525,12 +497,26 @@ success:
     jmp failure
 
 success:
-    inc ppu_pos ; inc row for next time
     lda #0
     rts
 failure:
-    inc ppu_pos ; inc row for next time
     lda #1
+    rts
+.endproc
+
+; calculate current position in PPU
+.proc calculate_ppu_pos
+    lda mobs + Mob::direction
+    cmp #Direction::right
+    beq calculate_ppu_row
+    cmp #Direction::left
+    beq calculate_ppu_row
+
+    ; calculate column
+    lda ppu_addr + 1
+    ldx #$20
+    jsr divide
+    sta ppu_pos
     rts
 .endproc
 
@@ -554,5 +540,71 @@ failure:
     clc
     adc ppu_pos
     sta ppu_pos
+    rts
+.endproc
+
+.proc ppu_at_next_nt
+    ; are we at end of NT?
+    lda ppu_pos
+    cmp #$20
+    beq success
+    ; nope
+    lda #1
+    rts
+success:
+    lda #0
+    rts
+.endproc
+
+; updates draw_buffer to next NT
+; updates previously written draw_buffer's length
+; NOTE: should only happen once per update cycle
+.proc buffer_next_nt
+    ; only test when increasing vram horizontally
+    lda mobs + Mob::direction
+    cmp #Direction::up
+    beq start
+    cmp #Direction::down
+    beq start
+    ; short circuit if scrolling left or right
+    rts
+start:
+    ; update old length to current loop index
+    cur_tile = tmp
+    ldy buffer_start
+    lda cur_tile
+    sta draw_buffer, y
+
+    ; write new draw length
+    ldy draw_y
+    lda draw_length
+    sec
+    sbc cur_tile
+    sta draw_buffer, y
+    iny
+    ; flip horizontal nametable
+    lda ppu_addr
+    pha
+    lda ppu_addr + 1
+    pha
+    jsr inx_ppu
+    ; write new ppu address
+    lda ppu_addr
+    sta draw_buffer, y
+    iny
+    lda ppu_addr + 1
+    sta draw_buffer, y
+    iny
+    ; restore previous ppu address for next buffer update
+    pla
+    sta ppu_addr + 1
+    pla
+    sta ppu_addr
+    ; write vram increment, assume horizontal
+    lda base_nt
+    sta draw_buffer, y
+    iny
+
+    sty draw_y
     rts
 .endproc
