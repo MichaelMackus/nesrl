@@ -20,6 +20,7 @@ items:       .res .sizeof(ItemDrop)*maxdrops
 ; get feature at xpos and ypos
 ; out: 0 on success
 ; updates: y register to feature index
+; todo if x matches, huge performance hit here (in loop label)
 .proc feature_at
     ldy #0
 loop:
