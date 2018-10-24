@@ -17,6 +17,7 @@ startx:      .res 1 ; for buffer seen loop
 draw_y:      .res 1 ; current draw buffer index
 last_dir:    .res 2 ; last scroll direction (x, y) for bg scrolling
 draw_length: .res 1
+ppu_pos:     .res 1 ; for ppu_at_attribute procedure
 cur_tile = tmp
 
 .segment "CODE"
@@ -60,22 +61,15 @@ start_buffer:
     lda mobs + Mob::direction
     jsr update_ppuaddr
 
+    ; calculate the row in the PPU, for attribute check
+    jsr calculate_ppu_row
+
 continue_buffer:
     ; get next y index
     jsr next_index
 
-    ; write length to ppu
-    lda mobs + Mob::direction
-    cmp #Direction::right
-    beq len_30
-    cmp #Direction::left
-    beq len_30
     ; going up or down, len = 32
-    lda #32
-    sta draw_length
-    jmp buffer_start
-len_30:
-    lda #30
+    lda #$20
     sta draw_length
 
 buffer_start:
@@ -110,6 +104,15 @@ buffer_tiles:
     stx cur_tile
 buffer_tile_loop:
     sty draw_y
+    jsr ppu_at_attribute
+    bne buffer_tile
+    ; we're at the attribute table, write default attribute
+    ; todo figure out attribute updates
+    lda #$0
+    sta draw_buffer, y
+    iny
+    jmp continue_loop ; don't increment position since we never wrote tile data
+buffer_tile:
     ; get the tiles at the ppu_addr location
     jsr get_bg_metatile
     ldy draw_y
@@ -332,8 +335,7 @@ update_buffer_amount:
 
 
 ; increase or decrease ppuaddr depending on scroll dir
-; todo check last_dir
-; todo detect end of dungeon
+; todo do we have to check *all* last_dirs in each case?
 ;
 ; in: scroll dir
 ; clobbers: x register
@@ -353,7 +355,6 @@ update_up:
     beq up_page
     jsr dey_ppu
     rts
-; todo almost! need to figure out scroll value & flipping
 up_page:
     jsr dey_ppu_nt
     rts
@@ -364,10 +365,10 @@ update_down:
     beq down_page
     jsr iny_ppu
     rts
-; todo almost! need to figure out scroll value & flipping
 down_page:
     jsr iny_ppu_nt
     rts
+; todo figure this out
 ; todo ensure we are at left of page
 update_left:
     jsr scroll_left
@@ -380,6 +381,7 @@ update_right:
     rts
 .endproc
 
+; todo not exactly working since player is moving in 16 pixel increments
 ; update metaxpos and metaypos depending on player dir for the bg tile
 ;
 ; in: scroll dir
@@ -456,21 +458,90 @@ check_down:
     bcs failure
     jmp success
 
-; todo horizontal check
+; todo fixme
 check_left:
-check_right:
-    jsr get_first_col
-    ;cmp #min_bound*2
-    beq failure
-    jsr get_last_col
-    ;cmp #max_width * 2 - min_bound * 2
-    cmp #max_width * 2
+    jmp success
+    lda mobs + Mob::coords + Coord::xcoord
+    asl
+    ; ensure we're not at top of dungeon
+    cmp #horizontal_bound
+    bcc failure
+    ; edge case for walking left from right of dungeon
+    cmp #(max_height*2) - (screen_width-horizontal_bound)
     bcs failure
     jmp success
+check_right:
+    jmp success
+    lda mobs + Mob::coords + Coord::xcoord
+    asl
+    ; edge case for walking right from left of dungeon
+    cmp #horizontal_bound
+    beq failure ; edge case for going right
+    bcc failure
+    ; ensure we're not at end of dungeon
+    cmp #(max_height*2) - (screen_width-horizontal_bound)
+    beq success;  edge case for going right
+    bcs failure
+    jmp success
+
 failure:
     lda #1
     rts
 success:
     lda #0
+    rts
+.endproc
+
+; test if ppu at attribute boundary
+;
+; from nesdev:
+; Each attribute table, starting at $23C0, $27C0, $2BC0, or $2FC0, is arranged as an 8x8 byte array
+; (64 bytes total)
+.proc ppu_at_attribute
+    ; only test when increasing vram vertically
+    lda mobs + Mob::direction
+    cmp #Direction::up
+    beq failure
+    cmp #Direction::down
+    beq failure
+
+    ; ppu row 30 and 31 are attributes
+    lda ppu_pos
+    cmp #30
+    bcc failure
+    cmp #32
+    bcc success
+    jmp failure
+
+success:
+    inc ppu_pos ; inc row for next time
+    lda #0
+    rts
+failure:
+    inc ppu_pos ; inc row for next time
+    lda #1
+    rts
+.endproc
+
+; calculate current row in PPU for attribute check
+.proc calculate_ppu_row
+    ; 8 rows in first 3 pages
+    lda ppu_addr
+    ldx #4
+    jsr divide
+    ; result of *mod* is page number, multiply by 8 to get row
+    asl
+    asl
+    asl
+    sta ppu_pos
+    ; divide low byte by 32 to get offset in page
+    lda ppu_addr + 1
+    ldx #$20
+    jsr divide
+    ; add result of *division* with row of page
+    txa
+    clc
+    adc ppu_pos
+    sta ppu_pos
     rts
 .endproc
