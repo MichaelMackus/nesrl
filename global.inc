@@ -129,13 +129,13 @@ min_bound   = 1  ; minimum number of spaces from edge
 ; sprite.s
 .global update_sprite_offsets
 .global update_sprites
+.global debug
 
 ; update.s
 .global init_buffer
 .global buffer_tiles
 .global buffer_messages
 .global buffer_hp
-.global buffer_debug
 
 ; render.s
 .global render

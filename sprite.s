@@ -223,6 +223,75 @@ clear_mob:
     jmp continue_mobs_loop
 .endproc
 
+; display sprites on bottom of screen debugging current PPUADDR
+.proc debug
+    DEBUG_Y = 210
+    DEBUG_X = 210
+    DEBUG_SPRITE = 80
+
+    ; ppu high
+    lda ppu_addr
+    ; get high place tile
+    lsr
+    lsr
+    lsr
+    lsr
+    jsr get_hex_tile
+    ; update sprite
+    sta $0201 + DEBUG_SPRITE
+    lda #DEBUG_Y
+    sta $0200 + DEBUG_SPRITE
+    lda #0
+    sta $0202 + DEBUG_SPRITE
+    lda #DEBUG_X
+    sta $0203 + DEBUG_SPRITE
+    ; ppu high
+    lda ppu_addr
+    ; get low place tile
+    and #%00001111
+    jsr get_hex_tile
+    ; update sprite
+    sta $0201 + DEBUG_SPRITE + 4
+    lda #DEBUG_Y
+    sta $0200 + DEBUG_SPRITE + 4
+    lda #0
+    sta $0202 + DEBUG_SPRITE + 4
+    lda #DEBUG_X + 8
+    sta $0203 + DEBUG_SPRITE + 4
+    ; ppu high
+    lda ppu_addr + 1
+    ; get high place tile
+    lsr
+    lsr
+    lsr
+    lsr
+    jsr get_hex_tile
+    ; update sprite
+    sta $0201 + DEBUG_SPRITE + 8
+    lda #DEBUG_Y
+    sta $0200 + DEBUG_SPRITE + 8
+    lda #0
+    sta $0202 + DEBUG_SPRITE + 8
+    lda #DEBUG_X + 16
+    sta $0203 + DEBUG_SPRITE + 8
+    ; ppu high
+    lda ppu_addr + 1
+    ; get low place tile
+    and #%00001111
+    jsr get_hex_tile
+    ; update sprite
+    sta $0201 + DEBUG_SPRITE + 12
+    lda #DEBUG_Y
+    sta $0200 + DEBUG_SPRITE + 12
+    lda #0
+    sta $0202 + DEBUG_SPRITE + 12
+    lda #DEBUG_X + 24
+    sta $0203 + DEBUG_SPRITE + 12
+
+
+    rts
+.endproc
+
 
 ; get mob offset from left edge
 ;
