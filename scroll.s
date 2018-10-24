@@ -1,6 +1,5 @@
 ; functions related to PPU scrolling
 ; todo scrolling functions currently assume scroll is always on 8 pixel boundary
-; todo inc & dec nt functions should just do that, the page should be set in the inc/dec ppu functions
 
 ; in: dividend
 ; x: divisor
@@ -189,7 +188,6 @@ inc_nt:
 .endproc
 
 ; clobbers: x
-; todo how to handle not overwriting attrs?
 .proc dex_ppu
     ; if remainder of division is #$00, wrap to prev NT
     lda ppu_addr+1
@@ -203,8 +201,6 @@ inc_nt:
     rts
 dec_nt:
     jsr dex_ppu_nt
-    ; todo this won't work if we're on last page, since then the 
-    ; todo update script will try adding +32 to 0xbf
     ; add $1f to from low byte to go to end x of next NT
     lda ppu_addr + 1
     clc
@@ -308,12 +304,12 @@ inc_nt:
 ; increment PPU nametable horizontally
 .proc inx_ppu_nt
     ; handle nametable wrapping
-    ; todo not handling page!
     lda ppu_addr
     ldx #8
     jsr mod
     cmp #4
     bcc inc_nt
+    lda ppu_addr
     sec
     sbc #$04
     sta ppu_addr

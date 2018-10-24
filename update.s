@@ -42,6 +42,11 @@ cur_tile = tmp
 
 ; todo update rest of code to work with new byte (vram increment flag)
 
+; todo up & down won't work when moving left or right
+; todo this is because the vram increment won't cross the nametables
+; todo will have to update length & ppu addr dynamically in loop :(
+;
+; todo going right has a glitch in the amount of cycles it takes sometimes
 ; update draw buffer with new bg tiles
 ; this assumes scrolling in direction of player movement
 ;
@@ -368,16 +373,25 @@ update_down:
 down_page:
     jsr iny_ppu_nt
     rts
-; todo figure this out
-; todo ensure we are at left of page
 update_left:
     jsr scroll_left
+    lda #Direction::right
+    cmp last_dir
+    beq left_page
     jsr dex_ppu
     rts
-; todo ensure we are at right of page
+left_page:
+    jsr dex_ppu_nt
+    rts
 update_right:
     jsr scroll_right
+    lda #Direction::left
+    cmp last_dir
+    beq right_page
     jsr inx_ppu
+    rts
+right_page:
+    jsr inx_ppu_nt
     rts
 .endproc
 
@@ -458,20 +472,17 @@ check_down:
     bcs failure
     jmp success
 
-; todo fixme
 check_left:
-    jmp success
     lda mobs + Mob::coords + Coord::xcoord
     asl
     ; ensure we're not at top of dungeon
     cmp #horizontal_bound
     bcc failure
     ; edge case for walking left from right of dungeon
-    cmp #(max_height*2) - (screen_width-horizontal_bound)
+    cmp #(max_width*2) - (screen_width-horizontal_bound)
     bcs failure
     jmp success
 check_right:
-    jmp success
     lda mobs + Mob::coords + Coord::xcoord
     asl
     ; edge case for walking right from left of dungeon
@@ -479,7 +490,7 @@ check_right:
     beq failure ; edge case for going right
     bcc failure
     ; ensure we're not at end of dungeon
-    cmp #(max_height*2) - (screen_width-horizontal_bound)
+    cmp #(max_width*2) - (screen_width-horizontal_bound)
     beq success;  edge case for going right
     bcs failure
     jmp success
