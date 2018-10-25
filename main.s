@@ -183,10 +183,10 @@ playgame:
     beq player_moved
 
 ai:
-    ;jsr mob_ai
+    jsr mob_ai
     jsr check_game_over
 
-    ;jsr mob_spawner
+    jsr mob_spawner
     jsr player_regen
 
     ; update messages buffer and hp every time, todo figure out better way

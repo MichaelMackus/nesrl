@@ -7,6 +7,8 @@
 
 cur_tile:    .res 1 ; for drawing sprites
 tmp:         .res 1
+tmp2:        .res 1 ; todo used for can_player_see proc
+mob:         .res 1 ; current mob index
 
 xoffset:     .res 1
 yoffset:     .res 1
@@ -22,122 +24,170 @@ yoffset:     .res 1
     rts
 .endproc
 
+; todo add case for >= 255 sprites, that way we can increase maxmobs
+; todo add flicker for >= 8 sprites per scan line
 .proc update_sprites
-; render the player in the center of the screen, unless there are no
-; more tiles in that direction
-render_player:
-    lda #0
+    ldx #$00
+    lda #$00
+    sta mob
+render_mob:
+    ; todo ensure we can see mob first, will need to clear OAM data after
+    ;ldy mob
+    ;jsr can_player_see
+    ;bne next_mob
+    ; get mob start tile
     jsr get_mob_tile
     sta cur_tile
-    ldx #$00
     ldy #$00
-render_player_loop:
+render_mob_loop:
     ; update sprite y pos
-    jsr get_player_y
+    jsr get_mob_y
     sta $0200, x
-set_player_tile:
+set_mob_tile:
     lda cur_tile
     sta $0201, x
     jsr get_dir_attribute
     sta $0202, x
     ; update sprite x pos
-    jsr get_player_x
+    jsr get_mob_x
     sta $0203, x
-    ; continue loop
-    iny
-    cpy #4
-    bne continue_loop ; done
-    jmp render_mobs
-continue_loop:
+    ; add 4 to sprite index
     txa
     clc
     adc #$04
     tax
+    ; finish loop if we've rendered 4 tiles (16x16 sprite)
+    iny
+    cpy #4
+    beq next_mob
+continue_loop:
     ; increment mob tile
     cpy #2
     beq next_tile_row
     inc cur_tile
-    jmp render_player_loop
+    jmp render_mob_loop
 next_tile_row:
     ; increment to next row
     lda cur_tile
     clc
     adc #$F ; add 15 to get to next row
     sta cur_tile
-    jmp render_player_loop
+    jmp render_mob_loop
+next_mob:
+    lda mob
+    clc
+    adc #mob_size
+    sta mob
+    cmp #mobs_size
+    bne render_mob
+    rts
 
 ; getters for mob x & y based on screen pos
-get_player_y:
+get_mob_y:
     sty tmp
-    ldy #0
-    jsr get_mob_yoffset
-    ; multiply by 8 for pixels
-    asl
-    asl
-    asl
-    ; need y for adjustments
+    ldy mob
+    ; ensure mob is within screen bounds, todo can_see function
+    jsr can_player_see
+    bne clear_mob
+    jsr is_alive
+    beq adjust_mob_y
+clear_mob:
+    ; dead - Y to FF
+    lda #$FF
     ldy tmp
-adjust_player_y:
+    rts
+adjust_mob_y:
+    lda mobs + Mob::direction, y
+    ldy tmp
     ; increment based on y value
-    pha
-    lda mobs + Mob::direction
     cmp #Direction::down
-    beq adjust_player_y_inverse
-    pla
+    beq adjust_mob_y_inverse
     cpy #2
     beq increase_y
     cpy #3
     beq increase_y
+    ; get offset unchanged
+    ldy mob
+    jsr get_mob_yoffset
+    ; restore original y
+    ldy tmp
     rts
 increase_y:
+    ; get offset
+    ldy mob
+    jsr get_mob_yoffset
     ; increase sprite row
     clc
     adc #$08
+    ; restore original y
+    ldy tmp
     rts
-adjust_player_y_inverse:
-    pla
+adjust_mob_y_inverse:
     cpy #0
     beq increase_y
     cpy #1
     beq increase_y
-    rts
-get_player_x:
-    sty tmp
-    ldy #0
-    jsr get_mob_xoffset
-    ; multiply by 8 for pixels
-    asl
-    asl
-    asl
-    ; need y for adjustments
+    ; get offset unchanged
+    ldy mob
+    jsr get_mob_yoffset
+    ; restore original y
     ldy tmp
-adjust_player_x:
+    rts
+get_mob_x:
+    sty tmp
+    ldy mob
+    ; ensure mob is within screen bounds, todo can_see function
+    jsr can_player_see
+    bne clear_mob
+    jsr is_alive
+    beq adjust_mob_x
+    jmp clear_mob
+adjust_mob_x:
     ; increment based on x value
-    pha
-    lda mobs + Mob::direction
+    lda mobs + Mob::direction, y
+    ldy tmp
     cmp #Direction::left
-    beq adjust_player_x_inverse
-    pla
+    beq adjust_mob_x_inverse
     cpy #1
     beq increase_x
     cpy #3
     beq increase_x
+    ; get offset unchanged
+    ldy mob
+    jsr get_mob_xoffset
+    ; restore original y
+    ldy tmp
     rts
 increase_x:
+    ; get offset unchanged
+    ldy mob
+    jsr get_mob_xoffset
     ; increase sprite row
     clc
     adc #$08
+    ; restore original y
+    ldy tmp
     rts
-adjust_player_x_inverse:
-    pla
+adjust_mob_x_inverse:
     cpy #0
     beq increase_x
     cpy #2
     beq increase_x
+    ; get offset unchanged
+    ldy mob
+    jsr get_mob_xoffset
+    ; restore original y
+    ldy tmp
     rts
 
 get_dir_attribute:
-    lda mobs + Mob::direction
+    sty tmp
+    ldy mob
+    ; todo wth? this kills the player!
+    ;jsr is_alive
+    ;bne get_normal_attribute
+    lda mobs + Mob::direction, y
+    ldy tmp
     cmp #Direction::up
     beq get_normal_attribute
     cmp #Direction::right
@@ -153,74 +203,6 @@ get_normal_attribute:
 flip_vertical_attribute:
     lda #%10000000
     rts
-
-render_mobs:
-    rts ; todo remove
-    ldx #4
-    ldy #mob_size
-render_mobs_loop:
-    jsr is_alive
-    bne clear_mob
-    lda mobs + Mob::coords + Coord::xcoord, y
-    sta xpos
-    lda mobs + Mob::coords + Coord::ycoord, y
-    sta ypos
-    ; check if we can see mob
-    tya
-    pha
-    txa
-    pha
-    ldy #0
-    jsr can_see
-    beq render_mob
-    pla
-    tax
-    pla
-    tay
-    ; nope, hide mob
-    jmp clear_mob
-render_mob:
-    pla
-    tax
-    pla
-    tay
-    ; todo multiply x & y by 2 in order to get metax
-    lda mobs + Mob::coords + Coord::ycoord, y
-    asl
-    asl
-    asl
-    clc
-    adc #$07 ; +8 (skip first row), and -1 (sprite data delayed 1 scanline)
-    sta $0200, x
-    tya
-    jsr get_mob_tile
-    sta $0201, x
-    lda #%00000000
-    sta $0202, x
-    lda mobs + Mob::coords + Coord::xcoord, y
-    asl
-    asl
-    asl
-    sta $0203, x
-continue_mobs_loop:
-    txa
-    clc
-    adc #$04
-    tax
-    tya
-    clc
-    adc #mob_size
-    tay
-    cmp #mobs_size
-    bne render_mobs_loop
-done_mobs:
-    rts
-clear_mob:
-    ; set sprite x and y to off screen
-    lda #$FF
-    sta $0200, x
-    sta $0203, x
-    jmp continue_mobs_loop
 .endproc
 
 ; display sprites on bottom of screen debugging current PPUADDR
@@ -319,6 +301,7 @@ clear_mob:
 .endproc
 
 
+; todo is this working for mobs (not player)?
 ; get mob offset from left edge
 ;
 ; y: mob index to calculate
@@ -329,9 +312,14 @@ get_offset_xpos:
     asl ; multiply by 2
     sec
     sbc xoffset
+    ; multiply by 8 for pixels
+    asl
+    asl
+    asl
     rts
 .endproc
 
+; todo is this working for mobs (not player)?
 ; get mob offset from top edge
 ;
 ; y: mob index to calculate
@@ -342,6 +330,46 @@ get_offset_ypos:
     asl ; multiply by 2
     sec
     sbc yoffset
+    ; multiply by 8 for pixels
+    asl
+    asl
+    asl
     rts
 .endproc
 
+; todo make more generic
+.proc can_player_see
+    lda mobs + Mob::coords + Coord::ycoord, y
+    asl
+    cmp yoffset
+    bcc failure
+    lda yoffset
+    clc
+    adc #screen_height
+    sta tmp2
+    lda mobs + Mob::coords + Coord::ycoord, y
+    asl
+    cmp tmp2
+    bcs failure
+
+    lda mobs + Mob::coords + Coord::xcoord, y
+    asl
+    cmp xoffset
+    bcc failure
+    lda xoffset
+    clc
+    adc #screen_width
+    sta tmp2
+    lda mobs + Mob::coords + Coord::xcoord, y
+    asl
+    cmp tmp2
+    bcs failure
+
+    ; success
+    lda #0
+    rts
+
+failure:
+    lda #1
+    rts
+.endproc

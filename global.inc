@@ -4,7 +4,7 @@
 maxtiles    = 96
 max_width   = 32
 max_height  = 24
-maxmobs     = 20
+maxmobs     = 15 ; todo current upper limit of update_sprites proc
 maxfeatures = 20
 maxdrops    = 20
 min_bound   = 1  ; minimum number of spaces from edge

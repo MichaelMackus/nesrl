@@ -89,6 +89,8 @@ floor:
 .proc get_mob_tile
     ; branch based on mob type
     tay
+    jmp player_tile
+    ; todo more tiles
     lda mobs + Mob::type, y
     cmp #Mobs::player
     beq player_tile
@@ -104,7 +106,7 @@ floor:
     lda #$01
     rts
 player_tile:
-    lda mobs+Mob::direction
+    lda mobs+Mob::direction, y
     cmp #Direction::up
     beq player_uptile
     cmp #Direction::down
