@@ -12,6 +12,7 @@
 .segment "ZEROPAGE"
 
 tmp:          .res 1
+tmp2:         .res 1
 starty:       .res 1 ; for buffer seen loop
 startx:       .res 1 ; for buffer seen loop
 draw_y:       .res 1 ; current draw buffer index
@@ -50,11 +51,14 @@ buffer_start: .res 1 ; start index for draw buffer
 start_buffer:
     ; initialize ppuaddr for buffering
     jsr init_ppuaddr
+
     ; execute buffer update twice, for 16 pixels total
     jsr buffer
     jsr buffer
+
     ; reset ppuaddr to origin
     jsr reset_ppuaddr
+
     rts
 
 buffer:
@@ -73,8 +77,17 @@ buffer:
     jsr next_index
     sty buffer_start
 
+    lda mobs + Mob::direction
+    cmp #Direction::left
+    beq len_30
+    cmp #Direction::right
+    beq len_30
     ; going up or down, len = 32
-    lda #$20
+    lda #32
+    jmp write_buffer
+len_30:
+    lda #30
+write_buffer:
     sta draw_length
     sta draw_buffer, y
     iny
@@ -116,12 +129,7 @@ buffer_tile_loop:
     jsr buffer_next_nt ; updates draw buffer and draw_y
     jmp buffer_tile
 update_attribute:
-    ; we're at the attribute table, write default attribute
-    ; todo figure out attribute updates
-    lda #$0
-    sta draw_buffer, y
-    iny
-    jmp continue_loop ; don't increment position since we never wrote tile data
+    jsr buffer_next_vertical_nt
 buffer_tile:
     ; get the tiles at the ppu_addr location
     jsr get_bg_metatile
@@ -140,7 +148,6 @@ buffer_tile:
 inc_metay:
     ; inc metay
     inc metaypos
-    jmp continue_loop
 continue_loop:
     inc ppu_pos
     inc cur_tile
@@ -546,10 +553,17 @@ failure:
 .endproc
 
 .proc ppu_at_next_nt
+    lda mobs + Mob::direction
+    cmp #Direction::right
+    beq failure
+    cmp #Direction::left
+    beq failure
+
     ; are we at end of NT?
     lda ppu_pos
     cmp #$20
     beq success
+failure:
     ; nope
     lda #1
     rts
@@ -562,15 +576,6 @@ success:
 ; updates previously written draw_buffer's length
 ; NOTE: should only happen once per update cycle
 .proc buffer_next_nt
-    ; only test when increasing vram horizontally
-    lda mobs + Mob::direction
-    cmp #Direction::up
-    beq start
-    cmp #Direction::down
-    beq start
-    ; short circuit if scrolling left or right
-    rts
-start:
     ; update old length to current loop index
     cur_tile = tmp
     ldy buffer_start
@@ -584,24 +589,23 @@ start:
     sbc cur_tile
     sta draw_buffer, y
     iny
-    ; flip horizontal nametable
+
+    ; remember origin
     lda ppu_addr
     pha
     lda ppu_addr + 1
     pha
 
-    ; increment ppu based on amount tiles written
-ppuloop:
-    jsr inx_ppu
-    dec cur_tile
-    lda cur_tile
-    bne ppuloop
-    ; restore cur_tile
-    ldy buffer_start
-    lda draw_buffer, y
-    sta cur_tile
-    ldy draw_y
-    iny
+    ; switch to start column of next nt
+    jsr inx_ppu_nt
+    lda ppu_addr+1
+    ldx #$20
+    jsr divide
+    sta tmp2
+    lda ppu_addr+1
+    sec
+    sbc tmp2
+    sta ppu_addr+1
 
     ; write new ppu address
     lda ppu_addr
@@ -610,15 +614,89 @@ ppuloop:
     lda ppu_addr + 1
     sta draw_buffer, y
     iny
+
     ; restore previous ppu address for next buffer update
     pla
     sta ppu_addr + 1
     pla
     sta ppu_addr
+
     ; write vram increment, assume horizontal
     lda base_nt
     sta draw_buffer, y
     iny
+
+    ; update ppu_pos
+    lda #0
+    sta ppu_pos
+
+    sty draw_y
+    rts
+.endproc
+
+; updates draw_buffer to next NT
+; updates previously written draw_buffer's length
+; NOTE: should only happen once per update cycle
+.proc buffer_next_vertical_nt
+    ; update old length to current loop index
+    cur_tile = tmp
+    ldy buffer_start
+    lda cur_tile
+    sta draw_buffer, y
+
+    ; write new draw length
+    ldy draw_y
+    lda draw_length
+    sec
+    sbc cur_tile
+    sta draw_buffer, y
+    iny
+
+    ; remember origin
+    lda ppu_addr
+    pha
+    lda ppu_addr + 1
+    pha
+
+    ; switch to start page of next nt
+    jsr iny_ppu_nt
+    lda ppu_addr
+    ldx #4
+    jsr divide
+    sta tmp2
+    lda ppu_addr
+    sec
+    sbc tmp2
+    sta ppu_addr
+    ; switch to start row of next nt
+    lda ppu_addr + 1
+    ldx #$20
+    jsr divide
+    sta ppu_addr + 1
+
+    ; write new ppu address
+    lda ppu_addr
+    sta draw_buffer, y
+    iny
+    lda ppu_addr + 1
+    sta draw_buffer, y
+    iny
+
+    ; restore previous ppu address for next buffer update
+    pla
+    sta ppu_addr + 1
+    pla
+    sta ppu_addr
+
+    ; write vram increment, assume vertical
+    lda base_nt
+    ora #%00000100 ; increment going down
+    sta draw_buffer, y
+    iny
+    
+    ; update ppu_pos
+    lda #0
+    sta ppu_pos
 
     sty draw_y
     rts
