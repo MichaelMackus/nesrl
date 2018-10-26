@@ -58,11 +58,15 @@ start_buffer:
     ; initialize ppuaddr for buffering
     jsr init_ppuaddr
 
+    ; todo clear currently seen tiles, before ppu address update
+
     ; execute buffer update twice, for 16 pixels total
     ;jsr buffer_edges
     ;jsr buffer_edges
+    jsr update_ppuaddr
+    jsr update_ppuaddr
     
-    ; buffer seen tiles, todo not enough time to do this, need to fix buffering
+    ; buffer seen tiles
     jsr buffer_seen
 
     ; scroll twice
@@ -73,9 +77,7 @@ start_buffer:
     jsr reset_ppuaddr
 
     rts
-.endproc
 
-.proc buffer_edges
     cur_tile = tmp
 buffer:
     ; update scroll metaxpos and metaypos depending on player dir
@@ -427,6 +429,33 @@ done:
     sta ppu_addr
     rts
 
+; todo initialize ppuaddr to player row
+;
+; in: scroll dir
+; clobbers: x register
+.proc init_ppuaddr
+    lda mobs + Mob::direction
+    cmp #Direction::right
+    beq update_right
+    cmp #Direction::left
+    beq update_left
+    cmp #Direction::down
+    beq update_down
+    ;cmp #Direction::up
+    ;beq update_up
+update_up:
+    jsr dey_ppu
+    rts
+update_down:
+    jsr iny_ppu
+    rts
+update_left:
+    jsr dex_ppu
+    rts
+update_right:
+    jsr inx_ppu
+    rts
+.endproc
 ; todo fixme
 ; increase or decrease ppuaddr depending on scroll dir
 ;
