@@ -54,6 +54,15 @@ y_repeat:
     cmp endy
     beq tiles_done ; greater than or equal
 x_repeat:
+    lda metaypos
+    lsr
+    sta ypos
+    lda metaxpos
+    lsr
+    sta xpos
+    ldy #0
+    jsr can_see
+    bne render_bg
     jsr get_bg_metatile
     sta $2007
     jmp continue_loop

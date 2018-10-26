@@ -13,8 +13,9 @@
 
 tmp:           .res 1
 tmp2:          .res 1
-starty:        .res 1 ; for buffer seen loop
-startx:        .res 1 ; for buffer seen loop
+endy:          .res 1 ; for buffer seen loop
+endx:          .res 1 ; for buffer seen loop
+prevx:         .res 1 ; for buffer seen loop
 draw_y:        .res 1 ; current draw buffer index
 draw_length:   .res 1
 ppu_pos:       .res 1 ; for ppu_at_attribute procedure
@@ -42,7 +43,6 @@ prev_ppu_addr: .res 2 ; for clearing status, todo remove
 ;
 ; clobbers: all registers, xpos, and ypos
 .proc buffer_tiles
-    cur_tile = tmp
 
     jsr can_scroll_dir
     beq start_buffer
@@ -59,8 +59,11 @@ start_buffer:
     jsr init_ppuaddr
 
     ; execute buffer update twice, for 16 pixels total
-    jsr buffer
-    jsr buffer
+    ;jsr buffer_edges
+    ;jsr buffer_edges
+    
+    ; buffer seen tiles, todo not enough time to do this, need to fix buffering
+    jsr buffer_seen
 
     ; scroll twice
     jsr update_scroll
@@ -70,7 +73,10 @@ start_buffer:
     jsr reset_ppuaddr
 
     rts
+.endproc
 
+.proc buffer_edges
+    cur_tile = tmp
 buffer:
     ; update scroll metaxpos and metaypos depending on player dir
     jsr update_coords
@@ -148,9 +154,9 @@ buffer_tile:
     sta ypos
     ; check that we can see the tile
     ; todo need to update newly seen tiles
-    ;ldy #0
-    ;jsr can_see ; todo check seen tiles
-    ;bne blank_tile
+    ldy #0
+    jsr was_seen
+    bne blank_tile
 
     ; get the tiles at the ppu_addr location
     jsr get_bg_tile
@@ -188,6 +194,267 @@ done:
     lda #$00
     sta draw_buffer, y
     rts
+
+; increase or decrease ppuaddr depending on scroll dir
+;
+; in: scroll dir
+; clobbers: x register
+.proc update_ppuaddr
+    lda mobs + Mob::direction
+    cmp #Direction::right
+    beq update_right
+    cmp #Direction::left
+    beq update_left
+    cmp #Direction::down
+    beq update_down
+    ;cmp #Direction::up
+    ;beq update_up
+update_up:
+    jsr dey_ppu
+    rts
+update_down:
+    jsr iny_ppu
+    rts
+update_left:
+    jsr dex_ppu
+    rts
+update_right:
+    jsr inx_ppu
+    rts
+.endproc
+
+; todo not exactly working since player is moving in 16 pixel increments
+; update metaxpos and metaypos depending on player dir for the bg tile
+;
+; in: scroll dir
+.proc update_coords
+    lda mobs + Mob::direction
+    cmp #Direction::right
+    beq update_right
+    cmp #Direction::left
+    beq update_left
+    cmp #Direction::down
+    beq update_down
+    ;cmp #Direction::up
+    ;beq update_up
+update_up:
+    jsr get_first_col
+    sta metaxpos
+    jsr get_first_row
+    sta metaypos
+    rts
+update_down:
+    jsr get_first_col
+    sta metaxpos
+    jsr get_last_row
+    sta metaypos
+    dec metaypos
+    rts
+update_left:
+    jsr get_first_col
+    sta metaxpos
+    jsr get_first_row
+    sta metaypos
+    rts
+update_right:
+    jsr get_last_col
+    sta metaxpos
+    dec metaxpos
+    jsr get_first_row
+    sta metaypos
+    rts
+.endproc
+
+.endproc
+
+; update draw buffer with seen bg tiles
+;
+; clobbers: all registers, xpos, and ypos
+; todo update to use metaxpos and metaypos ?
+.proc buffer_seen
+    ; remember original ppu pos
+    lda ppu_addr
+    pha
+    lda ppu_addr + 1
+    pha
+
+    ; load player xpos and ypos
+    lda mobs + Mob::coords + Coord::xcoord
+    sta xpos
+    lda mobs + Mob::coords + Coord::ycoord
+    sta ypos
+    ; get current byte offset & mask
+    jsr get_byte_offset
+    tay
+    jsr get_byte_mask
+
+    ; update endx and endy
+    lda ypos
+    sta metaypos
+    clc
+    adc #sight_distance + 1 ; increment by 1 for player
+    sta endy
+    lda xpos
+    sta metaxpos
+    clc
+    adc #sight_distance + 1 ; increment by 1 for player
+    sta endx
+
+    ; initialize draw_length
+    lda #sight_distance*2 + 1 ; increment by 1 for player
+    sta draw_length
+
+    ; set ypos to ypos - 2, and xpos to xpos - 2
+update_ypos:
+    lda metaypos
+    sec
+    sbc #sight_distance
+    bcc fix_overflow_ypos ; detect overflow
+    sta metaypos
+update_xpos:
+    lda metaxpos
+    sec
+    sbc #sight_distance
+    bcc fix_overflow_xpos ; detect overflow
+    sta metaxpos
+    sta prevx
+    jmp loop
+
+fix_overflow_ypos:
+    lda #0
+    sta metaypos
+    jmp update_xpos
+fix_overflow_xpos:
+    lda #0
+    sta metaxpos
+    sta prevx
+    ; update draw_length
+    lda mobs + Mob::coords + Coord::xcoord
+    clc
+    adc #sight_distance+1 ; increment by 1 for player
+    sta draw_length
+    ;todo init ppuaddr
+
+loop:
+    lda metaypos
+    cmp #max_height
+    bcc loop_start_buffer
+    jmp done
+loop_start_buffer:
+    ; write draw buffer length of sight distance
+    jsr next_index
+    lda draw_length
+    sta draw_buffer, y
+    iny
+    sty draw_y
+    ; update ppu addr pointer, todo just need to inc by 32 each time for y
+    ;jsr update_ppuaddr
+    ; store ppu addr to buffer
+    ldy draw_y
+    lda ppu_addr
+    sta draw_buffer, y
+    iny
+    lda ppu_addr+1
+    sta draw_buffer, y
+    iny
+    ; vram increment
+    lda base_nt
+    sta draw_buffer, y
+    iny
+
+   ; now we're ready to draw tile data
+tile_loop:
+    sty draw_y
+    ; update xpos and ypos with meta pos
+    lda metaxpos
+    sta xpos
+    lda metaypos
+    sta ypos
+    ; ensure xpos and ypos is valid
+    jsr within_bounds
+    bne tile_bg
+    ; check if we can see
+    ldy #0
+    jsr can_see
+    beq draw_seen
+    ; draw seen tile, if already seen
+    jsr was_seen
+    ; no tile was seen, draw bg
+    bne tile_bg
+draw_seen:
+    ; update seen tile
+    jsr update_seen
+    ; success, draw tile
+    jsr get_bg_metatile
+    ldy draw_y
+    sta draw_buffer, y
+    iny
+    jmp loop_nextx
+tile_bg:
+    ldy draw_y
+    lda #$00
+    sta draw_buffer, y
+    iny
+
+loop_nextx:
+    inc metaxpos
+    lda metaxpos
+    cmp endx
+    beq loop_donex
+    jmp tile_loop
+
+loop_donex:
+    ; reset x
+    lda prevx
+    sta metaxpos
+loop_next:
+    ; store zero length at end
+    lda #$00
+    sta draw_buffer, y
+    iny
+    ; increment y & ensure we're not done
+    inc metaypos
+    lda metaypos
+    cmp endy
+    ; todo issue here
+    ;beq done
+    ;jmp loop
+ 
+done:
+    pla
+    sta ppu_addr + 1
+    pla
+    sta ppu_addr
+    rts
+
+; todo fixme
+; increase or decrease ppuaddr depending on scroll dir
+;
+; in: scroll dir
+; clobbers: x register
+.proc update_ppuaddr
+    lda mobs + Mob::direction
+    cmp #Direction::right
+    beq update_right
+    cmp #Direction::left
+    beq update_left
+    cmp #Direction::down
+    beq update_down
+    ;cmp #Direction::up
+    ;beq update_up
+update_up:
+    jsr dey_ppu
+    rts
+update_down:
+    jsr iny_ppu
+    rts
+update_left:
+    jsr dex_ppu
+    rts
+update_right:
+    jsr inx_ppu
+    rts
+.endproc
 .endproc
 
 .proc clear_hp
@@ -438,34 +705,6 @@ reset_down:
     rts
 .endproc
 
-; increase or decrease ppuaddr depending on scroll dir
-;
-; in: scroll dir
-; clobbers: x register
-.proc update_ppuaddr
-    lda mobs + Mob::direction
-    cmp #Direction::right
-    beq update_right
-    cmp #Direction::left
-    beq update_left
-    cmp #Direction::down
-    beq update_down
-    ;cmp #Direction::up
-    ;beq update_up
-update_up:
-    jsr dey_ppu
-    rts
-update_down:
-    jsr iny_ppu
-    rts
-update_left:
-    jsr dex_ppu
-    rts
-update_right:
-    jsr inx_ppu
-    rts
-.endproc
-
 ; update scroll amount
 ;
 ; in: scroll dir
@@ -491,48 +730,6 @@ update_left:
     rts
 update_right:
     jsr scroll_right
-    rts
-.endproc
-
-; todo not exactly working since player is moving in 16 pixel increments
-; update metaxpos and metaypos depending on player dir for the bg tile
-;
-; in: scroll dir
-.proc update_coords
-    lda mobs + Mob::direction
-    cmp #Direction::right
-    beq update_right
-    cmp #Direction::left
-    beq update_left
-    cmp #Direction::down
-    beq update_down
-    ;cmp #Direction::up
-    ;beq update_up
-update_up:
-    jsr get_first_col
-    sta metaxpos
-    jsr get_first_row
-    sta metaypos
-    rts
-update_down:
-    jsr get_first_col
-    sta metaxpos
-    jsr get_last_row
-    sta metaypos
-    dec metaypos
-    rts
-update_left:
-    jsr get_first_col
-    sta metaxpos
-    jsr get_first_row
-    sta metaypos
-    rts
-update_right:
-    jsr get_last_col
-    sta metaxpos
-    dec metaxpos
-    jsr get_first_row
-    sta metaypos
     rts
 .endproc
 

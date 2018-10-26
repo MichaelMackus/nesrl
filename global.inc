@@ -47,6 +47,7 @@ min_bound   = 1  ; minimum number of spaces from edge
 
 ; dungeon.s
 .global tiles
+.global seen
 .globalzp dlevel
 .globalzp xpos
 .globalzp ypos
