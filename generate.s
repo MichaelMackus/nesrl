@@ -45,6 +45,7 @@ clear_loop:
 generate_corridors:
     sta direction
     sta tunnels
+    sta tunnel_len
 
     jsr randxy
 
@@ -82,6 +83,10 @@ random_length:
     sta floor_len
     sta connecting
     jsr d6 ; todo don't hardcode random value
+    ; prevent picking previous length
+    cmp tunnel_len
+    beq random_length
+    ; check max & min length
     cmp #max_length
     beq check_min
     bcs random_length ; greater than max_length
