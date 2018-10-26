@@ -11,14 +11,15 @@
 
 .segment "ZEROPAGE"
 
-tmp:          .res 1
-tmp2:         .res 1
-starty:       .res 1 ; for buffer seen loop
-startx:       .res 1 ; for buffer seen loop
-draw_y:       .res 1 ; current draw buffer index
-draw_length:  .res 1
-ppu_pos:      .res 1 ; for ppu_at_attribute procedure
-buffer_start: .res 1 ; start index for draw buffer
+tmp:           .res 1
+tmp2:          .res 1
+starty:        .res 1 ; for buffer seen loop
+startx:        .res 1 ; for buffer seen loop
+draw_y:        .res 1 ; current draw buffer index
+draw_length:   .res 1
+ppu_pos:       .res 1 ; for ppu_at_attribute procedure
+buffer_start:  .res 1 ; start index for draw buffer
+prev_ppu_addr: .res 2 ; for clearing status, todo remove
 
 .segment "CODE"
 
@@ -49,6 +50,11 @@ buffer_start: .res 1 ; start index for draw buffer
     rts
 
 start_buffer:
+    lda ppu_addr
+    sta prev_ppu_addr
+    lda ppu_addr + 1
+    sta prev_ppu_addr + 1
+
     ; initialize ppuaddr for buffering
     jsr init_ppuaddr
 
@@ -131,8 +137,26 @@ buffer_tile_loop:
 update_attribute:
     jsr buffer_next_vertical_nt
 buffer_tile:
+    ; divide metax and metay by 2 to get tile offset
+    lda metaxpos
+    lsr
+    sta xpos
+    lda metaypos
+    lsr
+    sta ypos
+    ; check that we can see the tile
+    ; todo need to update newly seen tiles
+    ;ldy #0
+    ;jsr can_see ; todo check seen tiles
+    ;bne blank_tile
+
     ; get the tiles at the ppu_addr location
-    jsr get_bg_metatile
+    jsr get_bg_tile
+    jmp update_buffer
+blank_tile:
+    lda #$00
+
+update_buffer:
     ldy draw_y
     sta draw_buffer, y
     iny
@@ -164,17 +188,84 @@ done:
     rts
 .endproc
 
-.proc buffer_hp
+.proc clear_hp
     jsr next_index
     ; length
-    lda #$05 ; HP always 7 chars wide
+    lda #$08 ; HP always 8 chars wide
     sta draw_buffer, y
     iny
     ; ppu addresses
-    lda #$23
+    jsr buffer_status_ppuaddr
+    ; for VRAM update
+    lda base_nt
     sta draw_buffer, y
     iny
-    lda #$25
+    ; data
+    lda #$00
+    sta draw_buffer, y
+    iny
+    lda #$00
+    sta draw_buffer, y
+    iny
+    lda #$00
+    sta draw_buffer, y
+    iny
+    lda #$00
+    sta draw_buffer, y
+    iny
+    lda #$00
+    sta draw_buffer, y
+    iny
+    lda #$00
+    sta draw_buffer, y
+    iny
+    lda #$00
+    sta draw_buffer, y
+    iny
+    lda #$00
+    sta draw_buffer, y
+    iny
+    lda #$00
+    sta draw_buffer, y
+    iny
+    rts
+.endproc
+
+; todo why is status moving down on left scroll?
+.proc buffer_hp
+    ; clear old HP if exists
+    ;lda ppu_addr
+    ;pha
+    ;lda ppu_addr + 1
+    ;pha
+    ;lda prev_ppu_addr
+    ;sta ppu_addr
+    ;lda prev_ppu_addr + 1
+    ;sta ppu_addr + 1
+    ;jsr clear_hp
+    ;pla
+    ;sta ppu_addr + 1
+    ;pla
+    ;sta ppu_addr
+
+    jsr next_index
+    ; length
+    lda #$08 ; HP always 8 chars wide
+    sta draw_buffer, y
+    iny
+    ; ppu addresses
+    jsr buffer_status_ppuaddr
+    ; vram increment
+    lda base_nt
+    sta draw_buffer, y
+    iny
+    ; write "HP" to screen
+    lda #<txt_hp
+    sta str_pointer
+    lda #>txt_hp
+    sta str_pointer+1
+    jsr buffer_str
+    lda #$00
     sta draw_buffer, y
     iny
     ; add leading space (for spacing up with other elements)
@@ -701,3 +792,37 @@ success:
     sty draw_y
     rts
 .endproc
+
+; todo not properly setting to bot of nt every time
+.proc buffer_status_ppuaddr
+    lda ppu_addr
+    pha
+    lda ppu_addr + 1
+    pha
+
+    ; set ppuaddr
+    jsr iny_ppu_nt
+    jsr dey_ppu
+    jsr dey_ppu
+    jsr dey_ppu
+    jsr dey_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+
+    lda ppu_addr
+    sta draw_buffer, y
+    iny
+    lda ppu_addr + 1
+    sta draw_buffer, y
+    iny
+
+    pla
+    sta ppu_addr + 1
+    pla
+    sta ppu_addr
+    rts
+.endproc
+
+.segment "RODATA"
+
+txt_hp: .asciiz "HP"
