@@ -1,8 +1,13 @@
 .include "global.inc"
 
+; todo perhaps use ray casting + bresenham's line algorithm?
+; todo alternatively, if fix generation to generate non-overlapping corridors,
+; todo and separate rooms, we can just do simple alg of showing current
+; todo corridor(s) lining up to player's tile, and current room
+
 .segment "ZEROPAGE"
 
-sight_distance = 2
+sight_distance = 5
 
 destx: .res 1
 desty: .res 1
@@ -14,8 +19,6 @@ sight: .res 1 ; used to set sight for mobs (mobs can see further in dungeon)
 .segment "CODE"
 
 ; check if mob can see tile
-; todo on diagonals, probably want to check diagonal closest to player on each increment, might prevent false positives
-; todo can sometimes see through walls if exactly +2 spaces away..?
 ;
 ; xpos: destination tile x (unmodified)
 ; ypos: destination tile y (unmodified)
@@ -37,7 +40,7 @@ sight: .res 1 ; used to set sight for mobs (mobs can see further in dungeon)
     lda mobs + Mob::coords + Coord::ycoord, y
     sta ypos
     lda mobs + Mob::type, y
-    cmp Mobs::player
+    cmp #Mobs::player
     bne set_mob_sight
     ; set player sight radius
     lda #sight_distance
