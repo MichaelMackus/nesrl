@@ -29,8 +29,7 @@
 
 .segment "ZEROPAGE"
 
-; todo increase once we free up some zeropage mem
-max_buffer_size = 120
+max_buffer_size = 160
 draw_buffer: .res max_buffer_size
 str_pointer: .res 2 ; pointer for buffering of strings
 
