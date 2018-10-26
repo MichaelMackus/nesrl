@@ -6,7 +6,8 @@
 
 tunnels:     .res 1
 tunnel_len:  .res 1
-direction:   .res 1 ; represents last direction
+direction:   .res 1 ; represents corridor direction
+prevdir:     .res 1 ; previous direction
 prevdlevel:  .res 1 ; previous dlevel
 tmp:         .res 1
 
@@ -38,6 +39,7 @@ clear_loop:
 ; random maze generator (with length limits & no repeats) as way to make more interesting
 ; see https://medium.freecodecamp.org/how-to-make-your-own-procedural-dungeon-map-generator-using-the-random-walk-algorithm-e0085c8aa9a?gi=74f51f176996
 generate_corridors:
+    sta prevdir
     sta direction
     sta tunnels
 
@@ -60,7 +62,7 @@ random_dir_loop:
     jsr d4
     sta tmp
     ; prevent picking same direction as previous loop
-    cmp direction
+    cmp prevdir
     beq random_dir_loop
     ; prevent picking opposite direction
     jsr is_opposite_dir
@@ -95,6 +97,9 @@ check_dir:
     inx
     cpx tunnel_len
     bne check_dir
+    ; update prevdir for next loop
+    lda direction
+    sta prevdir
     ; restore xpos and ypos from stack (for check function)
     pla
     sta ypos
