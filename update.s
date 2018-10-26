@@ -62,6 +62,10 @@ start_buffer:
     jsr buffer
     jsr buffer
 
+    ; scroll twice
+    jsr update_scroll
+    jsr update_scroll
+
     ; reset ppuaddr to origin
     jsr reset_ppuaddr
 
@@ -69,11 +73,9 @@ start_buffer:
 
 buffer:
     ; update scroll metaxpos and metaypos depending on player dir
-    lda mobs + Mob::direction
     jsr update_coords
 
     ; update ppu & scroll depending on player direction
-    lda mobs + Mob::direction
     jsr update_ppuaddr
 
     ; calculate the position in the PPU, todo should we do this before updating ppu?
@@ -441,6 +443,35 @@ reset_down:
 ; in: scroll dir
 ; clobbers: x register
 .proc update_ppuaddr
+    lda mobs + Mob::direction
+    cmp #Direction::right
+    beq update_right
+    cmp #Direction::left
+    beq update_left
+    cmp #Direction::down
+    beq update_down
+    ;cmp #Direction::up
+    ;beq update_up
+update_up:
+    jsr dey_ppu
+    rts
+update_down:
+    jsr iny_ppu
+    rts
+update_left:
+    jsr dex_ppu
+    rts
+update_right:
+    jsr inx_ppu
+    rts
+.endproc
+
+; update scroll amount
+;
+; in: scroll dir
+; clobbers: x register
+.proc update_scroll
+    lda mobs + Mob::direction
     cmp #Direction::right
     beq update_right
     cmp #Direction::left
@@ -451,19 +482,15 @@ reset_down:
     ;beq update_up
 update_up:
     jsr scroll_up
-    jsr dey_ppu
     rts
 update_down:
     jsr scroll_down
-    jsr iny_ppu
     rts
 update_left:
     jsr scroll_left
-    jsr dex_ppu
     rts
 update_right:
     jsr scroll_right
-    jsr inx_ppu
     rts
 .endproc
 
@@ -472,6 +499,7 @@ update_right:
 ;
 ; in: scroll dir
 .proc update_coords
+    lda mobs + Mob::direction
     cmp #Direction::right
     beq update_right
     cmp #Direction::left
