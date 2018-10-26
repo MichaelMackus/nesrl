@@ -44,7 +44,6 @@ init_memory:
     sta controller1
     sta controller1release
     sta dlevel
-    sta draw_buffer
     sta need_draw
     sta turn
     inc turn ; set turn to 1
@@ -55,6 +54,7 @@ init_memory:
     jsr push_msg
     lda Messages::none
     jsr push_msg
+    jsr init_buffer
 
 clear_oam:
     lda #$FF
@@ -114,9 +114,16 @@ render_draw_buffer:
     lda #$00
     sta need_draw
 
+    ; update base ppu addr
+    lda base_nt
+    ora #%10000000 ; default
+    sta $2000
+
     ; update scroll
-    lda #$00
+    bit $2002
+    lda scroll
     sta $2005
+    lda scroll + 1
     sta $2005
 
 continue_nmi:
@@ -155,6 +162,10 @@ start_screen:
     beq done
     lda #GameState::playing
     sta gamestate
+    ; initialize *both* seed values
+    lda nmis
+    sta seed
+    sta seed + 1
     jmp regenerate
 
 playgame:
@@ -173,7 +184,7 @@ playgame:
     cmp #InputResult::win
     beq win_dungeon
     cmp #InputResult::move
-    beq update_seen
+    beq player_moved
 
 ai:
     jsr mob_ai
@@ -183,8 +194,8 @@ ai:
     jsr player_regen
 
     ; update messages buffer and hp every time, todo figure out better way
-    jsr buffer_messages
-    jsr buffer_hp
+    ;jsr buffer_messages
+    ;jsr buffer_hp
     ; notify nmi to draw the buffer
     lda #1
     sta need_draw
@@ -206,10 +217,12 @@ wait_nmi:
 
 ; re-generate next dungeon level
 regenerate:
+    ; initialize & flip seed bits
     lda nmis
+    eor #$32
     sta seed
+    ; generate dungeon
     jsr generate
-    ; render the dungeon
     jsr render
     jmp done
 
@@ -228,8 +241,9 @@ win_dungeon:
     jmp done
 
 ; ensure buffer is updated when new tiles seen
-update_seen:
-    jsr buffer_seen
+player_moved:
+    jsr update_sprite_offsets
+    jsr buffer_tiles
     jmp ai
 
 ; ensure player alive, otherwise display Game Over screen

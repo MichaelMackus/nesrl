@@ -1,10 +1,11 @@
 ; basic math functions
 
 .export divide
+.export mod
 
 .segment "ZEROPAGE"
 
-tmp:  .res 1
+tmp:      .res 1
 
 .segment "CODE"
 
@@ -29,4 +30,8 @@ loop:
     jmp loop
 done:
     rts
+.endproc
+
+.proc mod
+    jmp divide
 .endproc

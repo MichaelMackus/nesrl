@@ -38,18 +38,27 @@ check_movement:
     rts
 attempt_left:
     dec xpos
+    ; update player direction
+    lda #Direction::left
+    sta mobs + Mob::direction
     jsr attempt_move
     rts
 attempt_right:
     inc xpos
+    lda #Direction::right
+    sta mobs + Mob::direction
     jsr attempt_move
     rts
 attempt_down:
     inc ypos
+    lda #Direction::down
+    sta mobs + Mob::direction
     jsr attempt_move
     rts
 attempt_up:
     dec ypos
+    lda #Direction::up
+    sta mobs + Mob::direction
     jsr attempt_move
     rts
 .endproc

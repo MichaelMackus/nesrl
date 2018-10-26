@@ -43,10 +43,18 @@
     ycoord .byte
 .endstruct
 
+.enum Direction
+    up = 1
+    right = 2
+    down = 3
+    left = 4
+.endenum
+
 .struct Mob
-    coords .tag Coord
-    hp     .byte
-    type   .byte ; one of Mobs enum
+    coords    .tag Coord
+    hp        .byte
+    type      .byte ; one of Mobs enum
+    direction .byte ; direction mob is facing
 .endstruct
 
 .struct PlayerStats

@@ -7,10 +7,13 @@
 .segment "ZEROPAGE"
 
 tmp: .res 1
+startx: .res 1
+endx:   .res 1
+endy:   .res 1
 
 .segment "CODE"
 
-; render the dungeon level
+; render the dungeon level on the current screen
 .proc render
     lda nmis
 wait_nmi:
@@ -22,99 +25,111 @@ generate_ppu:
     lda #%00000000 ; note: need second bit in order to show background on left side of screen
     sta $2001
 
+    ; initialize defaults for scrolling functionality
+    jsr init_buffer
+
+    ; initialize scroll offsets
+    jsr update_sprite_offsets
+
+    ; update PPUADDR
     bit $2002
-    ; prep ppu for first nametable write
-    lda #$20
+    lda ppu_addr
     sta $2006
-    lda #$00
+    lda ppu_addr + 1
     sta $2006
-    ldx #$00 ; counter for background sprite position
-    ldy #$00
-; clear first line
-clear_line:
-    sta $2007
-    inx
-    cpx #$20
-    bne clear_line
-    ldx #$00
+
+draw_dungeon:
+    jsr get_first_col
+    sta startx
+    sta metaxpos
+    jsr get_last_col
+    sta endx
+    jsr get_first_row
+    sta metaypos
+    jsr get_last_row
+    sta endy
 ; loop through x and y
 y_repeat:
-    cpy #max_height ; +1 to ensure we clear first line
-    beq render_status
+    lda metaypos
+    cmp endy
+    beq tiles_done ; greater than or equal
 x_repeat:
-    stx xpos
-    sty ypos
-    ldy #0
-.ifndef WIZARD
-    jsr can_see
-    bne render_bg
-.endif
-    jsr get_bg_tile
+    jsr get_bg_metatile
     sta $2007
     jmp continue_loop
 render_bg:
     lda #$00
     sta $2007
+
 continue_loop:
-    ldx xpos
-    ldy ypos
-    inx
-    cpx #max_width
-    bne x_repeat
-    iny
-    ldx #$00
+    inc metaxpos
+    lda metaxpos
+    cmp endx
+    beq continue_y ; greater than or equal
+    jmp x_repeat
+continue_y:
+    inc metaypos
+    lda startx
+    sta metaxpos
     jmp y_repeat
-; render status messages
-render_status:
-    ; hp
-    bit $2002
-    lda #$23
-    sta $2006
-    lda #$21
-    sta $2006
-    lda #<txt_hp
-    sta str_pointer
-    lda #>txt_hp
-    sta str_pointer+1
-    jsr render_str
-    ; spacing to line up with dlvl
-    lda #$00
-    sta $2007
-    sta $2007
-    ; render hp
-    jsr buffer_hp
+; todo render status messages
+tiles_done:
+;    ; hp
+;    bit $2002
+;    lda #$23
+;    sta $2006
+;    lda #$21
+;    sta $2006
+;    lda #<txt_hp
+;    sta str_pointer
+;    lda #>txt_hp
+;    sta str_pointer+1
+;    jsr render_str
+;    ; spacing to line up with dlvl
+;    lda #$00
+;    sta $2007
+;    sta $2007
+;    ; render hp
+;    jsr buffer_hp
+;
+;    ; dlvl
+;    bit $2002
+;    lda #$23
+;    sta $2006
+;    lda #$61
+;    sta $2006
+;    lda #<txt_dlvl
+;    sta str_pointer
+;    lda #>txt_dlvl
+;    sta str_pointer+1
+;    jsr render_str
+;    ; render current dlevel
+;    lda dlevel
+;    jsr render_num
+;
+;    ; buffer our messages, todo this shouldn't be necessary
+;    jsr buffer_messages
+;
+;    ; render the buffer & update our sprites
+;    jsr render_buffer
 
-    ; dlvl
-    bit $2002
-    lda #$23
-    sta $2006
-    lda #$61
-    sta $2006
-    lda #<txt_dlvl
-    sta str_pointer
-    lda #>txt_dlvl
-    sta str_pointer+1
-    jsr render_str
-    ; render current dlevel
-    lda dlevel
-    jsr render_num
-
-    ; buffer our messages, todo this shouldn't be necessary
-    jsr buffer_messages
-
-    ; render the buffer & update our sprites
-    jsr render_buffer
+render_done:
     jsr update_sprites
 
     lda nmis
-render_done:
+render_wait:
     cmp nmis
-    beq render_done
+    beq render_wait
 
+    ; update the NT page
+    lda #%10000000
+    ora base_nt
+    sta $2000
     ; update scrolling
     bit $2002
-    lda #$00
+    lda scroll
     sta $2005
+    lda scroll + 1
     sta $2005
 
     ; tell PPU to render BG & sprites
