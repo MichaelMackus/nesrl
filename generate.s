@@ -10,17 +10,13 @@ direction:   .res 1 ; represents corridor direction
 prevdir:     .res 1 ; previous direction
 prevdlevel:  .res 1 ; previous dlevel
 tmp:         .res 1
-floor_len:   .res 1 ; used to prevent increment tunnels if traversing another corridor
-connecting:  .res 1 ; used to prevent connecting corridors more than once
 
 max_tunnels = 90 ; maximum tunnels
 max_length  = 6  ; maximum length for tunnel
-min_length  = 3  ; minimum length for tunnel
 
 .segment "CODE"
 
 ; generate level
-; todo generate rooms
 .proc generate
 
 initialize:
@@ -43,6 +39,7 @@ clear_loop:
 ; random maze generator (with length limits & no repeats) as way to make more interesting
 ; see https://medium.freecodecamp.org/how-to-make-your-own-procedural-dungeon-map-generator-using-the-random-walk-algorithm-e0085c8aa9a?gi=74f51f176996
 generate_corridors:
+    sta prevdir
     sta direction
     sta tunnels
     sta tunnel_len
@@ -54,11 +51,8 @@ generate_corridors:
     pha
     lda ypos
     pha
-    lda #0
-    pha
 
 random_dir:
-    pla
     ; restore xpos and ypos from stack (for check function)
     pla
     sta ypos
@@ -67,58 +61,50 @@ random_dir:
 random_dir_loop:
     ; pick random direction
     jsr d4
-    ; prevent picking previous dir
-    cmp direction
+    sta tmp
+    ; prevent picking same direction as previous loop
+    cmp prevdir
     beq random_dir_loop
-    sta direction
+    ; prevent picking opposite direction
+    jsr is_opposite_dir
+    beq random_dir_loop
     ; push xpos and ypos to stack to restore after check
     lda xpos
     pha
     lda ypos
     pha
+    ; update direction
+    lda tmp
+    sta direction
+    ldx #$00
+    txa
+    pha
 
 ; pick random length
 random_length:
-    lda #0
-    sta floor_len
-    sta connecting
     jsr d6 ; todo don't hardcode random value
     ; prevent picking previous length
     cmp tunnel_len
     beq random_length
     ; check max & min length
     cmp #max_length
-    beq check_min
+    beq length_done
     bcs random_length ; greater than max_length
-check_min:
-    cmp #min_length
-    bcc random_length
 length_done:
     sta tunnel_len
-    ldx #0
+    pla
+    tax
 check_dir:
-    txa
-    pha
     lda direction
     jsr update_pos
     jsr within_bounds
     bne random_dir
-    jsr is_corridor
-    bne random_dir
-    jsr is_floor
-    bne continue_dir_loop
-    ; increment floor length if traversing previous corridor
-    inc floor_len
-continue_dir_loop:
-    pla
-    tax
     inx
     cpx tunnel_len
     bne check_dir
     ; update prevdir for next loop
     lda direction
     sta prevdir
-finish_dir:
     ; restore xpos and ypos from stack (for check function)
     pla
     sta ypos
@@ -128,12 +114,6 @@ finish_dir:
     ldx #$00
 
 update_tile:
-    ; todo only inc tunnels if floor length is > to tunnel_len - min_length
-    ; todo possible endless loop
-    ;lda floor_len
-    ;cmp #min_length
-    ;bcs update_tile_loop
-inc_tunnels:
     inc tunnels
     lda tunnels
     cmp #max_tunnels
@@ -268,84 +248,6 @@ generate_features:
 
 .endproc
 
-; check if corridor is overlapping next to another corridor
-; enforce our corridors are only connected via intersection or corner
-; clobbers: y
-is_corridor:
-    lda xpos
-    pha
-    lda ypos
-    pha
-
-    ; check if connecting to another corridor
-    ; only check perpendicular dirs
-    lda direction
-    cmp #1
-    beq cmp_x
-    cmp #2
-    beq cmp_y
-    cmp #3
-    beq cmp_x
-    cmp #4
-    beq cmp_y
-
-cmp_x:
-    inc xpos
-    jsr within_bounds
-    bne cmp_dec_x
-    jsr is_floor
-    beq corridor_connecting
-cmp_dec_x:
-    dec xpos
-    dec xpos
-    jsr within_bounds
-    bne is_corridor_success
-    jsr is_floor
-    beq corridor_connecting
-    jmp is_corridor_success
-cmp_y:
-    inc ypos
-    jsr within_bounds
-    bne cmp_dec_y
-    jsr is_floor
-    beq corridor_connecting
-cmp_dec_y:
-    dec ypos
-    dec ypos
-    jsr within_bounds
-    bne is_corridor_success
-    jsr is_floor
-    beq corridor_connecting
-
-is_corridor_success:
-    lda #0
-    sta connecting
-    pla
-    sta ypos
-    pla
-    sta xpos
-    lda #0
-    rts
-corridor_connecting:
-    inc connecting
-    lda connecting
-    cmp #2
-    bcs is_corridor_fail
-    ; allow connecting corridors at most once
-    pla
-    sta ypos
-    pla
-    sta xpos
-    lda #0
-    rts
-is_corridor_fail:
-    pla
-    sta ypos
-    pla
-    sta xpos
-    lda #1
-    rts
-
 ; check if direction is opposite of previous "direction" var
 ; in: current dir
 ; out: 0 if true (invalid current dir)
@@ -359,22 +261,22 @@ is_opposite_dir:
     cmp #4
     beq cmp_dir_2
 cmp_dir_1:
-    lda prevdir
+    lda direction
     cmp #1
     beq is_opposite
     jmp isnt_opposite
 cmp_dir_2:
-    lda prevdir
+    lda direction
     cmp #2
     beq is_opposite
     jmp isnt_opposite
 cmp_dir_3:
-    lda prevdir
+    lda direction
     cmp #3
     beq is_opposite
     jmp isnt_opposite
 cmp_dir_4:
-    lda prevdir
+    lda direction
     cmp #4
     beq is_opposite
     jmp isnt_opposite
