@@ -43,6 +43,10 @@ generate_corridors:
     sta direction
     sta tunnels
     sta tunnel_len
+    sta up_x
+    sta up_y
+    sta down_x
+    sta down_y
 
     jsr randxy
 
@@ -140,38 +144,30 @@ update_tile_loop:
     jmp random_dir_loop
 
 tiles_done:
-    ; generate up & down stair
+    ; generate up or down stair
     jsr rand_passable
-    lda xpos
-    sta down_x
-    lda ypos
-    sta down_y
-generate_up:
-    jsr rand_passable
-    ldx xpos
-    ldy ypos
-    cpx down_x
-    bne finish_up
-    cpy down_y
-    bne finish_up
-    jmp generate_up
-finish_up:
-    stx up_x
-    sty up_y
 ; update player x & y to up or down stair, depending on prevdlevel
 update_player:
     lda dlevel
     cmp prevdlevel
     bcc update_player_downstair
 update_player_upstair:
-    ldx up_x
-    ldy up_y
+    ; update upstair
+    ldx xpos
+    ldy ypos
+    stx up_x
+    sty up_y
+    ; update player coords
     stx mobs+Mob::coords+Coord::xcoord
     sty mobs+Mob::coords+Coord::ycoord
     jmp done_update_player
 update_player_downstair:
-    ldx down_x
-    ldy down_y
+    ; update down
+    ldx xpos
+    ldy ypos
+    stx down_x
+    sty down_y
+    ; update player coords
     stx mobs+Mob::coords+Coord::xcoord
     sty mobs+Mob::coords+Coord::ycoord
 done_update_player:
@@ -243,7 +239,37 @@ generate_features:
 ;    tax
 ;    cpx #maxfeatures * .sizeof(Feature) ; leave room for drops, since they count as "features" for now
 ;    bne generate_features
-    ; done
+
+    ; finally, generate next level stairs
+    lda up_x
+    bne generate_down
+    lda up_y
+    bne generate_down
+generate_up:
+    ; todo make this better with min width away from up
+    jsr rand_passable
+    ldx xpos
+    ldy ypos
+    cpx down_x
+    beq generate_up
+    cpy down_y
+    beq generate_up
+    stx up_x
+    stx up_y
+    jmp generate_done
+generate_down:
+    ; todo make this better with min width away from up
+    jsr rand_passable
+    ldx xpos
+    ldy ypos
+    cpx up_x
+    beq generate_down
+    cpy up_y
+    beq generate_down
+    stx down_x
+    sty down_y
+
+generate_done:
     rts
 
 .endproc
