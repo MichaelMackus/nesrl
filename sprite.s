@@ -211,7 +211,7 @@ flip_vertical_attribute:
 .proc debug
     DEBUG_Y = 200
     DEBUG_X = 210
-    DEBUG_SPRITE = 60
+    DEBUG_SPRITE = 100
 
     tya
     clc
