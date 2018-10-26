@@ -162,6 +162,10 @@ start_screen:
     beq done
     lda #GameState::playing
     sta gamestate
+    ; initialize *both* seed values
+    lda nmis
+    sta seed
+    sta seed + 1
     jmp regenerate
 
 playgame:
@@ -213,10 +217,12 @@ wait_nmi:
 
 ; re-generate next dungeon level
 regenerate:
+    ; initialize & flip seed bits
     lda nmis
+    eor #$32
     sta seed
+    ; generate dungeon
     jsr generate
-    ; render the dungeon
     jsr render
     jmp done
 
