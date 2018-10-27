@@ -7,7 +7,7 @@
 
 .segment "ZEROPAGE"
 
-sight_distance = 2
+sight_distance = 7
 
 destx: .res 1
 desty: .res 1
