@@ -1,6 +1,5 @@
 .include "global.inc"
 
-.export update_sprite_offsets
 .export update_sprites
 
 .segment "ZEROPAGE"
@@ -10,19 +9,7 @@ tmp:         .res 1
 tmp2:        .res 1 ; todo used for can_player_see proc
 mob:         .res 1 ; current mob index
 
-xoffset:     .res 1
-yoffset:     .res 1
-
 .segment "CODE"
-
-; initialize xoffset and yoffset
-.proc update_sprite_offsets
-    jsr get_first_col
-    sta xoffset
-    jsr get_first_row
-    sta yoffset
-    rts
-.endproc
 
 ; todo add case for >= 255 sprites, that way we can increase maxmobs
 ; todo add flicker for >= 8 sprites per scan line
@@ -300,8 +287,6 @@ flip_vertical_attribute:
     rts
 .endproc
 
-
-; todo is this working for mobs (not player)?
 ; get mob offset from left edge
 ;
 ; y: mob index to calculate
@@ -319,7 +304,6 @@ get_offset_xpos:
     rts
 .endproc
 
-; todo is this working for mobs (not player)?
 ; get mob offset from top edge
 ;
 ; y: mob index to calculate

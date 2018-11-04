@@ -29,7 +29,7 @@ generate_ppu:
     jsr init_buffer
 
     ; initialize scroll offsets
-    jsr update_sprite_offsets
+    jsr update_screen_offsets
 
     ; update PPUADDR
     bit $2002
@@ -63,6 +63,7 @@ x_repeat:
     ldy #0
     jsr can_see
     bne render_bg
+    jsr update_seen
     jsr get_bg_metatile
     sta $2007
     jmp continue_loop

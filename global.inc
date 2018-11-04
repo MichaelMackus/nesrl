@@ -120,12 +120,15 @@ min_bound   = 1  ; minimum number of spaces from edge
 .globalzp screen_height
 .globalzp vertical_bound
 .globalzp horizontal_bound
+.globalzp xoffset
+.globalzp yoffset
 .global get_mob_xoffset
 .global get_mob_yoffset
 .global get_first_col
 .global get_last_col
 .global get_first_row
 .global get_last_row
+.global update_screen_offsets
 
 ; sprite.s
 .global update_sprite_offsets

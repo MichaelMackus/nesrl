@@ -242,7 +242,7 @@ win_dungeon:
 
 ; ensure buffer is updated when new tiles seen
 player_moved:
-    jsr update_sprite_offsets
+    jsr update_screen_offsets
     jsr buffer_tiles
     jmp ai
 

@@ -1,5 +1,5 @@
 ; some simple procedures related to screen math
-; todo need to ensure we see entire dungeon - in NES 0 = unseen tile so need to account for that
+; todo need to ensure we see entire dungeon accounting for overscan
 
 .include "global.inc"
 
@@ -15,7 +15,20 @@ screen_height    = 30
 vertical_bound   = 14
 horizontal_bound = 16
 
+; screen x & y offset
+xoffset:     .res 1
+yoffset:     .res 1
+
 .segment "CODE"
+
+; initialize xoffset and yoffset
+.proc update_screen_offsets
+    jsr get_first_col
+    sta xoffset
+    jsr get_first_row
+    sta yoffset
+    rts
+.endproc
 
 ; metax of first column on screen
 .proc get_first_col
