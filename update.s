@@ -58,16 +58,17 @@ start_buffer:
     ; initialize ppuaddr for buffering
     jsr init_ppuaddr
 
-    ; todo clear currently seen tiles, before ppu address update
+    ; update scroll metaxpos and metaypos depending on player dir
+    jsr update_coords
 
-    ; execute buffer update twice, for 16 pixels total
-    ;jsr buffer_edges
-    ;jsr buffer_edges
+    ; clear leading edge(s) (assumes cannot be seen)
     jsr update_ppuaddr
+    jsr buffer_edge
     jsr update_ppuaddr
+    jsr buffer_edge
     
-    ; buffer seen tiles
-    jsr buffer_seen
+    ; todo buffer seen tiles
+    ;jsr buffer_seen
 
     ; scroll twice
     jsr update_scroll
@@ -78,13 +79,8 @@ start_buffer:
 
     rts
 
+buffer_edge:
     cur_tile = tmp
-buffer:
-    ; update scroll metaxpos and metaypos depending on player dir
-    jsr update_coords
-
-    ; update ppu & scroll depending on player direction
-    jsr update_ppuaddr
 
     ; calculate the position in the PPU, todo should we do this before updating ppu?
     jsr calculate_ppu_pos
@@ -147,23 +143,6 @@ buffer_tile_loop:
 update_attribute:
     jsr buffer_next_vertical_nt
 buffer_tile:
-    ; divide metax and metay by 2 to get tile offset
-    lda metaxpos
-    lsr
-    sta xpos
-    lda metaypos
-    lsr
-    sta ypos
-    ; check that we can see the tile
-    ; todo need to update newly seen tiles
-    ldy #0
-    jsr was_seen
-    bne blank_tile
-
-    ; get the tiles at the ppu_addr location
-    jsr get_bg_tile
-    jmp update_buffer
-blank_tile:
     lda #$00
 
 update_buffer:
@@ -273,6 +252,7 @@ update_right:
 ;
 ; clobbers: all registers, xpos, and ypos
 ; todo update to use metaxpos and metaypos ?
+; todo need to use attribute/nt boundary check!
 .proc buffer_seen
     ; remember original ppu pos
     lda ppu_addr

@@ -243,8 +243,7 @@ win_dungeon:
 ; ensure buffer is updated when new tiles seen
 player_moved:
     jsr update_sprite_offsets
-    ;jsr buffer_tiles ; todo update seen
-    jsr render
+    jsr buffer_tiles
     jmp ai
 
 ; ensure player alive, otherwise display Game Over screen
