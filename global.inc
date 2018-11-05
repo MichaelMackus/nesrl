@@ -136,8 +136,10 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global debug
 
 ; update.s
+.globalzp tiles_buffered
 .global init_buffer
 .global buffer_tiles
+.global buffer_seen
 .global buffer_messages
 .global buffer_hp
 

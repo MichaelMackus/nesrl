@@ -7,6 +7,7 @@
 
 .export buffer_hp
 .export buffer_tiles
+.export buffer_seen
 .export buffer_messages
 
 .segment "ZEROPAGE"
@@ -22,10 +23,13 @@ ppu_pos:        .res 1 ; for ppu_at_attribute procedure
 buffer_start:   .res 1 ; start index for draw buffer
 prev_ppu_addr:  .res 2 ; for clearing status, todo remove
 
-; represents tile index (from 0-240) that was last buffered
-tile_index:     .res 1
+; represents row that was last buffered
+row_buffered:   .res 1
 ; represents amount of tiles buffered this loop (need to batch this, since it is too expensive to do in one shot)
 tiles_buffered: .res 1
+
+; max tiles until we trigger next batch update
+max_tiles_buffered = 64
 
 ; represents previously seen tiles (for comparison)
 
@@ -51,6 +55,14 @@ tiles_buffered: .res 1
 ; clobbers: all registers, xpos, and ypos
 .proc buffer_tiles
 
+    ; trigger batch buffer mode of seen tiles
+    lda #$40
+    sta tiles_buffered
+    ; reset row for buffer seen tiles
+    lda #0
+    sta row_buffered
+
+    ; todo need to update seen using batch buffer if we can't scroll
     jsr can_scroll_dir
     beq start_buffer
     ; can't scroll, disable buffering
@@ -64,9 +76,6 @@ start_buffer:
 
     ; buffer leading edges
     jsr buffer_edges
-
-    ; buffer seen tiles
-    jsr buffer_seen
 
     ; scroll twice
     jsr update_scroll
@@ -312,14 +321,25 @@ reset_down:
 ; update draw buffer with seen bg tiles
 ;
 ; clobbers: all registers, xpos, and ypos
-; todo update to use metaxpos and metaypos ?
 ; todo need to use attribute/nt boundary check!
+; todo batch the buffering, seems like we can only write ~2-4 rows before NMI takes too long
+; todo is left/right buffering working?
 .proc buffer_seen
     ; remember original ppu pos
     lda ppu_addr
     pha
     lda ppu_addr + 1
     pha
+
+    ; initialize tiles buffered (for batch buffer mode)
+    lda #0
+    sta tiles_buffered
+
+    ; check if we're done with batch buffer mode
+    lda row_buffered
+    ; todo compare to last row
+    beq set_startx
+    jmp done
 
     ; set start & end x/y pos
 set_startx:
@@ -369,6 +389,8 @@ set_endy:
 force_endy:
     lda #max_height*2
     sta endy
+
+    ; todo increment metay by row_buffered
 
     ; increment PPU X
 inx_ppu_start:
@@ -478,12 +500,20 @@ loop_next:
     lda #$00
     sta draw_buffer, y
     iny
+    inc row_buffered
+    ; increment tiles buffered for batch buffer mode
+    ; todo end when max_tiles_buffered hit
+    lda tiles_buffered
+    clc
+    adc #$20
+    sta tiles_buffered
     ; increment y & ensure we're not done
     inc metaypos
     ; todo continue loop when batching finished
     ;jmp loop
  
 done:
+    ; reset ppu addr
     pla
     sta ppu_addr + 1
     pla
