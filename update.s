@@ -335,12 +335,6 @@ reset_down:
     lda #0
     sta tiles_buffered
 
-    ; check if we're done with batch buffer mode
-    lda row_buffered
-    ; todo compare to last row
-    beq set_startx
-    jmp done
-
     ; set start & end x/y pos
 set_startx:
     lda mobs + Mob::coords + Coord::xcoord
@@ -385,12 +379,17 @@ set_endy:
     cmp #max_height*2
     bcs force_endy
     sta endy
-    jmp inx_ppu_start
+    jmp inc_metaypos
 force_endy:
     lda #max_height*2
     sta endy
 
-    ; todo increment metay by row_buffered
+inc_metaypos:
+    ; increment metay by row_buffered
+    lda metaypos
+    clc
+    adc row_buffered
+    sta metaypos
 
     ; increment PPU X
 inx_ppu_start:
