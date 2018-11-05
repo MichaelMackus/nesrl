@@ -107,7 +107,7 @@ buffer_edge:
     ; update scroll metaxpos and metaypos depending on player dir
     jsr update_coords
 
-    ; calculate the position in the PPU, todo should we do this before updating ppu?
+    ; calculate the position in the PPU
     jsr calculate_ppu_pos
 
     ; get next y index
@@ -324,8 +324,7 @@ reset_down:
 ; update draw buffer with seen bg tiles
 ;
 ; clobbers: all registers, xpos, and ypos
-; todo need to use attribute/nt boundary check!
-; todo ypos is off by +1 when crossing x NT boundary? Possibly related to attribute/nt boundary
+; todo bug when hitting max tiles - 5, introduced by 8473542e9c2809cd4f8fe2cdb76bfcfa8a54fc46
 .proc buffer_seen
     ; remember original ppu pos
     lda ppu_addr
@@ -431,13 +430,22 @@ check_max_buffered:
     bcc loop_start_buffer
     jmp done
 loop_start_buffer:
+    ; save buffer_start for NT boundary check
+    sty buffer_start
+
+    ; initialize cur_tile for NT boundary check
+    cur_tile = tmp
+    lda #0
+    sta cur_tile
+
+    ; calculate the position in the PPU
+    jsr calculate_ppu_col
+
     ; write draw buffer length of sight distance
     lda draw_length
     sta draw_buffer, y
     iny
-    sty draw_y
     ; store ppu addr to buffer
-    ldy draw_y
     lda ppu_addr
     sta draw_buffer, y
     iny
@@ -450,9 +458,17 @@ loop_start_buffer:
     iny
 
    ; now we're ready to draw tile data
-   ; todo update seen
 tile_loop:
     sty draw_y
+
+    ; check for horizontal NT boundary (iny_ppu accounts for attributes)
+    lda ppu_pos
+    cmp #$20
+    bne draw_check
+    ; we're at NT boundary
+    jsr buffer_next_nt
+
+draw_check:
     ; update xpos and ypos with meta pos
     lda metaxpos
     lsr
@@ -467,12 +483,11 @@ tile_loop:
     ldy #0
     jsr can_see
     beq draw_seen
-    ; draw seen tile, if already seen, todo not necessary
+    ; draw seen tile, if already seen, todo perhaps necessary for performance
     ;jsr was_seen
     ; no tile was seen, draw bg
     ;bne tile_bg
     jmp tile_bg
-; todo need to use attribute/nt boundary check! otherwise things wig out!
 draw_seen:
     ; update seen tile
     jsr update_seen
@@ -493,6 +508,10 @@ loop_nextx:
     lda metaxpos
     cmp endx
     beq loop_donex
+    ; increment cur_tile & ppu_pos (for NT boundary check)
+    inc cur_tile
+    inc ppu_pos
+    ; redo loop
     jmp tile_loop
 
 loop_donex:
@@ -855,7 +874,10 @@ failure:
     beq calculate_ppu_row
     cmp #Direction::left
     beq calculate_ppu_row
+    jmp calculate_ppu_col
+.endproc
 
+.proc calculate_ppu_col
     ; calculate column
     lda ppu_addr + 1
     ldx #$20
@@ -887,6 +909,7 @@ failure:
     rts
 .endproc
 
+; todo don't hardcode to direction
 .proc ppu_at_next_nt
     lda mobs + Mob::direction
     cmp #Direction::right
