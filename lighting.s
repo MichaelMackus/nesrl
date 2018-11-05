@@ -7,7 +7,7 @@
 
 .segment "ZEROPAGE"
 
-sight_distance = 1 ; todo should probably be 5
+sight_distance = 5
 
 destx: .res 1
 desty: .res 1

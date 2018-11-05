@@ -322,8 +322,7 @@ reset_down:
 ;
 ; clobbers: all registers, xpos, and ypos
 ; todo need to use attribute/nt boundary check!
-; todo batch the buffering, seems like we can only write ~2-4 rows before NMI takes too long
-; todo is left/right buffering working?
+; todo ypos is off by +1 when crossing x NT boundary? Possibly related to attribute/nt boundary
 .proc buffer_seen
     ; remember original ppu pos
     lda ppu_addr
@@ -343,6 +342,7 @@ set_startx:
     sbc #sight_distance*2
     bcc forcex
     sta metaxpos
+    sta prevx
     jmp set_starty
 forcex:
     lda #0
@@ -417,6 +417,7 @@ loop_start:
     ; initialize draw_length
     lda #(sight_distance*2 + 1)*2 ; increment by 1 for player
     sta draw_length
+    jsr next_index
 
 loop:
     lda metaypos
@@ -425,13 +426,10 @@ loop:
     jmp done
 loop_start_buffer:
     ; write draw buffer length of sight distance
-    jsr next_index
     lda draw_length
     sta draw_buffer, y
     iny
     sty draw_y
-    ; update ppu addr pointer, todo just need to inc by 32 each time for y
-    ;jsr update_ppuaddr
     ; store ppu addr to buffer
     ldy draw_y
     lda ppu_addr
@@ -468,6 +466,7 @@ tile_loop:
     ; no tile was seen, draw bg
     ;bne tile_bg
     jmp tile_bg
+; todo need to use attribute/nt boundary check! otherwise things wig out!
 draw_seen:
     ; update seen tile
     jsr update_seen
@@ -498,18 +497,21 @@ loop_next:
     ; store zero length at end
     lda #$00
     sta draw_buffer, y
-    iny
     inc row_buffered
     ; increment tiles buffered for batch buffer mode
-    ; todo end when max_tiles_buffered hit
     lda tiles_buffered
     clc
-    adc #$20
+    adc #(sight_distance*2 + 1)*2
     sta tiles_buffered
-    ; increment y & ensure we're not done
+    ; end when max_tiles_buffered hit
+    cmp #max_tiles_buffered
+    bcs done
+    ; increment y pos
     inc metaypos
-    ; todo continue loop when batching finished
-    ;jmp loop
+    ; increment PPU row
+    jsr iny_ppu
+    ; continue loop until batching finished
+    jmp loop
  
 done:
     ; reset ppu addr
