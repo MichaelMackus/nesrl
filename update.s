@@ -11,16 +11,23 @@
 
 .segment "ZEROPAGE"
 
-tmp:           .res 1
-tmp2:          .res 1
-endy:          .res 1 ; for buffer seen loop
-endx:          .res 1 ; for buffer seen loop
-prevx:         .res 1 ; for buffer seen loop
-draw_y:        .res 1 ; current draw buffer index
-draw_length:   .res 1
-ppu_pos:       .res 1 ; for ppu_at_attribute procedure
-buffer_start:  .res 1 ; start index for draw buffer
-prev_ppu_addr: .res 2 ; for clearing status, todo remove
+tmp:            .res 1
+tmp2:           .res 1
+endy:           .res 1 ; for buffer seen loop
+endx:           .res 1 ; for buffer seen loop
+prevx:          .res 1 ; for buffer seen loop
+draw_y:         .res 1 ; current draw buffer index
+draw_length:    .res 1
+ppu_pos:        .res 1 ; for ppu_at_attribute procedure
+buffer_start:   .res 1 ; start index for draw buffer
+prev_ppu_addr:  .res 2 ; for clearing status, todo remove
+
+; represents tile index (from 0-240) that was last buffered
+tile_index:     .res 1
+; represents amount of tiles buffered this loop (need to batch this, since it is too expensive to do in one shot)
+tiles_buffered: .res 1
+
+; represents previously seen tiles (for comparison)
 
 .segment "CODE"
 
@@ -55,32 +62,38 @@ start_buffer:
     lda ppu_addr + 1
     sta prev_ppu_addr + 1
 
-    ; initialize ppuaddr for buffering
-    jsr init_ppuaddr
+    ; buffer leading edges
+    jsr buffer_edges
 
-    ; update scroll metaxpos and metaypos depending on player dir
-    jsr update_coords
+    ; buffer seen tiles
+    jsr buffer_seen
+
+    ; scroll twice
+    jsr update_scroll
+    jsr update_scroll
+
+    rts
+.endproc
+
+.proc buffer_edges
+    ; initialize ppuaddr for buffering edge
+    jsr init_ppuaddr
 
     ; clear leading edge(s) (assumes cannot be seen)
     jsr update_ppuaddr
     jsr buffer_edge
     jsr update_ppuaddr
     jsr buffer_edge
-    
-    ; todo buffer seen tiles
-    ;jsr buffer_seen
-
-    ; scroll twice
-    jsr update_scroll
-    jsr update_scroll
-
-    ; reset ppuaddr to origin
+    ; reset ppuaddr to origin from buffering edge
     jsr reset_ppuaddr
 
     rts
 
 buffer_edge:
     cur_tile = tmp
+
+    ; update scroll metaxpos and metaypos depending on player dir
+    jsr update_coords
 
     ; calculate the position in the PPU, todo should we do this before updating ppu?
     jsr calculate_ppu_pos
@@ -246,6 +259,54 @@ update_right:
     rts
 .endproc
 
+; initialize the PPU address to point to start address for buffering
+; assumes ppuaddr is pointing to origin
+.proc init_ppuaddr
+    ; flip nametable if going right or down
+    lda mobs + Mob::direction
+    cmp #Direction::right
+    beq right_of_nt
+    cmp #Direction::down
+    beq bottom_of_nt
+    ; origin works for going left or up
+    rts
+right_of_nt:
+    ; flip nametable
+    jsr inx_ppu_nt
+    ; decrement x to get back to end of previous nametable
+    jsr dex_ppu
+    rts
+bottom_of_nt:
+    ; flip nametable
+    jsr iny_ppu_nt
+    ; decrement y to get back to end of previous nametable
+    jsr dey_ppu
+    rts
+.endproc
+
+; reset the PPU address to point to origin
+.proc reset_ppuaddr
+    ; first reset to origin of screen
+    lda mobs + Mob::direction
+    cmp #Direction::right
+    beq reset_right
+    cmp #Direction::down
+    beq reset_down
+    ; if we went left or up, we're already at origin of screen
+    rts
+reset_right:
+    ; flip nametable
+    jsr dex_ppu_nt
+    ; increase x to get to origin
+    jsr inx_ppu
+    rts
+reset_down:
+    ; flip nametable
+    jsr dey_ppu_nt
+    ; increase y to get to origin
+    jsr iny_ppu
+    rts
+.endproc
 .endproc
 
 ; update draw buffer with seen bg tiles
@@ -260,66 +321,85 @@ update_right:
     lda ppu_addr + 1
     pha
 
-    ; load player xpos and ypos
+    ; set start & end x/y pos
+set_startx:
     lda mobs + Mob::coords + Coord::xcoord
-    sta xpos
-    lda mobs + Mob::coords + Coord::ycoord
-    sta ypos
-    ; get current byte offset & mask
-    jsr get_byte_offset
-    tay
-    jsr get_byte_mask
-
-    ; update endx and endy
-    lda ypos
-    sta metaypos
-    clc
-    adc #sight_distance + 1 ; increment by 1 for player
-    sta endy
-    lda xpos
+    asl ; multiply by 2
+    sec
+    sbc #sight_distance*2
+    bcc forcex
     sta metaxpos
+    jmp set_starty
+forcex:
+    lda #0
+    sta metaxpos
+set_starty:
+    ; get starty
+    lda mobs + Mob::coords + Coord::ycoord
+    asl ; multiply by 2
+    sec
+    sbc #sight_distance*2
+    bcc forcey
+    sta metaypos
+    jmp set_endx
+forcey:
+    lda #0
+    sta metaypos
+set_endx:
+    lda metaxpos
     clc
-    adc #sight_distance + 1 ; increment by 1 for player
+    adc #(sight_distance*2 + 1)*2
+    ; check within bounds
+    cmp #max_width*2
+    bcs force_endx
     sta endx
+    jmp set_endy
+force_endx:
+    lda #max_width*2
+    sta endx
+set_endy:
+    lda metaypos
+    clc
+    adc #(sight_distance*2 + 1)*2
+    ; check within bounds
+    cmp #max_height*2
+    bcs force_endy
+    sta endy
+    jmp inx_ppu_start
+force_endy:
+    lda #max_height*2
+    sta endy
+
+    ; increment PPU X
+inx_ppu_start:
+    ldy xoffset
+inx_ppu_loop:
+    cpy metaxpos
+    beq iny_ppu_start
+    jsr inx_ppu
+    iny
+    jmp inx_ppu_loop
+
+    ; increment PPU Y
+iny_ppu_start:
+    ldy yoffset
+iny_ppu_loop:
+    cpy metaypos
+    beq loop_start
+    jsr iny_ppu
+    iny
+    jmp iny_ppu_loop
+
+loop_start:
+    ; todo clear end of previous sight radius before move
 
     ; initialize draw_length
-    lda #sight_distance*2 + 1 ; increment by 1 for player
+    lda #(sight_distance*2 + 1)*2 ; increment by 1 for player
     sta draw_length
-
-    ; set ypos to ypos - 2, and xpos to xpos - 2
-update_ypos:
-    lda metaypos
-    sec
-    sbc #sight_distance
-    bcc fix_overflow_ypos ; detect overflow
-    sta metaypos
-update_xpos:
-    lda metaxpos
-    sec
-    sbc #sight_distance
-    bcc fix_overflow_xpos ; detect overflow
-    sta metaxpos
-    sta prevx
-    jmp loop
-
-fix_overflow_ypos:
-    lda #0
-    sta metaypos
-    jmp update_xpos
-fix_overflow_xpos:
-    lda #0
-    sta metaxpos
-    sta prevx
-    ; update draw_length
-    lda mobs + Mob::coords + Coord::xcoord
-    clc
-    adc #sight_distance+1 ; increment by 1 for player
-    sta draw_length
-    ;todo init ppuaddr
 
 loop:
     lda metaypos
-    cmp #max_height
+    cmp endy
     bcc loop_start_buffer
     jmp done
 loop_start_buffer:
@@ -345,12 +425,15 @@ loop_start_buffer:
     iny
 
    ; now we're ready to draw tile data
+   ; todo update seen
 tile_loop:
     sty draw_y
     ; update xpos and ypos with meta pos
     lda metaxpos
+    lsr
     sta xpos
     lda metaypos
+    lsr
     sta ypos
     ; ensure xpos and ypos is valid
     jsr within_bounds
@@ -359,10 +442,11 @@ tile_loop:
     ldy #0
     jsr can_see
     beq draw_seen
-    ; draw seen tile, if already seen
-    jsr was_seen
+    ; draw seen tile, if already seen, todo not necessary
+    ;jsr was_seen
     ; no tile was seen, draw bg
-    bne tile_bg
+    ;bne tile_bg
+    jmp tile_bg
 draw_seen:
     ; update seen tile
     jsr update_seen
@@ -396,10 +480,7 @@ loop_next:
     iny
     ; increment y & ensure we're not done
     inc metaypos
-    lda metaypos
-    cmp endy
-    ; todo issue here
-    ;beq done
+    ; todo continue loop when batching finished
     ;jmp loop
  
 done:
@@ -408,62 +489,6 @@ done:
     pla
     sta ppu_addr
     rts
-
-; todo initialize ppuaddr to player row
-;
-; in: scroll dir
-; clobbers: x register
-.proc init_ppuaddr
-    lda mobs + Mob::direction
-    cmp #Direction::right
-    beq update_right
-    cmp #Direction::left
-    beq update_left
-    cmp #Direction::down
-    beq update_down
-    ;cmp #Direction::up
-    ;beq update_up
-update_up:
-    jsr dey_ppu
-    rts
-update_down:
-    jsr iny_ppu
-    rts
-update_left:
-    jsr dex_ppu
-    rts
-update_right:
-    jsr inx_ppu
-    rts
-.endproc
-; todo fixme
-; increase or decrease ppuaddr depending on scroll dir
-;
-; in: scroll dir
-; clobbers: x register
-.proc update_ppuaddr
-    lda mobs + Mob::direction
-    cmp #Direction::right
-    beq update_right
-    cmp #Direction::left
-    beq update_left
-    cmp #Direction::down
-    beq update_down
-    ;cmp #Direction::up
-    ;beq update_up
-update_up:
-    jsr dey_ppu
-    rts
-update_down:
-    jsr iny_ppu
-    rts
-update_left:
-    jsr dex_ppu
-    rts
-update_right:
-    jsr inx_ppu
-    rts
-.endproc
 .endproc
 
 .proc clear_hp
@@ -662,55 +687,6 @@ update_buffer_amount:
     clc
     adc draw_length
     sta draw_length
-    rts
-.endproc
-
-; initialize the PPU address to point to start address for buffering
-; assumes ppuaddr is pointing to origin
-.proc init_ppuaddr
-    ; flip nametable if going right or down
-    lda mobs + Mob::direction
-    cmp #Direction::right
-    beq right_of_nt
-    cmp #Direction::down
-    beq bottom_of_nt
-    ; origin works for going left or up
-    rts
-right_of_nt:
-    ; flip nametable
-    jsr inx_ppu_nt
-    ; decrement x to get back to end of previous nametable
-    jsr dex_ppu
-    rts
-bottom_of_nt:
-    ; flip nametable
-    jsr iny_ppu_nt
-    ; decrement y to get back to end of previous nametable
-    jsr dey_ppu
-    rts
-.endproc
-
-; reset the PPU address to point to origin
-.proc reset_ppuaddr
-    ; first reset to origin of screen
-    lda mobs + Mob::direction
-    cmp #Direction::right
-    beq reset_right
-    cmp #Direction::down
-    beq reset_down
-    ; if we went left or up, we're already at origin of screen
-    rts
-reset_right:
-    ; flip nametable
-    jsr dex_ppu_nt
-    ; increase x to get to origin
-    jsr inx_ppu
-    rts
-reset_down:
-    ; flip nametable
-    jsr dey_ppu_nt
-    ; increase y to get to origin
-    jsr iny_ppu
     rts
 .endproc
 
