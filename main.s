@@ -154,6 +154,8 @@ main:
     lda tiles_buffered
     beq check_state
     ; we're still in batch buffer mode, update tiles buffer
+    lda #0
+    sta tiles_buffered
     jsr buffer_seen
     jmp update
 

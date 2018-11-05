@@ -28,7 +28,7 @@ row_buffered:   .res 1
 ; represents amount of tiles buffered this loop (need to batch this, since it is too expensive to do in one shot)
 tiles_buffered: .res 1
 
-; max tiles until we trigger next batch update
+; max tiles until we trigger next batch update, todo can probably increase this to 86
 max_tiles_buffered = 64
 
 ; represents previously seen tiles (for comparison)
@@ -55,20 +55,12 @@ max_tiles_buffered = 64
 ; clobbers: all registers, xpos, and ypos
 .proc buffer_tiles
 
-    ; trigger batch buffer mode of seen tiles
-    lda #$40
-    sta tiles_buffered
-    ; reset row for buffer seen tiles
-    lda #0
-    sta row_buffered
-
-    ; todo need to update seen using batch buffer if we can't scroll
+    ; disable scrolling if we're at edge
     jsr can_scroll_dir
-    beq start_buffer
-    ; can't scroll, disable buffering
-    rts
+    beq start_scroll_buffer
+    jmp start_seen_buffer
 
-start_buffer:
+start_scroll_buffer:
     lda ppu_addr
     sta prev_ppu_addr
     lda ppu_addr + 1
@@ -77,9 +69,20 @@ start_buffer:
     ; buffer leading edges
     jsr buffer_edges
 
+    ; trigger batch buffer mode of seen tiles
+    lda #$40
+    sta tiles_buffered
+
     ; scroll twice
     jsr update_scroll
     jsr update_scroll
+
+start_seen_buffer:
+    ; reset row for buffer seen tiles
+    lda #0
+    sta row_buffered
+
+    jsr buffer_seen
 
     rts
 .endproc
@@ -330,10 +333,6 @@ reset_down:
     lda ppu_addr + 1
     pha
 
-    ; initialize tiles buffered (for batch buffer mode)
-    lda #0
-    sta tiles_buffered
-
     ; set start & end x/y pos
 set_startx:
     lda mobs + Mob::coords + Coord::xcoord
@@ -420,8 +419,15 @@ loop_start:
     jsr next_index
 
 loop:
+    ; end when endy hit
     lda metaypos
     cmp endy
+    bcc check_max_buffered
+    jmp done
+check_max_buffered:
+    ; end when max_tiles_buffered hit
+    lda tiles_buffered
+    cmp #max_tiles_buffered
     bcc loop_start_buffer
     jmp done
 loop_start_buffer:
@@ -503,9 +509,6 @@ loop_next:
     clc
     adc #(sight_distance*2 + 1)*2
     sta tiles_buffered
-    ; end when max_tiles_buffered hit
-    cmp #max_tiles_buffered
-    bcs done
     ; increment y pos
     inc metaypos
     ; increment PPU row
