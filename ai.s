@@ -89,7 +89,7 @@ move_mob:
     sta xpos
     lda mobs + Mob::coords + Coord::ycoord
     sta ypos
-    jsr can_see
+    jsr line_of_sight
     bne move_random
     jmp move_towards_player
 move_random:

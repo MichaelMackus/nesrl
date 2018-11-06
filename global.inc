@@ -83,7 +83,8 @@ min_bound   = 1  ; minimum number of spaces from edge
 
 ; lighting.s
 .globalzp sight_distance
-.global can_see
+.global can_player_see
+.global line_of_sight
 
 ; player.s
 .globalzp stats

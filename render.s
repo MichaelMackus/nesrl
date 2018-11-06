@@ -60,8 +60,7 @@ x_repeat:
     lda metaxpos
     lsr
     sta xpos
-    ldy #0
-    jsr can_see
+    jsr can_player_see
     bne render_bg
     jsr update_seen
     jsr get_bg_metatile

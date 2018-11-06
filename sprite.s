@@ -73,8 +73,8 @@ next_mob:
 get_mob_y:
     sty tmp
     ldy mob
-    ; ensure mob is within screen bounds, todo can_see function
-    jsr can_player_see
+    ; ensure mob is within screen bounds
+    jsr can_player_see_mob
     bne clear_mob
     jsr is_alive
     beq adjust_mob_y
@@ -123,8 +123,8 @@ adjust_mob_y_inverse:
 get_mob_x:
     sty tmp
     ldy mob
-    ; ensure mob is within screen bounds, todo can_see function
-    jsr can_player_see
+    ; ensure mob is within screen bounds
+    jsr can_player_see_mob
     bne clear_mob
     jsr is_alive
     beq adjust_mob_x
@@ -321,8 +321,13 @@ get_offset_ypos:
     rts
 .endproc
 
-; todo make more generic
-.proc can_player_see
+.proc can_player_see_mob
+    ; don't clobber x and y
+    tya
+    pha
+    txa
+    pha
+
     lda mobs + Mob::coords + Coord::ycoord, y
     asl
     cmp yoffset
@@ -350,28 +355,30 @@ get_offset_ypos:
     bcs failure
 
     ; ensure player has seen tile before displaying mob
-    ; todo Fog of war? We could also do something like display
-    ; todo generic tile of prev mob pos, if can't see
-    tya
-    pha
-    txa
-    pha
     lda mobs + Mob::coords + Coord::xcoord, y
     sta xpos
     lda mobs + Mob::coords + Coord::ycoord, y
     sta ypos
     jsr was_seen
-    sta tmp2 ; store result
+    bne failure
+    ; check player line of sight
+    ldy #0
+    jsr line_of_sight
+    bne failure
+
+    ; success
     pla
     tax
     pla
     tay
-
-    ; result
-    lda tmp2
+    lda #0
     rts
 
 failure:
+    pla
+    tax
+    pla
+    tay
     lda #1
     rts
 .endproc

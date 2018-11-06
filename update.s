@@ -31,7 +31,8 @@ tiles_buffered: .res 1
 ; max tiles until we trigger next batch update, todo figure out fitting in 1 frame
 max_tiles_buffered = 64
 
-; represents previously seen tiles (for comparison)
+; represents player sight distance (hardcoded for now)
+sight_distance = 1
 
 .segment "CODE"
 
@@ -48,7 +49,6 @@ max_tiles_buffered = 64
     rts
 .endproc
 
-; todo going right (now *left?) has a glitch in the amount of cycles it takes sometimes, perhaps something to do with NT boundary
 ; update draw buffer with new bg tiles
 ; this assumes scrolling in direction of player movement
 ;
@@ -175,8 +175,7 @@ buffer_tile:
     lda metaypos
     lsr
     sta ypos
-    ldy #0
-    jsr can_see
+    jsr can_player_see
     beq load_seen
     jsr was_seen
     beq load_seen
@@ -426,8 +425,6 @@ iny_ppu_loop:
     jmp iny_ppu_loop
 
 loop_start:
-    ; todo clear end of previous sight radius before move
-
     ; initialize draw_length
     lda #(sight_distance*2 + 1)*2 ; increment by 1 for player
     sta draw_length
@@ -496,8 +493,7 @@ draw_check:
     jsr within_bounds
     bne tile_bg
     ; check if we can see
-    ldy #0
-    jsr can_see
+    jsr can_player_see
     beq draw_seen
     ; draw seen tile, if already seen
     jsr was_seen
@@ -1075,7 +1071,7 @@ success:
     rts
 .endproc
 
-; todo not properly setting to bot of nt every time
+; todo not properly setting to bot of nt every time (probably due to NT boundary)
 .proc buffer_status_ppuaddr
     lda ppu_addr
     pha
