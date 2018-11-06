@@ -1,5 +1,15 @@
 .include "global.inc"
 
+; todo do this in batches - first generate maze, with *no* overlapping corridors
+; todo then, generate rooms with max dimensions of 4x4
+; todo this way, lighting & scrolling code don't update as much tiles at once
+;
+; todo can also do some clever tricks by making rooms have doors, so that we
+; todo only show corridor *or* room at once (door would block sight)
+;
+; todo if we limit corridors to max length of 4, this would also eliminate
+; todo need for sprite flicker
+
 .export generate
 
 .segment "ZEROPAGE"
@@ -32,6 +42,7 @@ clear_tiles:
     lda #$00
 clear_loop:
     sta tiles, x
+    sta seen, x
     inx
     cpx #maxtiles
     bne clear_loop

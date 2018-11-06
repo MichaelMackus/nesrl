@@ -46,6 +46,7 @@ init_memory:
     sta dlevel
     sta need_draw
     sta turn
+    sta tiles_buffered
     inc turn ; set turn to 1
     jsr initialize_player
     lda Messages::none
@@ -149,8 +150,17 @@ irq:
 .segment "CODE"
 
 main:
-    jsr readcontroller
+    ; check if we're still in batch buffer mode
+    lda tiles_buffered
+    beq check_state
+    ; we're still in batch buffer mode, update tiles buffer
+    lda #0
+    sta tiles_buffered
+    jsr buffer_seen
+    jmp update
 
+check_state:
+    jsr readcontroller
     lda gamestate
     cmp #1
     beq playgame
@@ -193,6 +203,7 @@ ai:
     jsr mob_spawner
     jsr player_regen
 
+update:
     ; update messages buffer and hp every time, todo figure out better way
     ;jsr buffer_messages
     ;jsr buffer_hp
@@ -242,7 +253,7 @@ win_dungeon:
 
 ; ensure buffer is updated when new tiles seen
 player_moved:
-    jsr update_sprite_offsets
+    jsr update_screen_offsets
     jsr buffer_tiles
     jmp ai
 

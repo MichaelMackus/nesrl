@@ -47,6 +47,7 @@ min_bound   = 1  ; minimum number of spaces from edge
 
 ; dungeon.s
 .global tiles
+.global seen
 .globalzp dlevel
 .globalzp xpos
 .globalzp ypos
@@ -82,7 +83,8 @@ min_bound   = 1  ; minimum number of spaces from edge
 
 ; lighting.s
 .globalzp sight_distance
-.global can_see
+.global can_player_see
+.global line_of_sight
 
 ; player.s
 .globalzp stats
@@ -119,12 +121,15 @@ min_bound   = 1  ; minimum number of spaces from edge
 .globalzp screen_height
 .globalzp vertical_bound
 .globalzp horizontal_bound
+.globalzp xoffset
+.globalzp yoffset
 .global get_mob_xoffset
 .global get_mob_yoffset
 .global get_first_col
 .global get_last_col
 .global get_first_row
 .global get_last_row
+.global update_screen_offsets
 
 ; sprite.s
 .global update_sprite_offsets
@@ -132,8 +137,10 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global debug
 
 ; update.s
+.globalzp tiles_buffered
 .global init_buffer
 .global buffer_tiles
+.global buffer_seen
 .global buffer_messages
 .global buffer_hp
 

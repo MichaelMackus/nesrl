@@ -7,19 +7,32 @@
 
 .export buffer_hp
 .export buffer_tiles
+.export buffer_seen
 .export buffer_messages
 
 .segment "ZEROPAGE"
 
-tmp:           .res 1
-tmp2:          .res 1
-starty:        .res 1 ; for buffer seen loop
-startx:        .res 1 ; for buffer seen loop
-draw_y:        .res 1 ; current draw buffer index
-draw_length:   .res 1
-ppu_pos:       .res 1 ; for ppu_at_attribute procedure
-buffer_start:  .res 1 ; start index for draw buffer
-prev_ppu_addr: .res 2 ; for clearing status, todo remove
+tmp:            .res 1
+tmp2:           .res 1
+endy:           .res 1 ; for buffer seen loop
+endx:           .res 1 ; for buffer seen loop
+prevx:          .res 1 ; for buffer seen loop
+draw_y:         .res 1 ; current draw buffer index
+draw_length:    .res 1
+ppu_pos:        .res 1 ; for ppu_at_attribute procedure
+buffer_start:   .res 1 ; start index for draw buffer
+prev_ppu_addr:  .res 2 ; for clearing status, todo remove
+
+; represents row that was last buffered
+row_buffered:   .res 1
+; represents amount of tiles buffered this loop (need to batch this, since it is too expensive to do in one shot)
+tiles_buffered: .res 1
+
+; max tiles until we trigger next batch update, todo figure out fitting in 1 frame
+max_tiles_buffered = 64
+
+; represents player sight distance (hardcoded for now)
+sight_distance = 1
 
 .segment "CODE"
 
@@ -36,49 +49,65 @@ prev_ppu_addr: .res 2 ; for clearing status, todo remove
     rts
 .endproc
 
-; todo going right (now *left?) has a glitch in the amount of cycles it takes sometimes, perhaps something to do with NT boundary
 ; update draw buffer with new bg tiles
 ; this assumes scrolling in direction of player movement
 ;
 ; clobbers: all registers, xpos, and ypos
 .proc buffer_tiles
-    cur_tile = tmp
 
+    ; disable scrolling if we're at edge
     jsr can_scroll_dir
-    beq start_buffer
-    ; can't scroll, disable buffering
-    rts
+    beq start_scroll_buffer
+    jmp start_seen_buffer
 
-start_buffer:
+start_scroll_buffer:
     lda ppu_addr
     sta prev_ppu_addr
     lda ppu_addr + 1
     sta prev_ppu_addr + 1
 
-    ; initialize ppuaddr for buffering
-    jsr init_ppuaddr
+    ; buffer leading edges
+    jsr buffer_edges
 
-    ; execute buffer update twice, for 16 pixels total
-    jsr buffer
-    jsr buffer
+    ; trigger batch buffer mode of seen tiles
+    lda #$40
+    sta tiles_buffered
 
     ; scroll twice
     jsr update_scroll
     jsr update_scroll
 
-    ; reset ppuaddr to origin
+start_seen_buffer:
+    ; reset row for buffer seen tiles
+    lda #0
+    sta row_buffered
+
+    jsr buffer_seen
+
+    rts
+.endproc
+
+.proc buffer_edges
+    ; initialize ppuaddr for buffering edge
+    jsr init_ppuaddr
+
+    ; clear leading edge(s) (assumes cannot be seen)
+    jsr update_ppuaddr
+    jsr buffer_edge
+    jsr update_ppuaddr
+    jsr buffer_edge
+    ; reset ppuaddr to origin from buffering edge
     jsr reset_ppuaddr
 
     rts
 
-buffer:
+buffer_edge:
+    cur_tile = tmp
+
     ; update scroll metaxpos and metaypos depending on player dir
     jsr update_coords
 
-    ; update ppu & scroll depending on player direction
-    jsr update_ppuaddr
-
-    ; calculate the position in the PPU, todo should we do this before updating ppu?
+    ; calculate the position in the PPU
     jsr calculate_ppu_pos
 
     ; get next y index
@@ -139,24 +168,22 @@ buffer_tile_loop:
 update_attribute:
     jsr buffer_next_vertical_nt
 buffer_tile:
-    ; divide metax and metay by 2 to get tile offset
+    ; check if we can see or already seen tile
     lda metaxpos
     lsr
     sta xpos
     lda metaypos
     lsr
     sta ypos
-    ; check that we can see the tile
-    ; todo need to update newly seen tiles
-    ;ldy #0
-    ;jsr can_see ; todo check seen tiles
-    ;bne blank_tile
-
-    ; get the tiles at the ppu_addr location
-    jsr get_bg_tile
-    jmp update_buffer
-blank_tile:
+    jsr can_player_see
+    beq load_seen
+    jsr was_seen
+    beq load_seen
+    ; can't see, load BG for now
     lda #$00
+    jmp update_buffer
+load_seen:
+    jsr get_bg_metatile
 
 update_buffer:
     ldy draw_y
@@ -187,6 +214,344 @@ done:
     ; write zero length for next buffer write
     lda #$00
     sta draw_buffer, y
+    rts
+
+; increase or decrease ppuaddr depending on scroll dir
+;
+; in: scroll dir
+; clobbers: x register
+.proc update_ppuaddr
+    lda mobs + Mob::direction
+    cmp #Direction::right
+    beq update_right
+    cmp #Direction::left
+    beq update_left
+    cmp #Direction::down
+    beq update_down
+    ;cmp #Direction::up
+    ;beq update_up
+update_up:
+    jsr dey_ppu
+    rts
+update_down:
+    jsr iny_ppu
+    rts
+update_left:
+    jsr dex_ppu
+    rts
+update_right:
+    jsr inx_ppu
+    rts
+.endproc
+
+; todo not exactly working since player is moving in 16 pixel increments
+; update metaxpos and metaypos depending on player dir for the bg tile
+;
+; in: scroll dir
+.proc update_coords
+    lda mobs + Mob::direction
+    cmp #Direction::right
+    beq update_right
+    cmp #Direction::left
+    beq update_left
+    cmp #Direction::down
+    beq update_down
+    ;cmp #Direction::up
+    ;beq update_up
+update_up:
+    jsr get_first_col
+    sta metaxpos
+    jsr get_first_row
+    sta metaypos
+    rts
+update_down:
+    jsr get_first_col
+    sta metaxpos
+    jsr get_last_row
+    sta metaypos
+    dec metaypos
+    rts
+update_left:
+    jsr get_first_col
+    sta metaxpos
+    jsr get_first_row
+    sta metaypos
+    rts
+update_right:
+    jsr get_last_col
+    sta metaxpos
+    dec metaxpos
+    jsr get_first_row
+    sta metaypos
+    rts
+.endproc
+
+; initialize the PPU address to point to start address for buffering
+; assumes ppuaddr is pointing to origin
+.proc init_ppuaddr
+    ; flip nametable if going right or down
+    lda mobs + Mob::direction
+    cmp #Direction::right
+    beq right_of_nt
+    cmp #Direction::down
+    beq bottom_of_nt
+    ; origin works for going left or up
+    rts
+right_of_nt:
+    ; flip nametable
+    jsr inx_ppu_nt
+    ; decrement x to get back to end of previous nametable
+    jsr dex_ppu
+    rts
+bottom_of_nt:
+    ; flip nametable
+    jsr iny_ppu_nt
+    ; decrement y to get back to end of previous nametable
+    jsr dey_ppu
+    rts
+.endproc
+
+; reset the PPU address to point to origin
+.proc reset_ppuaddr
+    ; first reset to origin of screen
+    lda mobs + Mob::direction
+    cmp #Direction::right
+    beq reset_right
+    cmp #Direction::down
+    beq reset_down
+    ; if we went left or up, we're already at origin of screen
+    rts
+reset_right:
+    ; flip nametable
+    jsr dex_ppu_nt
+    ; increase x to get to origin
+    jsr inx_ppu
+    rts
+reset_down:
+    ; flip nametable
+    jsr dey_ppu_nt
+    ; increase y to get to origin
+    jsr iny_ppu
+    rts
+.endproc
+.endproc
+
+; update draw buffer with seen bg tiles
+;
+; clobbers: all registers, xpos, and ypos
+; todo bug when hitting max tiles - 5, introduced by 8473542e9c2809cd4f8fe2cdb76bfcfa8a54fc46
+.proc buffer_seen
+    ; remember original ppu pos
+    lda ppu_addr
+    pha
+    lda ppu_addr + 1
+    pha
+
+    ; set start & end x/y pos
+set_startx:
+    lda mobs + Mob::coords + Coord::xcoord
+    asl ; multiply by 2
+    sec
+    sbc #sight_distance*2
+    bcc forcex
+    sta metaxpos
+    sta prevx
+    jmp set_starty
+forcex:
+    lda #0
+    sta metaxpos
+set_starty:
+    ; get starty
+    lda mobs + Mob::coords + Coord::ycoord
+    asl ; multiply by 2
+    sec
+    sbc #sight_distance*2
+    bcc forcey
+    sta metaypos
+    jmp set_endx
+forcey:
+    lda #0
+    sta metaypos
+set_endx:
+    lda metaxpos
+    clc
+    adc #(sight_distance*2 + 1)*2
+    ; check within bounds
+    cmp #max_width*2
+    bcs force_endx
+    sta endx
+    jmp set_endy
+force_endx:
+    lda #max_width*2
+    sta endx
+set_endy:
+    lda metaypos
+    clc
+    adc #(sight_distance*2 + 1)*2
+    ; check within bounds
+    cmp #max_height*2
+    bcs force_endy
+    sta endy
+    jmp inc_metaypos
+force_endy:
+    lda #max_height*2
+    sta endy
+
+inc_metaypos:
+    ; increment metay by row_buffered
+    lda metaypos
+    clc
+    adc row_buffered
+    sta metaypos
+
+    ; increment PPU X
+inx_ppu_start:
+    ldy xoffset
+inx_ppu_loop:
+    cpy metaxpos
+    beq iny_ppu_start
+    jsr inx_ppu
+    iny
+    jmp inx_ppu_loop
+
+    ; increment PPU Y
+iny_ppu_start:
+    ldy yoffset
+iny_ppu_loop:
+    cpy metaypos
+    beq loop_start
+    jsr iny_ppu
+    iny
+    jmp iny_ppu_loop
+
+loop_start:
+    ; initialize draw_length
+    lda #(sight_distance*2 + 1)*2 ; increment by 1 for player
+    sta draw_length
+    jsr next_index
+
+loop:
+    ; end when endy hit
+    lda metaypos
+    cmp endy
+    bcc check_max_buffered
+    jmp done
+check_max_buffered:
+    ; end when max_tiles_buffered hit
+    lda tiles_buffered
+    cmp #max_tiles_buffered
+    bcc loop_start_buffer
+    jmp done
+loop_start_buffer:
+    ; save buffer_start for NT boundary check
+    sty buffer_start
+
+    ; initialize cur_tile for NT boundary check
+    cur_tile = tmp
+    lda #0
+    sta cur_tile
+
+    ; calculate the position in the PPU
+    jsr calculate_ppu_col
+
+    ; write draw buffer length of sight distance
+    lda draw_length
+    sta draw_buffer, y
+    iny
+    ; store ppu addr to buffer
+    lda ppu_addr
+    sta draw_buffer, y
+    iny
+    lda ppu_addr+1
+    sta draw_buffer, y
+    iny
+    ; vram increment
+    lda base_nt
+    sta draw_buffer, y
+    iny
+
+   ; now we're ready to draw tile data
+tile_loop:
+    sty draw_y
+
+    ; check for horizontal NT boundary (iny_ppu accounts for attributes)
+    lda ppu_pos
+    cmp #$20
+    bne draw_check
+    ; we're at NT boundary
+    jsr buffer_next_nt
+
+draw_check:
+    ; update xpos and ypos with meta pos
+    lda metaxpos
+    lsr
+    sta xpos
+    lda metaypos
+    lsr
+    sta ypos
+    ; ensure xpos and ypos is valid
+    jsr within_bounds
+    bne tile_bg
+    ; check if we can see
+    jsr can_player_see
+    beq draw_seen
+    ; draw seen tile, if already seen
+    jsr was_seen
+    ; no tile was seen, draw bg
+    bne tile_bg
+draw_seen:
+    ; update seen tile
+    jsr update_seen
+    ; success, draw tile
+    jsr get_bg_metatile
+    ldy draw_y
+    sta draw_buffer, y
+    iny
+    jmp loop_nextx
+tile_bg:
+    ldy draw_y
+    lda #$00
+    sta draw_buffer, y
+    iny
+
+loop_nextx:
+    inc metaxpos
+    lda metaxpos
+    cmp endx
+    beq loop_donex
+    ; increment cur_tile & ppu_pos (for NT boundary check)
+    inc cur_tile
+    inc ppu_pos
+    ; redo loop
+    jmp tile_loop
+
+loop_donex:
+    ; reset x
+    lda prevx
+    sta metaxpos
+loop_next:
+    ; store zero length at end
+    lda #$00
+    sta draw_buffer, y
+    inc row_buffered
+    ; increment tiles buffered for batch buffer mode
+    lda tiles_buffered
+    clc
+    adc #(sight_distance*2 + 1)*2
+    sta tiles_buffered
+    ; increment y pos
+    inc metaypos
+    ; increment PPU row
+    jsr iny_ppu
+    ; continue loop until batching finished
+    jmp loop
+ 
+done:
+    ; reset ppu addr
+    pla
+    sta ppu_addr + 1
+    pla
+    sta ppu_addr
     rts
 .endproc
 
@@ -389,83 +754,6 @@ update_buffer_amount:
     rts
 .endproc
 
-; initialize the PPU address to point to start address for buffering
-; assumes ppuaddr is pointing to origin
-.proc init_ppuaddr
-    ; flip nametable if going right or down
-    lda mobs + Mob::direction
-    cmp #Direction::right
-    beq right_of_nt
-    cmp #Direction::down
-    beq bottom_of_nt
-    ; origin works for going left or up
-    rts
-right_of_nt:
-    ; flip nametable
-    jsr inx_ppu_nt
-    ; decrement x to get back to end of previous nametable
-    jsr dex_ppu
-    rts
-bottom_of_nt:
-    ; flip nametable
-    jsr iny_ppu_nt
-    ; decrement y to get back to end of previous nametable
-    jsr dey_ppu
-    rts
-.endproc
-
-; reset the PPU address to point to origin
-.proc reset_ppuaddr
-    ; first reset to origin of screen
-    lda mobs + Mob::direction
-    cmp #Direction::right
-    beq reset_right
-    cmp #Direction::down
-    beq reset_down
-    ; if we went left or up, we're already at origin of screen
-    rts
-reset_right:
-    ; flip nametable
-    jsr dex_ppu_nt
-    ; increase x to get to origin
-    jsr inx_ppu
-    rts
-reset_down:
-    ; flip nametable
-    jsr dey_ppu_nt
-    ; increase y to get to origin
-    jsr iny_ppu
-    rts
-.endproc
-
-; increase or decrease ppuaddr depending on scroll dir
-;
-; in: scroll dir
-; clobbers: x register
-.proc update_ppuaddr
-    lda mobs + Mob::direction
-    cmp #Direction::right
-    beq update_right
-    cmp #Direction::left
-    beq update_left
-    cmp #Direction::down
-    beq update_down
-    ;cmp #Direction::up
-    ;beq update_up
-update_up:
-    jsr dey_ppu
-    rts
-update_down:
-    jsr iny_ppu
-    rts
-update_left:
-    jsr dex_ppu
-    rts
-update_right:
-    jsr inx_ppu
-    rts
-.endproc
-
 ; update scroll amount
 ;
 ; in: scroll dir
@@ -491,48 +779,6 @@ update_left:
     rts
 update_right:
     jsr scroll_right
-    rts
-.endproc
-
-; todo not exactly working since player is moving in 16 pixel increments
-; update metaxpos and metaypos depending on player dir for the bg tile
-;
-; in: scroll dir
-.proc update_coords
-    lda mobs + Mob::direction
-    cmp #Direction::right
-    beq update_right
-    cmp #Direction::left
-    beq update_left
-    cmp #Direction::down
-    beq update_down
-    ;cmp #Direction::up
-    ;beq update_up
-update_up:
-    jsr get_first_col
-    sta metaxpos
-    jsr get_first_row
-    sta metaypos
-    rts
-update_down:
-    jsr get_first_col
-    sta metaxpos
-    jsr get_last_row
-    sta metaypos
-    dec metaypos
-    rts
-update_left:
-    jsr get_first_col
-    sta metaxpos
-    jsr get_first_row
-    sta metaypos
-    rts
-update_right:
-    jsr get_last_col
-    sta metaxpos
-    dec metaxpos
-    jsr get_first_row
-    sta metaypos
     rts
 .endproc
 
@@ -639,7 +885,10 @@ failure:
     beq calculate_ppu_row
     cmp #Direction::left
     beq calculate_ppu_row
+    jmp calculate_ppu_col
+.endproc
 
+.proc calculate_ppu_col
     ; calculate column
     lda ppu_addr + 1
     ldx #$20
@@ -671,6 +920,7 @@ failure:
     rts
 .endproc
 
+; todo don't hardcode to direction
 .proc ppu_at_next_nt
     lda mobs + Mob::direction
     cmp #Direction::right
@@ -821,7 +1071,7 @@ success:
     rts
 .endproc
 
-; todo not properly setting to bot of nt every time
+; todo not properly setting to bot of nt every time (probably due to NT boundary)
 .proc buffer_status_ppuaddr
     lda ppu_addr
     pha

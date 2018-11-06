@@ -1,6 +1,5 @@
 .include "global.inc"
 
-.export update_sprite_offsets
 .export update_sprites
 
 .segment "ZEROPAGE"
@@ -10,19 +9,7 @@ tmp:         .res 1
 tmp2:        .res 1 ; todo used for can_player_see proc
 mob:         .res 1 ; current mob index
 
-xoffset:     .res 1
-yoffset:     .res 1
-
 .segment "CODE"
-
-; initialize xoffset and yoffset
-.proc update_sprite_offsets
-    jsr get_first_col
-    sta xoffset
-    jsr get_first_row
-    sta yoffset
-    rts
-.endproc
 
 ; todo add case for >= 255 sprites, that way we can increase maxmobs
 ; todo add flicker for >= 8 sprites per scan line
@@ -86,8 +73,8 @@ next_mob:
 get_mob_y:
     sty tmp
     ldy mob
-    ; ensure mob is within screen bounds, todo can_see function
-    jsr can_player_see
+    ; ensure mob is within screen bounds
+    jsr can_player_see_mob
     bne clear_mob
     jsr is_alive
     beq adjust_mob_y
@@ -136,8 +123,8 @@ adjust_mob_y_inverse:
 get_mob_x:
     sty tmp
     ldy mob
-    ; ensure mob is within screen bounds, todo can_see function
-    jsr can_player_see
+    ; ensure mob is within screen bounds
+    jsr can_player_see_mob
     bne clear_mob
     jsr is_alive
     beq adjust_mob_x
@@ -300,8 +287,6 @@ flip_vertical_attribute:
     rts
 .endproc
 
-
-; todo is this working for mobs (not player)?
 ; get mob offset from left edge
 ;
 ; y: mob index to calculate
@@ -319,7 +304,6 @@ get_offset_xpos:
     rts
 .endproc
 
-; todo is this working for mobs (not player)?
 ; get mob offset from top edge
 ;
 ; y: mob index to calculate
@@ -337,8 +321,13 @@ get_offset_ypos:
     rts
 .endproc
 
-; todo make more generic
-.proc can_player_see
+.proc can_player_see_mob
+    ; don't clobber x and y
+    tya
+    pha
+    txa
+    pha
+
     lda mobs + Mob::coords + Coord::ycoord, y
     asl
     cmp yoffset
@@ -365,11 +354,31 @@ get_offset_ypos:
     cmp tmp2
     bcs failure
 
+    ; ensure player has seen tile before displaying mob
+    lda mobs + Mob::coords + Coord::xcoord, y
+    sta xpos
+    lda mobs + Mob::coords + Coord::ycoord, y
+    sta ypos
+    jsr was_seen
+    bne failure
+    ; check player line of sight
+    ldy #0
+    jsr line_of_sight
+    bne failure
+
     ; success
+    pla
+    tax
+    pla
+    tay
     lda #0
     rts
 
 failure:
+    pla
+    tax
+    pla
+    tay
     lda #1
     rts
 .endproc

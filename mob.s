@@ -122,6 +122,7 @@ d12_dmg:
 
 ; generate random mob at index y
 ; clobbers: x
+; todo ensure we don't spawn mobs in LOS of player?
 .proc rand_mob
     ; store y for later use
     tya

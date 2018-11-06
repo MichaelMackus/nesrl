@@ -29,7 +29,7 @@ generate_ppu:
     jsr init_buffer
 
     ; initialize scroll offsets
-    jsr update_sprite_offsets
+    jsr update_screen_offsets
 
     ; update PPUADDR
     bit $2002
@@ -54,6 +54,15 @@ y_repeat:
     cmp endy
     beq tiles_done ; greater than or equal
 x_repeat:
+    lda metaypos
+    lsr
+    sta ypos
+    lda metaxpos
+    lsr
+    sta xpos
+    jsr can_player_see
+    bne render_bg
+    jsr update_seen
     jsr get_bg_metatile
     sta $2007
     jmp continue_loop
