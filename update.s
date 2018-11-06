@@ -159,18 +159,10 @@ buffer_tiles:
     stx cur_tile
 buffer_tile_loop:
     sty draw_y
-    ; check to prevent attributes update (scrolling up or down)
-    jsr ppu_at_attribute
-    beq update_attribute
-    ; check if we're past nametable boundary (scrolling left or right)
-    jsr ppu_at_next_nt
-    bne buffer_tile
-    ; we're past NT boundary, update buffer and continue
-    jsr buffer_next_nt ; updates draw buffer and draw_y
-    jmp buffer_tile
-update_attribute:
-    jsr buffer_next_vertical_nt
-buffer_tile:
+
+    ; update ppu page if at NT boundary
+    jsr update_nt_boundary
+
     ; check if we can see or already seen tile
     lda metaxpos
     lsr
@@ -478,14 +470,9 @@ loop_start_buffer:
 tile_loop:
     sty draw_y
 
-    ; check for horizontal NT boundary (iny_ppu accounts for attributes)
-    lda ppu_pos
-    cmp #$20
-    bne draw_check
-    ; we're at NT boundary
-    jsr buffer_next_nt
+    ; update ppu page if at NT boundary
+    jsr update_nt_boundary
 
-draw_check:
     ; update xpos and ypos with meta pos
     lda metaxpos
     lsr
@@ -855,35 +842,6 @@ success:
     rts
 .endproc
 
-; test if ppu at attribute boundary
-;
-; from nesdev:
-; Each attribute table, starting at $23C0, $27C0, $2BC0, or $2FC0, is arranged as an 8x8 byte array
-; (64 bytes total)
-.proc ppu_at_attribute
-    ; only test when increasing vram vertically
-    lda mobs + Mob::direction
-    cmp #Direction::up
-    beq failure
-    cmp #Direction::down
-    beq failure
-
-    ; ppu row 30 and 31 are attributes
-    lda ppu_pos
-    cmp #30
-    bcc failure
-    cmp #32
-    bcc success
-    jmp failure
-
-success:
-    lda #0
-    rts
-failure:
-    lda #1
-    rts
-.endproc
-
 ; calculate current position in PPU
 .proc calculate_ppu_pos
     lda ppu_ctrl
@@ -924,14 +882,61 @@ failure:
     rts
 .endproc
 
-; todo don't hardcode to direction
-.proc ppu_at_next_nt
-    lda mobs + Mob::direction
-    cmp #Direction::right
-    beq failure
-    cmp #Direction::left
-    beq failure
+.proc update_nt_boundary
+    ; check to prevent attributes update (scrolling up or down)
+    jsr ppu_at_attribute
+    beq update_attribute
+    ; check if we're past nametable boundary (scrolling left or right)
+    jsr ppu_at_next_nt
+    beq update_nt
+    ; nope, continue
+    rts
+update_nt:
+    ; we're past NT boundary, update buffer and continue
+    jmp buffer_next_nt ; updates draw buffer and draw_y
+update_attribute:
+    jmp buffer_next_vertical_nt
 
+; test if ppu at attribute boundary (and we're writing vertically)
+;
+; from nesdev:
+; Each attribute table, starting at $23C0, $27C0, $2BC0, or $2FC0, is arranged as an 8x8 byte array
+; (64 bytes total)
+.proc ppu_at_attribute
+    ; only test when increasing vram vertically
+    lda ppu_ctrl
+    and #%00000100
+    bne check
+    ; not incrementing vertically
+    jmp failure
+
+check:
+    ; ppu row 30 and 31 are attributes
+    lda ppu_pos
+    cmp #30
+    bcc failure
+    cmp #32
+    bcc success
+    jmp failure
+
+success:
+    lda #0
+    rts
+failure:
+    lda #1
+    rts
+.endproc
+
+; test if at NT boundary (and we're writing horizontally)
+.proc ppu_at_next_nt
+    ; only test when increasing vram horizontally
+    lda ppu_ctrl
+    and #%00000100
+    beq check
+    ; not incrementing vertically
+    jmp failure
+
+check:
     ; are we at end of NT?
     lda ppu_pos
     cmp #$20
@@ -1072,6 +1077,7 @@ success:
 
     sty draw_y
     rts
+.endproc
 .endproc
 
 ; todo not properly setting to bot of nt every time (probably due to NT boundary)
