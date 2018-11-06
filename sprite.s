@@ -349,8 +349,26 @@ get_offset_ypos:
     cmp tmp2
     bcs failure
 
-    ; success
-    lda #0
+    ; ensure player has seen tile before displaying mob
+    ; todo Fog of war? We could also do something like display
+    ; todo generic tile of prev mob pos, if can't see
+    tya
+    pha
+    txa
+    pha
+    lda mobs + Mob::coords + Coord::xcoord, y
+    sta xpos
+    lda mobs + Mob::coords + Coord::ycoord, y
+    sta ypos
+    jsr was_seen
+    sta tmp2 ; store result
+    pla
+    tax
+    pla
+    tay
+
+    ; result
+    lda tmp2
     rts
 
 failure:
