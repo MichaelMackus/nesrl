@@ -20,6 +20,7 @@ prevx:          .res 1 ; for buffer seen loop
 draw_y:         .res 1 ; current draw buffer index
 draw_length:    .res 1
 ppu_pos:        .res 1 ; for ppu_at_attribute procedure
+ppu_ctrl:       .res 1 ; for checking vram increment (next NT or next attribute?)
 buffer_start:   .res 1 ; start index for draw buffer
 prev_ppu_addr:  .res 2 ; for clearing status, todo remove
 
@@ -107,9 +108,6 @@ buffer_edge:
     ; update scroll metaxpos and metaypos depending on player dir
     jsr update_coords
 
-    ; calculate the position in the PPU
-    jsr calculate_ppu_pos
-
     ; get next y index
     jsr next_index
     sty buffer_start
@@ -143,15 +141,20 @@ write_buffer:
     ; increment horizontally
     lda base_nt
     sta draw_buffer, y
+    sta ppu_ctrl
     iny
     jmp buffer_tiles
 inc_vertically:
     lda base_nt
     ora #%00000100 ; increment going down
     sta draw_buffer, y
+    sta ppu_ctrl
     iny
 
 buffer_tiles:
+    ; calculate the position in the PPU
+    jsr calculate_ppu_pos
+
     ldx #$00
     stx cur_tile
 buffer_tile_loop:
@@ -451,9 +454,6 @@ loop_start_buffer:
     lda #0
     sta cur_tile
 
-    ; calculate the position in the PPU
-    jsr calculate_ppu_col
-
     ; write draw buffer length of sight distance
     lda draw_length
     sta draw_buffer, y
@@ -468,7 +468,11 @@ loop_start_buffer:
     ; vram increment
     lda base_nt
     sta draw_buffer, y
+    sta ppu_ctrl
     iny
+
+    ; calculate the position in the PPU
+    jsr calculate_ppu_pos
 
    ; now we're ready to draw tile data
 tile_loop:
@@ -566,6 +570,7 @@ done:
     ; for VRAM update
     lda base_nt
     sta draw_buffer, y
+    sta ppu_ctrl
     iny
     ; data
     lda #$00
@@ -625,6 +630,7 @@ done:
     ; vram increment
     lda base_nt
     sta draw_buffer, y
+    sta ppu_ctrl
     iny
     ; write "HP" to screen
     lda #<txt_hp
@@ -880,11 +886,9 @@ failure:
 
 ; calculate current position in PPU
 .proc calculate_ppu_pos
-    lda mobs + Mob::direction
-    cmp #Direction::right
-    beq calculate_ppu_row
-    cmp #Direction::left
-    beq calculate_ppu_row
+    lda ppu_ctrl
+    and #%00000100
+    bne calculate_ppu_row
     jmp calculate_ppu_col
 .endproc
 
@@ -990,8 +994,8 @@ success:
     pla
     sta ppu_addr
 
-    ; write vram increment, assume horizontal
-    lda base_nt
+    ; write vram increment
+    lda ppu_ctrl
     sta draw_buffer, y
     iny
 
@@ -1057,9 +1061,8 @@ success:
     pla
     sta ppu_addr
 
-    ; write vram increment, assume vertical
-    lda base_nt
-    ora #%00000100 ; increment going down
+    ; write vram increment
+    lda ppu_ctrl
     sta draw_buffer, y
     iny
     
