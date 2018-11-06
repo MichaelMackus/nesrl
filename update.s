@@ -28,7 +28,7 @@ row_buffered:   .res 1
 ; represents amount of tiles buffered this loop (need to batch this, since it is too expensive to do in one shot)
 tiles_buffered: .res 1
 
-; max tiles until we trigger next batch update, todo can probably increase this to 86
+; max tiles until we trigger next batch update, todo figure out fitting in 1 frame
 max_tiles_buffered = 64
 
 ; represents previously seen tiles (for comparison)
@@ -168,7 +168,23 @@ buffer_tile_loop:
 update_attribute:
     jsr buffer_next_vertical_nt
 buffer_tile:
+    ; check if we can see or already seen tile
+    lda metaxpos
+    lsr
+    sta xpos
+    lda metaypos
+    lsr
+    sta ypos
+    ldy #0
+    jsr can_see
+    beq load_seen
+    jsr was_seen
+    beq load_seen
+    ; can't see, load BG for now
     lda #$00
+    jmp update_buffer
+load_seen:
+    jsr get_bg_metatile
 
 update_buffer:
     ldy draw_y
@@ -483,11 +499,10 @@ draw_check:
     ldy #0
     jsr can_see
     beq draw_seen
-    ; draw seen tile, if already seen, todo perhaps necessary for performance
-    ;jsr was_seen
+    ; draw seen tile, if already seen
+    jsr was_seen
     ; no tile was seen, draw bg
-    ;bne tile_bg
-    jmp tile_bg
+    bne tile_bg
 draw_seen:
     ; update seen tile
     jsr update_seen
