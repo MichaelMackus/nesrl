@@ -204,9 +204,10 @@ ai:
     jsr player_regen
 
 update:
-    ; update messages buffer and hp every time, todo figure out better way
+    ; todo figure out better way to buffer messages, probably want to
+    ; todo buffer them using draw loop, clearing on next action
     ;jsr buffer_messages
-    ;jsr buffer_hp
+    jsr buffer_hp
     ; notify nmi to draw the buffer
     lda #1
     sta need_draw

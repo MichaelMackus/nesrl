@@ -591,6 +591,7 @@ done:
 .endproc
 
 ; todo why is status moving down on left scroll?
+; todo use sprites for this?
 .proc buffer_hp
     ; clear old HP if exists
     ;lda ppu_addr
@@ -608,9 +609,18 @@ done:
     ;sta ppu_addr
 
     jsr next_index
+
+    ; save buffer_start for NT boundary check
+    sty buffer_start
+    ; initialize cur_tile for NT boundary check
+    cur_tile = tmp
+    lda #0
+    sta cur_tile
+
     ; length
     lda #$08 ; HP always 8 chars wide
     sta draw_buffer, y
+    sta draw_length
     iny
     ; ppu addresses
     jsr buffer_status_ppuaddr
@@ -619,16 +629,38 @@ done:
     sta draw_buffer, y
     sta ppu_ctrl
     iny
+
+    ; calculate the position in the PPU
+    jsr calculate_ppu_pos
+
     ; write "HP" to screen
-    lda #<txt_hp
-    sta str_pointer
-    lda #>txt_hp
-    sta str_pointer+1
-    jsr buffer_str
+    ; check ppu nt boundary
+    jsr update_nt_boundary
+    lda txt_hp
+    jsr get_str_tile
+    sta draw_buffer, y
+    iny
+    inc cur_tile
+    inc ppu_pos
+    ; check ppu nt boundary
+    jsr update_nt_boundary
+    lda txt_hp + 1
+    jsr get_str_tile
+    sta draw_buffer, y
+    iny
+    inc cur_tile
+    inc ppu_pos
+
+    ; draw space
+    jsr update_nt_boundary
     lda #$00
     sta draw_buffer, y
     iny
-    ; add leading space (for spacing up with other elements)
+    inc cur_tile
+    inc ppu_pos
+
+    jsr update_nt_boundary
+    ; add leading space
     lda mobs + Mob::hp
     cmp #10
     bcs tens
@@ -640,11 +672,23 @@ space:
     ; buffer tens place
 tens:
     jsr buffer_num
+    inc cur_tile
+    inc ppu_pos
+    inc cur_tile
+    inc ppu_pos
+
+    ; todo fix for tens num
+    jsr update_nt_boundary
+
     ; add " / " for max HP, todo need slash char, for now using comma
     lda #$0C
     sta draw_buffer, y
     iny
+    inc cur_tile
+    inc ppu_pos
+
     ; render max hp
+    jsr update_nt_boundary
     lda stats + PlayerStats::maxhp
     jsr buffer_num
     ; finish buffer
