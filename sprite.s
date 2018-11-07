@@ -108,7 +108,7 @@ render_mob_loop:
 set_mob_tile:
     lda cur_tile
     sta $0201, x
-    jsr get_dir_attribute
+    jsr get_mob_attribute
     sta $0202, x
     ; update sprite x pos
     jsr get_mob_x
@@ -246,12 +246,36 @@ adjust_mob_x_inverse:
     rts
 .endproc
 
-.proc get_dir_attribute
+.proc get_mob_attribute
     sty tmp
     ldy mob
-    ; todo wth? this kills the player!
-    ;jsr is_alive
-    ;bne get_normal_attribute
+    lda mobs + Mob::type, y
+    cmp #Mobs::player
+    beq normal
+    cmp #Mobs::goblin
+    beq green
+    cmp #Mobs::orc
+    beq dark
+    cmp #Mobs::ogre
+    beq dark
+    ; dark + red
+    lda #3
+    sta tmp2
+    jmp get_dir_attr
+normal:
+    lda #0
+    sta tmp2
+    jmp get_dir_attr
+green:
+    lda #1
+    sta tmp2
+    jmp get_dir_attr
+dark:
+    lda #2
+    sta tmp2
+
+get_dir_attr:
+    ldy mob
     lda mobs + Mob::direction, y
     ldy tmp
     cmp #Direction::up
@@ -262,12 +286,15 @@ adjust_mob_x_inverse:
     beq flip_vertical_attribute
     ; left - flip horizontal
     lda #%01000000
+    ora tmp2
     rts
 get_normal_attribute:
     lda #%00000000
+    ora tmp2
     rts
 flip_vertical_attribute:
     lda #%10000000
+    ora tmp2
     rts
 .endproc
 .endproc

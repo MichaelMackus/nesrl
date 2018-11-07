@@ -78,7 +78,7 @@ paletteloop:
     lda PALETTE, x
     sta $2007 ; this tells PPU to write color palette to the previous address in PPU
     inx
-    cpx #24
+    cpx #32
     bne paletteloop
     ldx #$FF      ; reset stack to $FF
     txs
@@ -274,11 +274,11 @@ game_over:
 
 PALETTE:
     ; tiles
-    .byte $0d, $09, $2d, $3a, $0f, $21, $2c, $3a
-    .byte $0d, $2d, $08, $18, $0f, $21, $2c, $3a
+    .byte $0f, $09, $2d, $3a, $0f, $21, $2c, $3a
+    .byte $0f, $2d, $08, $18, $0f, $21, $2c, $3a
     ; sprites
-    .byte $0d, $12, $13, $23, $0f, $29, $19, $1A
-    .byte $0d, $12, $13, $23, $0f, $29, $19, $1A
+    .byte $0f, $08, $2d, $30, $0f, $1d, $1d, $0a
+    .byte $0f, $1d, $1d, $2d, $0f, $1d, $1d, $06
 
 .segment "VECTORS"
 
