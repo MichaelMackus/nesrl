@@ -23,6 +23,7 @@
 .include "global.inc"
 
 .export buffer_num
+.export buffer_num_tens
 .export buffer_num_hex
 .export buffer_str
 .export render_buffer
@@ -108,6 +109,26 @@ done:
     inc tmp
     cmp #10
     bcc render_ones
+    jsr buffer_num_tens
+    inc tmp
+render_ones:
+    jsr get_num_tile
+    sta draw_buffer, y
+    iny
+    ; return length of written number
+    lda tmp
+    rts
+.endproc
+
+; add tens place of number to draw_buffer
+;
+; in: number
+; y: index of current draw buffer pos
+; clobbers: x
+.proc buffer_num_tens
+    cmp #10
+    bcc render_space
+    ldx #0
 tens_loop:
     cmp #10
     bcc render_tens
@@ -117,19 +138,20 @@ tens_loop:
     jmp tens_loop
 render_tens:
     pha ; remember ones
-    inc tmp
     txa
     jsr get_num_tile
     sta draw_buffer, y
     iny
     ; now, render ones place
     pla
-render_ones:
-    jsr get_num_tile
+    rts
+render_space:
+    pha ; remember ones
+    lda #0
     sta draw_buffer, y
     iny
-    ; return length of written number
-    lda tmp
+    ; now, render ones place
+    pla
     rts
 .endproc
 

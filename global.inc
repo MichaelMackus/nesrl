@@ -142,7 +142,7 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global buffer_tiles
 .global buffer_seen
 .global buffer_messages
-.global buffer_hp
+.global buffer_status
 
 ; render.s
 .global render
@@ -157,6 +157,7 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global next_index
 .global buffer_str
 .global buffer_num
+.global buffer_num_tens
 .global buffer_num_hex
 .global render_buffer
 

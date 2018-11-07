@@ -5,7 +5,7 @@
 
 .include "global.inc"
 
-.export buffer_hp
+.export buffer_status
 .export buffer_tiles
 .export buffer_seen
 .export buffer_messages
@@ -22,7 +22,6 @@ draw_length:    .res 1
 ppu_pos:        .res 1 ; for ppu_at_attribute procedure
 ppu_ctrl:       .res 1 ; for checking vram increment (next NT or next attribute?)
 buffer_start:   .res 1 ; start index for draw buffer
-prev_ppu_addr:  .res 2 ; for clearing status, todo remove
 
 ; represents row that was last buffered
 row_buffered:   .res 1
@@ -62,11 +61,6 @@ sight_distance = 1
     jmp start_seen_buffer
 
 start_scroll_buffer:
-    lda ppu_addr
-    sta prev_ppu_addr
-    lda ppu_addr + 1
-    sta prev_ppu_addr + 1
-
     ; buffer leading edges
     jsr buffer_edges
 
@@ -75,6 +69,7 @@ start_scroll_buffer:
     sta tiles_buffered
 
     ; scroll twice
+    ; todo scroll *after* buffer updated?
     jsr update_scroll
     jsr update_scroll
 
@@ -546,67 +541,14 @@ done:
     rts
 .endproc
 
-.proc clear_hp
-    jsr next_index
-    ; length
-    lda #$08 ; HP always 8 chars wide
-    sta draw_buffer, y
-    iny
-    ; ppu addresses
-    jsr buffer_status_ppuaddr
-    ; for VRAM update
-    lda base_nt
-    sta draw_buffer, y
-    sta ppu_ctrl
-    iny
-    ; data
-    lda #$00
-    sta draw_buffer, y
-    iny
-    lda #$00
-    sta draw_buffer, y
-    iny
-    lda #$00
-    sta draw_buffer, y
-    iny
-    lda #$00
-    sta draw_buffer, y
-    iny
-    lda #$00
-    sta draw_buffer, y
-    iny
-    lda #$00
-    sta draw_buffer, y
-    iny
-    lda #$00
-    sta draw_buffer, y
-    iny
-    lda #$00
-    sta draw_buffer, y
-    iny
-    lda #$00
-    sta draw_buffer, y
-    iny
-    rts
-.endproc
-
-; todo why is status moving down on left scroll?
-; todo use sprites for this?
-.proc buffer_hp
-    ; clear old HP if exists
-    ;lda ppu_addr
-    ;pha
-    ;lda ppu_addr + 1
-    ;pha
-    ;lda prev_ppu_addr
-    ;sta ppu_addr
-    ;lda prev_ppu_addr + 1
-    ;sta ppu_addr + 1
-    ;jsr clear_hp
-    ;pla
-    ;sta ppu_addr + 1
-    ;pla
-    ;sta ppu_addr
+; todo need to increase dungeon bounds by 1
+; todo getting flashing going down sometimes
+.proc buffer_status
+    ; remember ppuaddr
+    lda ppu_addr
+    pha
+    lda ppu_addr + 1
+    pha
 
     jsr next_index
 
@@ -618,83 +560,148 @@ done:
     sta cur_tile
 
     ; length
-    lda #$08 ; HP always 8 chars wide
+    lda #$02
     sta draw_buffer, y
     sta draw_length
     iny
+
     ; ppu addresses
-    jsr buffer_status_ppuaddr
+    ; todo need to write this off screen each frame & figure out scroll split
+    jsr init_ppuaddr
+    lda ppu_addr
+    sta draw_buffer, y
+    iny
+    lda ppu_addr + 1
+    sta draw_buffer, y
+    iny
+
     ; vram increment
     lda base_nt
     sta draw_buffer, y
     sta ppu_ctrl
     iny
 
+    sty draw_y
+
     ; calculate the position in the PPU
     jsr calculate_ppu_pos
 
     ; write "HP" to screen
-    ; check ppu nt boundary
     jsr update_nt_boundary
     lda txt_hp
     jsr get_str_tile
+    ldy draw_y
     sta draw_buffer, y
-    iny
+    inc draw_y
     inc cur_tile
     inc ppu_pos
-    ; check ppu nt boundary
+    ; second tile
     jsr update_nt_boundary
     lda txt_hp + 1
     jsr get_str_tile
+    ldy draw_y
     sta draw_buffer, y
-    iny
+    inc draw_y
     inc cur_tile
     inc ppu_pos
 
-    ; draw space
-    jsr update_nt_boundary
-    lda #$00
+    ; length
+    lda #$05
+    ldy draw_y
+    sta draw_buffer, y
+    sta draw_length
+    iny
+
+    ; increment ppu x & write ppu addr
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    lda ppu_addr
     sta draw_buffer, y
     iny
+    lda ppu_addr + 1
+    sta draw_buffer, y
+    iny
+
+    ; vram increment
+    lda base_nt
+    sta draw_buffer, y
+    sta ppu_ctrl
+    iny
+
+    sty draw_y
+
+    ; calculate the position in the PPU & reset cur_tile
+    lda #0
+    sta cur_tile
+    jsr calculate_ppu_pos
+
+    ; render HP amount
+    jsr update_nt_boundary
+    lda mobs + Mob::hp
+    ldy draw_y
+    jsr buffer_num_tens
+    inc draw_y
     inc cur_tile
     inc ppu_pos
-
+    ; ones place
+    pha
     jsr update_nt_boundary
-    ; add leading space
-    lda mobs + Mob::hp
-    cmp #10
-    bcs tens
-space:
-    lda #$00
-    sta draw_buffer, y
-    iny
-    lda mobs + Mob::hp
-    ; buffer tens place
-tens:
+    pla
+    ldy draw_y
     jsr buffer_num
+    inc draw_y
     inc cur_tile
     inc ppu_pos
-    inc cur_tile
-    inc ppu_pos
-
-    ; todo fix for tens num
-    jsr update_nt_boundary
 
     ; add " / " for max HP, todo need slash char, for now using comma
     lda #$0C
+    ldy draw_y
     sta draw_buffer, y
-    iny
+    inc draw_y
     inc cur_tile
     inc ppu_pos
 
     ; render max hp
     jsr update_nt_boundary
     lda stats + PlayerStats::maxhp
+    ldy draw_y
+    jsr buffer_num_tens
+    inc draw_y
+    inc cur_tile
+    inc ppu_pos
+    ; ones place
+    pha
+    jsr update_nt_boundary
+    pla
+    ldy draw_y
     jsr buffer_num
+    inc draw_y
+    inc cur_tile
+    inc ppu_pos
+
+done:
     ; finish buffer
+    ldy draw_y
     lda #$00
     sta draw_buffer, y
+
+    ; remember ppuaddr
+    pla
+    sta ppu_addr + 1
+    pla
+    sta ppu_addr
+
     rts
+
+.proc init_ppuaddr
+    ; set ppuaddr
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    rts
+.endproc
 .endproc
 
 ; buffer the messages to draw buffer
@@ -1122,36 +1129,6 @@ success:
     sty draw_y
     rts
 .endproc
-.endproc
-
-; todo not properly setting to bot of nt every time (probably due to NT boundary)
-.proc buffer_status_ppuaddr
-    lda ppu_addr
-    pha
-    lda ppu_addr + 1
-    pha
-
-    ; set ppuaddr
-    jsr iny_ppu_nt
-    jsr dey_ppu
-    jsr dey_ppu
-    jsr dey_ppu
-    jsr dey_ppu
-    jsr inx_ppu
-    jsr inx_ppu
-
-    lda ppu_addr
-    sta draw_buffer, y
-    iny
-    lda ppu_addr + 1
-    sta draw_buffer, y
-    iny
-
-    pla
-    sta ppu_addr + 1
-    pla
-    sta ppu_addr
-    rts
 .endproc
 
 .segment "RODATA"
