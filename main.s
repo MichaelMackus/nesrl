@@ -207,8 +207,7 @@ update:
     ; todo figure out better way to buffer messages, probably want to
     ; todo buffer them using draw loop, clearing on next action
     ;jsr buffer_messages
-    ; todo figure out screen scroll split
-    jsr buffer_status
+
     ; notify nmi to draw the buffer
     lda #1
     sta need_draw

@@ -4,7 +4,7 @@
 maxtiles    = 96
 max_width   = 32
 max_height  = 24
-maxmobs     = 15 ; todo current upper limit of update_sprites proc
+maxmobs     = 10
 maxfeatures = 20
 maxdrops    = 20
 min_bound   = 1  ; minimum number of spaces from edge
@@ -142,7 +142,6 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global buffer_tiles
 .global buffer_seen
 .global buffer_messages
-.global buffer_status
 
 ; render.s
 .global render

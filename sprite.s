@@ -15,6 +15,81 @@ mob:         .res 1 ; current mob index
 ; todo add flicker for >= 8 sprites per scan line
 .proc update_sprites
     ldx #$00
+
+render_status:
+    ; render player HP with sprites (quick fix for status bar)
+    ; todo perhaps we can use color to denote *low*, *hurt*, and *max* HP status
+    lda #16
+    sta $0200, x
+    lda txt_hp
+    jsr get_str_tile
+    sta $0201, x
+    lda #$00
+    sta $0202, x
+    lda #16
+    sta $0203, x
+    inx
+    inx
+    inx
+    inx
+    lda #16
+    sta $0200, x
+    lda txt_hp + 1
+    jsr get_str_tile
+    sta $0201, x
+    lda #$00
+    sta $0202, x
+    lda #16 + 8
+    sta $0203, x
+    inx
+    inx
+    inx
+    inx
+    ; HP amount
+    lda #16
+    sta $0200, x
+    lda mobs + Mob::hp
+    ; divide by 10 to get tens place
+    stx tmp
+    ldx #10
+    jsr divide
+    txa
+    beq blank_tens
+    jsr get_num_tile
+    jmp write_tens
+blank_tens:
+    lda #$00
+write_tens:
+    ldx tmp
+    sta $0201, x
+    lda #$00
+    sta $0202, x
+    lda #16 + 24
+    sta $0203, x
+    inx
+    inx
+    inx
+    inx
+    lda #16
+    sta $0200, x
+    lda mobs + Mob::hp
+    ; mod by 10 to get ones place
+    stx tmp
+    ldx #10
+    jsr divide
+    jsr get_num_tile
+    ldx tmp
+    sta $0201, x
+    lda #$00
+    sta $0202, x
+    lda #16 + 32
+    sta $0203, x
+    inx
+    inx
+    inx
+    inx
+
+render_mobs:
     lda #$00
     sta mob
 render_mob:
@@ -69,8 +144,15 @@ next_mob:
     bne render_mob
     rts
 
+.proc clear_mob
+    ; dead - Y to 0, todo anything *but* zero doesn't work here...
+    ldy tmp
+    lda #$00
+    rts
+.endproc
+
 ; getters for mob x & y based on screen pos
-get_mob_y:
+.proc get_mob_y
     sty tmp
     ldy mob
     ; ensure mob is within screen bounds
@@ -78,11 +160,6 @@ get_mob_y:
     bne clear_mob
     jsr is_alive
     beq adjust_mob_y
-clear_mob:
-    ; dead - Y to FF
-    lda #$FF
-    ldy tmp
-    rts
 adjust_mob_y:
     lda mobs + Mob::direction, y
     ldy tmp
@@ -120,7 +197,8 @@ adjust_mob_y_inverse:
     ; restore original y
     ldy tmp
     rts
-get_mob_x:
+.endproc
+.proc get_mob_x
     sty tmp
     ldy mob
     ; ensure mob is within screen bounds
@@ -166,8 +244,9 @@ adjust_mob_x_inverse:
     ; restore original y
     ldy tmp
     rts
+.endproc
 
-get_dir_attribute:
+.proc get_dir_attribute
     sty tmp
     ldy mob
     ; todo wth? this kills the player!
@@ -190,6 +269,7 @@ get_normal_attribute:
 flip_vertical_attribute:
     lda #%10000000
     rts
+.endproc
 .endproc
 
 ; display sprites on bottom of screen debugging current PPUADDR
@@ -382,3 +462,7 @@ failure:
     lda #1
     rts
 .endproc
+
+.segment "RODATA"
+
+txt_hp: .asciiz "HP"
