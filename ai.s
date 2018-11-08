@@ -20,67 +20,6 @@ mob_ai_loop:
     beq do_ai
     jmp continue_mob_ai
 do_ai:
-    ; todo diff function
-    lda mobs + Mob::coords + Coord::xcoord, y
-    sta xpos
-    lda mobs + Mob::coords + Coord::ycoord, y
-    sta ypos
-    ; check x
-    lda mobs + Mob::coords + Coord::xcoord
-    cmp xpos
-    beq checkyplus1
-    inc xpos
-    cmp xpos
-    beq checky
-    dec xpos
-    dec xpos
-    cmp xpos
-    beq checky
-    jmp move_mob
-checkyplus1:
-    ; check y
-    lda mobs + Mob::coords + Coord::ycoord
-    inc ypos
-    cmp ypos
-    beq attack_player
-    dec ypos
-    dec ypos
-    cmp ypos
-    beq attack_player
-checky:
-    lda mobs + Mob::coords + Coord::ycoord
-    cmp ypos
-    beq attack_player
-    jmp move_mob
-damage = tmp
-attack_player:
-    ; remember y to stack
-    tya
-    pha
-    ; use damage calc for mob
-    jsr mob_dmg
-    ldy #0 ; player index
-    sta damage
-.ifndef WIZARD
-    jsr damage_mob
-.endif
-    ; push message
-    lda #Messages::hurt
-    ldx damage
-    jsr push_msg
-    ; check if player dead
-    ldy #0
-    jsr is_alive
-    bne player_dead
-    ; done
-    pla
-    tay
-    jmp continue_mob_ai
-player_dead:
-    ; dead
-    pla ; todo ensure this is appropriate
-    tay
-    rts
 mob_index = tmp
 move_mob:
     ; first check if can see player
@@ -93,63 +32,16 @@ move_mob:
     bne move_random
     jmp move_towards_player
 move_random:
-    ldy mob_index
     ; move mob random dir
-    lda mobs + Mob::coords + Coord::xcoord, y
-    sta xpos
-    lda mobs + Mob::coords + Coord::ycoord, y
-    sta ypos
     jsr d4
-    cmp #1
-    beq move_mob_up
-    cmp #2
-    beq move_mob_right
-    cmp #3
-    beq move_mob_down
-move_mob_left:
-    dec xpos
-    jsr is_passable
-    beq do_move_mob_left
-    ldy mob_index
+    pha
+    jsr try_move_dir
+    beq do_move
+    pla
     jmp continue_mob_ai
-do_move_mob_left:
-    ldy mob_index
-    lda xpos
-    sta mobs+Mob::coords+Coord::xcoord, y
-    jmp continue_mob_ai
-move_mob_up:
-    dec ypos
-    jsr is_passable
-    beq do_move_mob_up
-    ldy mob_index
-    jmp continue_mob_ai
-do_move_mob_up:
-    ldy mob_index
-    lda ypos
-    sta mobs+Mob::coords+Coord::ycoord, y
-    jmp continue_mob_ai
-move_mob_right:
-    inc xpos
-    jsr is_passable
-    beq do_move_mob_right
-    ldy mob_index
-    jmp continue_mob_ai
-do_move_mob_right:
-    ldy mob_index
-    lda xpos
-    sta mobs+Mob::coords+Coord::xcoord, y
-    jmp continue_mob_ai
-move_mob_down:
-    inc ypos
-    jsr is_passable
-    beq do_move_mob_up
-    ldy mob_index
-    jmp continue_mob_ai
-do_move_mob_down:
-    ldy mob_index
-    lda ypos
-    sta mobs+Mob::coords+Coord::ycoord, y
-    jmp continue_mob_ai
+do_move:
+    pla
+    jsr move_dir
 continue_mob_ai:
     tya
     clc
@@ -179,33 +71,40 @@ skip_right:
     pla ; player y pos
     pha
     jmp try_y
+
 try_left:
-    lda mobs+Mob::coords+Coord::xcoord, y
-    sta xpos
-    lda mobs+Mob::coords+Coord::ycoord, y
-    sta ypos
-    dec xpos
-    jsr is_passable
+    lda #Direction::left
+    pha
+    jsr try_move_dir
     beq finish_x_move
+    ; check for player
+    pla
+    pha
+    jsr player_at_dir
+    beq attack_x_player
     ; nope, continue trying
     ldy mob_index
+    pla ; direction
     pla ; player x
     pha
     jmp cont_try_x
 try_right:
-    lda mobs+Mob::coords+Coord::xcoord, y
-    sta xpos
-    lda mobs+Mob::coords+Coord::ycoord, y
-    sta ypos
-    inc xpos
-    jsr is_passable
+    lda #Direction::right
+    pha
+    jsr try_move_dir
     beq finish_x_move
+    ; check for player
+    pla
+    pha
+    jsr player_at_dir
+    beq attack_x_player
     ; nope, continue trying
     ldy mob_index
+    pla ; direction
     pla ; remove player x from stack
     pla ; player y
     pha
-    jmp try_y
+
 try_y:
     cmp mobs+Mob::coords+Coord::ycoord, y
     bcc try_up
@@ -216,42 +115,197 @@ cont_try_y:
 skip_down:
     pla ; remove player y from stack
     jmp continue_mob_ai ; don't move, try next mob
+
 try_up:
-    lda mobs+Mob::coords+Coord::xcoord, y
-    sta xpos
-    lda mobs+Mob::coords+Coord::ycoord, y
-    sta ypos
-    dec ypos
-    jsr is_passable
-    beq finish_move
+    lda #Direction::up
+    pha
+    jsr try_move_dir
+    beq finish_y_move
+    ; check for player
+    pla
+    pha
+    jsr player_at_dir
+    beq attack_y_player
     ; nope, continue trying
     ldy mob_index
+    pla ; direction
     pla ; player y
     pha
     jmp cont_try_y
 try_down:
-    lda mobs+Mob::coords+Coord::xcoord, y
-    sta xpos
-    lda mobs+Mob::coords+Coord::ycoord, y
-    sta ypos
-    inc ypos
-    jsr is_passable
-    beq finish_move
-    ; nope, done trying
+    lda #Direction::down
+    pha
+    jsr try_move_dir
+    beq finish_y_move
+    ; check for player
+    pla
+    pha
+    jsr player_at_dir
+    beq attack_y_player
+    ; nope, continue trying
     ldy mob_index
+    pla ; direction
     pla ; remove player y from stack
     jmp continue_mob_ai
+
 finish_x_move:
+    pla ; direction
+    jsr move_dir
     pla ; remove player x from stack
-finish_move:
     pla ; remove player y from stack
-    ldy mob_index
-    lda xpos
-    sta mobs+Mob::coords+Coord::xcoord, y
-    lda ypos
-    sta mobs+Mob::coords+Coord::ycoord, y
-    ; continue AI
     jmp continue_mob_ai
+
+finish_y_move:
+    pla ; direction
+    jsr move_dir
+    pla ; remove player y from stack
+    jmp continue_mob_ai
+
+attack_x_player:
+    ; update mob direction
+    pla
+    ldy mob_index
+    sta mobs + Mob::direction, y
+    pla ; remove player x from stack
+    pla ; remove player y from stack
+    jmp attack_player
+attack_y_player:
+    ; update mob direction
+    pla
+    ldy mob_index
+    sta mobs + Mob::direction, y
+    pla ; remove player y from stack
+attack_player:
+    damage = tmp
+    ; remember y to stack
+    tya
+    pha
+    ; use damage calc for mob
+    jsr mob_dmg
+    ldy #0 ; player index
+    sta damage
+.ifndef WIZARD
+    jsr damage_mob
+.endif
+    ; push message
+    lda #Messages::hurt
+    ldx damage
+    jsr push_msg
+    ; check if player dead
+    ldy #0
+    jsr is_alive
+    bne player_dead
+    ; done
+    pla
+    tay
+    jmp continue_mob_ai
+player_dead:
+    ; dead
+    pla ; todo ensure this is appropriate
+    tay
+    rts
+
+; try to move in direction
+;
+; in: direction
+; clobbers: xpos, ypos, x, and y
+.proc try_move_dir
+    cmp #Direction::left
+    beq try_left
+    cmp #Direction::right
+    beq try_right
+    cmp #Direction::down
+    beq try_down
+    ; up
+try_up:
+    jsr update_pos
+    dec ypos
+    jmp is_passable
+try_down:
+    jsr update_pos
+    inc ypos
+    jmp is_passable
+try_right:
+    jsr update_pos
+    inc xpos
+    jmp is_passable
+try_left:
+    jsr update_pos
+    dec xpos
+    jmp is_passable
+
+update_pos:
+    ldy mob_index
+    lda mobs + Mob::coords + Coord::xcoord, y
+    sta xpos
+    lda mobs + Mob::coords + Coord::ycoord, y
+    sta ypos
+    rts
+.endproc
+
+; is player at direction?
+;
+; in: direction
+; clobbers: xpos, ypos, x, and y
+.proc player_at_dir
+    cmp #Direction::left
+    beq try_left
+    cmp #Direction::right
+    beq try_right
+    cmp #Direction::down
+    beq try_down
+    ; up
+    ; todo
+try_up:
+    jsr update_pos
+    dec ypos
+    jmp compare_player
+try_down:
+    jsr update_pos
+    inc ypos
+    jmp compare_player
+try_right:
+    jsr update_pos
+    inc xpos
+    jmp compare_player
+try_left:
+    jsr update_pos
+    dec xpos
+    jmp compare_player
+
+compare_player:
+    lda xpos
+    cmp mobs + Mob::coords + Coord::xcoord
+    bne fail
+    lda ypos
+    cmp mobs + Mob::coords + Coord::ycoord
+    rts
+fail:
+    lda #1
+    rts
+
+update_pos:
+    ldy mob_index
+    lda mobs + Mob::coords + Coord::xcoord, y
+    sta xpos
+    lda mobs + Mob::coords + Coord::ycoord, y
+    sta ypos
+    rts
+.endproc
+
+; finish move in direction, xpos and ypos should be set from
+; try_move_dir
+;
+; in: direction
+.proc move_dir
+    ldy mob_index
+    sta mobs + Mob::direction, y
+    lda ypos
+    sta mobs + Mob::coords + Coord::ycoord, y
+    lda xpos
+    sta mobs + Mob::coords + Coord::xcoord, y
+    rts
+.endproc
 .endproc
 
 ; should be called each time turn in order to spawn mobs randomly
