@@ -73,11 +73,11 @@ mob_at_fail:
 .endproc
 
 ; check if mob alive
-; in: mob index
+;
+; y: mob index
 ; out: 0 if alive
 .proc is_alive
     lda mobs + Mob::hp, y
-    cmp #0
     beq is_dead
     lda #0
     rts

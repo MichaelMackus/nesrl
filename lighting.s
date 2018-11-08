@@ -26,7 +26,6 @@ sight: .res 1 ; used to set sight for mobs (mobs can see further in dungeon)
 .proc line_of_sight
     lda #14
     sta sight
-    ldy #0
     jmp can_see
 .endproc
 

@@ -6,24 +6,25 @@
 .segment "ZEROPAGE"
 
 tmp:      .res 1
+tmp2:     .res 1
 
 .segment "CODE"
 
 ; update mob pos randomly, and attack player
 ; moves towards player if can see
 ; NOTE: mobs see further than player, so its a little challenging
+; todo bug when moving out of mob range?
 .proc mob_ai
+    mob_index = tmp
+    mob_dir   = tmp2
     ldy #mob_size
 mob_ai_loop:
-    tya
+    sty mob_index
     jsr is_alive
     beq do_ai
     jmp continue_mob_ai
 do_ai:
-mob_index = tmp
-move_mob:
     ; first check if can see player
-    sty mob_index
     lda mobs + Mob::coords + Coord::xcoord
     sta xpos
     lda mobs + Mob::coords + Coord::ycoord
@@ -34,15 +35,15 @@ move_mob:
 move_random:
     ; move mob random dir
     jsr d4
-    pha
+    sta mob_dir
     jsr try_move_dir
     beq do_move
-    pla
     jmp continue_mob_ai
 do_move:
-    pla
+    lda mob_dir
     jsr move_dir
 continue_mob_ai:
+    ldy mob_index
     tya
     clc
     adc #mob_size
@@ -52,135 +53,93 @@ continue_mob_ai:
     jmp mob_ai_loop
 done_ai_loop:
     rts
+
 move_towards_player:
     ldy mob_index
-    ; xpos and ypos have position of player
-    lda ypos
-    pha
-    lda xpos
-    pha
 try_x:
-    cmp mobs+Mob::coords+Coord::xcoord, y
+    lda mobs + Mob::coords + Coord::xcoord
+    cmp mobs + Mob::coords + Coord::xcoord, y
     bcc try_left
 cont_try_x:
-    cmp mobs+Mob::coords+Coord::xcoord, y
-    beq skip_right
+    lda mobs + Mob::coords + Coord::xcoord
+    cmp mobs + Mob::coords + Coord::xcoord, y
+    beq try_y
     bcs try_right
-skip_right:
-    pla ; remove player x from stack
-    pla ; player y pos
-    pha
     jmp try_y
 
 try_left:
     lda #Direction::left
-    pha
+    sta mob_dir
     jsr try_move_dir
-    beq finish_x_move
+    beq finish_move
     ; check for player
-    pla
-    pha
+    lda mob_dir
     jsr player_at_dir
-    beq attack_x_player
+    beq attack_player
     ; nope, continue trying
     ldy mob_index
-    pla ; direction
-    pla ; player x
-    pha
     jmp cont_try_x
 try_right:
     lda #Direction::right
-    pha
+    sta mob_dir
     jsr try_move_dir
-    beq finish_x_move
+    beq finish_move
     ; check for player
-    pla
-    pha
+    lda mob_dir
     jsr player_at_dir
-    beq attack_x_player
+    beq attack_player
     ; nope, continue trying
     ldy mob_index
-    pla ; direction
-    pla ; remove player x from stack
-    pla ; player y
-    pha
 
 try_y:
-    cmp mobs+Mob::coords+Coord::ycoord, y
+    lda mobs + Mob::coords + Coord::ycoord
+    cmp mobs + Mob::coords + Coord::ycoord, y
     bcc try_up
 cont_try_y:
-    cmp mobs+Mob::coords+Coord::ycoord, y
-    beq skip_down
+    lda mobs + Mob::coords + Coord::ycoord
+    cmp mobs + Mob::coords + Coord::ycoord, y
+    beq continue_mob_ai
     bcs try_down
-skip_down:
-    pla ; remove player y from stack
-    jmp continue_mob_ai ; don't move, try next mob
+    jmp continue_mob_ai
 
 try_up:
     lda #Direction::up
-    pha
+    sta mob_dir
     jsr try_move_dir
-    beq finish_y_move
+    beq finish_move
     ; check for player
-    pla
-    pha
+    lda mob_dir
     jsr player_at_dir
-    beq attack_y_player
+    beq attack_player
     ; nope, continue trying
     ldy mob_index
-    pla ; direction
-    pla ; player y
-    pha
     jmp cont_try_y
 try_down:
     lda #Direction::down
-    pha
+    sta mob_dir
     jsr try_move_dir
-    beq finish_y_move
+    beq finish_move
     ; check for player
-    pla
-    pha
+    lda mob_dir
     jsr player_at_dir
-    beq attack_y_player
+    beq attack_player
     ; nope, continue trying
     ldy mob_index
-    pla ; direction
-    pla ; remove player y from stack
     jmp continue_mob_ai
 
-finish_x_move:
-    pla ; direction
-    jsr move_dir
-    pla ; remove player x from stack
-    pla ; remove player y from stack
-    jmp continue_mob_ai
+finish_move:
+    jmp do_move
 
-finish_y_move:
-    pla ; direction
-    jsr move_dir
-    pla ; remove player y from stack
-    jmp continue_mob_ai
-
-attack_x_player:
-    ; update mob direction
-    pla
-    ldy mob_index
-    sta mobs + Mob::direction, y
-    pla ; remove player x from stack
-    pla ; remove player y from stack
-    jmp attack_player
-attack_y_player:
-    ; update mob direction
-    pla
-    ldy mob_index
-    sta mobs + Mob::direction, y
-    pla ; remove player y from stack
 attack_player:
-    damage = tmp
+    ; update mob direction
+    ldy mob_index
+    lda mob_dir
+    sta mobs + Mob::direction, y
     ; remember y to stack
     tya
     pha
     ; use damage calc for mob
+    damage = tmp
     jsr mob_dmg
     ldy #0 ; player index
     sta damage
@@ -197,12 +156,11 @@ attack_player:
     bne player_dead
     ; done
     pla
-    tay
+    sta mob_index
     jmp continue_mob_ai
 player_dead:
     ; dead
-    pla ; todo ensure this is appropriate
-    tay
+    pla
     rts
 
 ; try to move in direction
@@ -255,7 +213,6 @@ update_pos:
     cmp #Direction::down
     beq try_down
     ; up
-    ; todo
 try_up:
     jsr update_pos
     dec ypos
@@ -281,7 +238,6 @@ compare_player:
     cmp mobs + Mob::coords + Coord::ycoord
     rts
 fail:
-    lda #1
     rts
 
 update_pos:
