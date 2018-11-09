@@ -31,10 +31,15 @@
 .segment "ZEROPAGE"
 
 max_buffer_size = 160
-draw_buffer: .res max_buffer_size
-str_pointer: .res 2 ; pointer for buffering of strings
+draw_buffer:  .res max_buffer_size
+str_pointer:  .res 2 ; pointer for buffering of strings
+buffer_index: .res 1 ; current index for buffering, >0 if batch buffer mode
+tiles_drawn:  .res 1 ; amount of tiles drawn
 
 tmp: .res 1
+
+; max amount of tiles before we end drawing this frame
+tiles_per_frame = 64
 
 .segment "CODE"
 
@@ -204,9 +209,11 @@ render_ones_padded:
 ;
 ; clobbers: all registers
 .proc render_buffer
+    draw_length = tmp
     lda #0
-    tay
     tax
+    sta tiles_drawn
+    ldy buffer_index
 loop:
     lda draw_buffer, y ; length to draw
     bne update_ppuaddr
@@ -214,9 +221,10 @@ loop:
     ; reset draw_buffer to length 0
     lda #0
     sta draw_buffer
+    sta buffer_index ; stop batch buffer mode
     rts
 update_ppuaddr:
-    sta tmp
+    sta draw_length
     iny
     ; reset ppu latch
     bit $2002
@@ -233,16 +241,26 @@ update_ppuaddr:
     sta $2000
     iny
 vram_loop:
-    cpx tmp
+    cpx draw_length
     beq next
     ; now we can write the actual buffer data to vram
     lda draw_buffer, y
     sta $2007
     inx
     iny
+    ; check for end of batch buffering
+    ; todo do this outside loop (add draw_length), not going to work here due to ppuaddr
+    ; todo change to max_bytes_per_frame
+    inc tiles_drawn
+    lda tiles_drawn
+    cmp #tiles_per_frame
+    bcs update_buffer_index
     jmp vram_loop
 next:
     lda #0
     tax
     jmp loop
+update_buffer_index:
+    sty buffer_index
+    rts
 .endproc

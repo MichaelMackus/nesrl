@@ -22,11 +22,6 @@ ppu_pos:        .res 1 ; for ppu_at_attribute procedure
 ppu_ctrl:       .res 1 ; for checking vram increment (next NT or next attribute?)
 buffer_start:   .res 1 ; start index for draw buffer
 
-; represents row that was last buffered
-row_buffered:   .res 1
-; represents amount of tiles buffered this loop (need to batch this, since it is too expensive to do in one shot)
-tiles_buffered: .res 1
-
 ; max tiles until we trigger next batch update, todo figure out fitting in 1 frame
 max_tiles_buffered = 64
 
@@ -38,6 +33,7 @@ sight_distance = 1
 ; initialize buffers
 .proc init_buffer
     lda #0
+    sta buffer_index
     sta draw_buffer
     sta scroll
     sta scroll+1
@@ -63,20 +59,12 @@ start_scroll_buffer:
     ; buffer leading edges
     jsr buffer_edges
 
-    ; trigger batch buffer mode of seen tiles
-    lda #$40
-    sta tiles_buffered
-
     ; scroll twice
     ; todo scroll *after* buffer updated?
     jsr update_scroll
     jsr update_scroll
 
 start_seen_buffer:
-    ; reset row for buffer seen tiles
-    lda #0
-    sta row_buffered
-
     jsr buffer_seen
 
     rts
@@ -381,17 +369,10 @@ set_endy:
     cmp #max_height*2
     bcs force_endy
     sta endy
-    jmp inc_metaypos
+    jmp inx_ppu_start
 force_endy:
     lda #max_height*2
     sta endy
-
-inc_metaypos:
-    ; increment metay by row_buffered
-    lda metaypos
-    clc
-    adc row_buffered
-    sta metaypos
 
     ; increment PPU X
 inx_ppu_start:
@@ -423,12 +404,6 @@ loop:
     ; end when endy hit
     lda metaypos
     cmp endy
-    bcc check_max_buffered
-    jmp done
-check_max_buffered:
-    ; end when max_tiles_buffered hit
-    lda tiles_buffered
-    cmp #max_tiles_buffered
     bcc loop_start_buffer
     jmp done
 loop_start_buffer:
@@ -518,12 +493,6 @@ loop_next:
     ; store zero length at end
     lda #$00
     sta draw_buffer, y
-    inc row_buffered
-    ; increment tiles buffered for batch buffer mode
-    lda tiles_buffered
-    clc
-    adc #(sight_distance*2 + 1)*2
-    sta tiles_buffered
     ; increment y pos
     inc metaypos
     ; increment PPU row
