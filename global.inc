@@ -41,6 +41,7 @@ min_bound   = 1  ; minimum number of spaces from edge
 .globalzp messages
 .globalzp message_strlen
 .globalzp message_size
+.global clear_messages
 .global push_msg
 .global update_message_str
 .global has_amount

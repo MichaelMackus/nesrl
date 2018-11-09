@@ -13,6 +13,21 @@ tmp_message: .res .sizeof(Message)
 
 .segment "CODE"
 
+; clobbers: x
+.proc clear_messages
+    ldx #0
+clear_messages:
+    lda #Messages::none
+    sta messages, x
+    txa
+    clc
+    adc #.sizeof(Message)
+    tax
+    cmp #.sizeof(Message) * max_messages
+    bne clear_messages
+    rts
+.endproc
+
 ; Use messages as a message stack & push the message.
 ;
 ; in: type

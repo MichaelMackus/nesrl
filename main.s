@@ -150,6 +150,7 @@ irq:
 .segment "CODE"
 
 main:
+    jsr clear_messages
     ; check if we're still in batch buffer mode
     lda tiles_buffered
     beq check_state
