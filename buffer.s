@@ -216,6 +216,7 @@ render_ones_padded:
     ldy buffer_index
 loop:
     lda draw_buffer, y ; length to draw
+    sta draw_length
     bne check_buffer_index
     ; length is 0, so we're done drawing
     ; reset draw_buffer to length 0 to stop batch buffer mode
@@ -224,9 +225,8 @@ loop:
     sta buffer_index
     rts
 check_buffer_index:
-    lda tiles_drawn
     clc
-    adc draw_buffer, y ; length to draw, todo add all bytes written
+    adc tiles_drawn ; todo add all bytes written
     cmp #tiles_per_frame
     bcc update_ppu
     beq update_ppu
@@ -235,12 +235,10 @@ check_buffer_index:
     rts
 update_ppu:
     sta tiles_drawn
-    lda draw_buffer, y
-    sta draw_length
-    iny
     ; reset ppu latch
     bit $2002
     ; set ppu addr, high byte then low byte
+    iny
     lda draw_buffer, y
     sta $2006
     iny
