@@ -216,14 +216,26 @@ render_ones_padded:
     ldy buffer_index
 loop:
     lda draw_buffer, y ; length to draw
-    bne update_ppuaddr
+    bne check_buffer_index
     ; length is 0, so we're done drawing
-    ; reset draw_buffer to length 0
+    ; reset draw_buffer to length 0 to stop batch buffer mode
     lda #0
     sta draw_buffer
-    sta buffer_index ; stop batch buffer mode
+    sta buffer_index
     rts
-update_ppuaddr:
+check_buffer_index:
+    lda tiles_drawn
+    clc
+    adc draw_buffer, y ; length to draw, todo add all bytes written
+    cmp #tiles_per_frame
+    bcc update_ppu
+    beq update_ppu
+    ; we've drawn enough tiles, update the buffer index & return
+    sty buffer_index
+    rts
+update_ppu:
+    sta tiles_drawn
+    lda draw_buffer, y
     sta draw_length
     iny
     ; reset ppu latch
@@ -248,19 +260,8 @@ vram_loop:
     sta $2007
     inx
     iny
-    ; check for end of batch buffering
-    ; todo do this outside loop (add draw_length), not going to work here due to ppuaddr
-    ; todo change to max_bytes_per_frame
-    inc tiles_drawn
-    lda tiles_drawn
-    cmp #tiles_per_frame
-    bcs update_buffer_index
     jmp vram_loop
 next:
-    lda #0
-    tax
+    ldx #0
     jmp loop
-update_buffer_index:
-    sty buffer_index
-    rts
 .endproc
