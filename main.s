@@ -46,7 +46,6 @@ init_memory:
     sta dlevel
     sta need_draw
     sta turn
-    sta tiles_buffered
     inc turn ; set turn to 1
     jsr initialize_player
     lda Messages::none
@@ -152,12 +151,9 @@ irq:
 main:
     jsr clear_messages
     ; check if we're still in batch buffer mode
-    lda tiles_buffered
+    lda buffer_index
     beq check_state
     ; we're still in batch buffer mode, update tiles buffer
-    lda #0
-    sta tiles_buffered
-    jsr buffer_seen
     jmp update
 
 check_state:

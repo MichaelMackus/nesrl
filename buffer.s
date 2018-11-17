@@ -30,11 +30,20 @@
 
 .segment "ZEROPAGE"
 
-max_buffer_size = 160
-draw_buffer: .res max_buffer_size
-str_pointer: .res 2 ; pointer for buffering of strings
+str_pointer:  .res 2 ; pointer for buffering of strings
+buffer_index: .res 1 ; current index for buffering, >0 if batch buffer mode
+tiles_drawn:  .res 1 ; amount of tiles drawn
+tmp:          .res 1
 
-tmp: .res 1
+; this is the absolute max to be added to buffer per action
+; max_buffer_size = (2*8 + 2*32) + (6*8 + 6*6)
+; NOTE: 8 bytes are for max buffer header when crossing NT boundary
+; NOTE: normally this would be 4 (length, ppu, ppu+1, control)
+max_buffer_size = 164
+draw_buffer:  .res max_buffer_size
+
+; max amount of tiles before we end drawing this frame
+tiles_per_frame = 64
 
 .segment "CODE"
 
@@ -204,23 +213,36 @@ render_ones_padded:
 ;
 ; clobbers: all registers
 .proc render_buffer
+    draw_length = tmp
     lda #0
-    tay
     tax
+    sta tiles_drawn
+    ldy buffer_index
 loop:
     lda draw_buffer, y ; length to draw
-    bne update_ppuaddr
+    sta draw_length
+    bne check_buffer_index
     ; length is 0, so we're done drawing
-    ; reset draw_buffer to length 0
+    ; reset draw_buffer to length 0 to stop batch buffer mode
     lda #0
     sta draw_buffer
+    sta buffer_index
     rts
-update_ppuaddr:
-    sta tmp
-    iny
+check_buffer_index:
+    clc
+    adc tiles_drawn ; todo add all bytes written
+    cmp #tiles_per_frame
+    bcc update_ppu
+    beq update_ppu
+    ; we've drawn enough tiles, update the buffer index & return
+    sty buffer_index
+    rts
+update_ppu:
+    sta tiles_drawn
     ; reset ppu latch
     bit $2002
     ; set ppu addr, high byte then low byte
+    iny
     lda draw_buffer, y
     sta $2006
     iny
@@ -233,7 +255,7 @@ update_ppuaddr:
     sta $2000
     iny
 vram_loop:
-    cpx tmp
+    cpx draw_length
     beq next
     ; now we can write the actual buffer data to vram
     lda draw_buffer, y
@@ -242,7 +264,6 @@ vram_loop:
     iny
     jmp vram_loop
 next:
-    lda #0
-    tax
+    ldx #0
     jmp loop
 .endproc
