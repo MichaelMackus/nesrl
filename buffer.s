@@ -30,13 +30,17 @@
 
 .segment "ZEROPAGE"
 
-max_buffer_size = 160
-draw_buffer:  .res max_buffer_size
 str_pointer:  .res 2 ; pointer for buffering of strings
 buffer_index: .res 1 ; current index for buffering, >0 if batch buffer mode
 tiles_drawn:  .res 1 ; amount of tiles drawn
+tmp:          .res 1
 
-tmp: .res 1
+; this is the absolute max to be added to buffer per action
+; max_buffer_size = (2*8 + 2*32) + (6*8 + 6*6)
+; NOTE: 8 bytes are for max buffer header when crossing NT boundary
+; NOTE: normally this would be 4 (length, ppu, ppu+1, control)
+max_buffer_size = 164
+draw_buffer:  .res max_buffer_size
 
 ; max amount of tiles before we end drawing this frame
 tiles_per_frame = 64
