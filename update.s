@@ -21,20 +21,6 @@ sight_distance = 1
 
 .segment "CODE"
 
-; initialize buffers
-.proc init_buffer
-    lda #0
-    sta buffer_index
-    sta draw_buffer
-    sta scroll
-    sta scroll+1
-    sta base_nt
-    sta ppu_addr+1
-    lda #$20
-    sta ppu_addr
-    rts
-.endproc
-
 ; update draw buffer with new bg tiles
 ; this assumes scrolling in direction of player movement
 ;
@@ -56,7 +42,7 @@ start_scroll_buffer:
     jsr update_scroll
 
 start_seen_buffer:
-    jsr buffer_seen
+    jsr buffer_seen ; this is for tiles *on* screen not edges
 
     rts
 .endproc
