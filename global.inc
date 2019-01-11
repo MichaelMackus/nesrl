@@ -13,10 +13,16 @@ min_bound   = 1  ; minimum number of spaces from edge
 ; math.s
 .global divide
 
-; scroll.s
+; ppu.s
 .globalzp ppu_addr
+.globalzp ppu_pos
 .globalzp scroll
 .globalzp base_nt
+.globalzp draw_y
+.globalzp draw_length
+.globalzp ppu_pos
+.globalzp ppu_ctrl
+.globalzp buffer_start
 .global scroll_right
 .global scroll_left
 .global scroll_up
@@ -29,6 +35,10 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global dey_ppu
 .global iny_ppu_nt
 .global dey_ppu_nt
+.global calculate_ppu_pos
+.global calculate_ppu_col
+.global calculate_ppu_row
+.global update_nt_boundary
 
 ; main.s
 .globalzp turn
