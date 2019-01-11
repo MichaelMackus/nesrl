@@ -16,11 +16,6 @@ tmp2:           .res 1
 endy:           .res 1 ; for buffer seen loop
 endx:           .res 1 ; for buffer seen loop
 prevx:          .res 1 ; for buffer seen loop
-draw_y:         .res 1 ; current draw buffer index
-draw_length:    .res 1
-ppu_pos:        .res 1 ; for ppu_at_attribute procedure
-ppu_ctrl:       .res 1 ; for checking vram increment (next NT or next attribute?)
-buffer_start:   .res 1 ; start index for draw buffer
 
 ; represents player sight distance (hardcoded for now)
 sight_distance = 1

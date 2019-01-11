@@ -18,6 +18,11 @@ min_bound   = 1  ; minimum number of spaces from edge
 .globalzp ppu_pos
 .globalzp scroll
 .globalzp base_nt
+.globalzp draw_y
+.globalzp draw_length
+.globalzp ppu_pos
+.globalzp ppu_ctrl
+.globalzp buffer_start
 .global scroll_right
 .global scroll_left
 .global scroll_up

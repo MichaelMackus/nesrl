@@ -6,9 +6,17 @@
 ; out: remainder of modulus
 .import mod
 
+; store draw buffer here (see: buffer.s)
+.importzp draw_buffer
+
 .exportzp ppu_addr
 .exportzp scroll
 .exportzp base_nt
+.exportzp draw_y
+.exportzp draw_length
+.exportzp ppu_pos
+.exportzp ppu_ctrl
+.exportzp buffer_start
 .export scroll_right
 .export scroll_left
 .export scroll_up
@@ -21,6 +29,10 @@
 .export inx_ppu_nt
 .export dex_ppu
 .export dex_ppu_nt
+.export calculate_ppu_pos
+.export calculate_ppu_col
+.export calculate_ppu_row
+.export update_nt_boundary
 
 y_first_nt = $20
 y_last_nt  = $28
@@ -29,9 +41,16 @@ x_last_nt  = $24
 
 .segment "ZEROPAGE"
 
-ppu_addr: .res 2 ; high byte, low byte
-scroll:   .res 2 ; x, y
-base_nt:  .res 1 ; mask for controller base NT bits
+tmp:            .res 1
+tmp2:           .res 1
+ppu_addr:       .res 2 ; high byte, low byte
+scroll:         .res 2 ; x, y
+base_nt:        .res 1 ; mask for controller base NT bits
+draw_y:         .res 1 ; current draw buffer index
+draw_length:    .res 1
+ppu_pos:        .res 1 ; for ppu_at_attribute procedure
+ppu_ctrl:       .res 1 ; for checking vram increment (next NT or next attribute?)
+buffer_start:   .res 1 ; start index for draw buffer
 
 .segment "CODE"
 
