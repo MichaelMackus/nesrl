@@ -20,8 +20,16 @@
 ;   |   PPU Address $2016
 ;   length=5
 
-.include "global.inc"
+; these procedures need to be defined in order to get the buffer_num and
+; buffer_str procedures to work (see: tile.s)
+.import get_hex_tile
+.import get_num_tile
+.import get_str_tile
 
+.exportzp buffer_index
+.exportzp str_pointer
+.exportzp draw_buffer
+.export next_index
 .export buffer_num
 .export buffer_num_tens
 .export buffer_num_hex
