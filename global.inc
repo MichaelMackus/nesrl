@@ -14,6 +14,7 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global divide
 
 ; ppu.s
+.globalzp cur_tile
 .globalzp ppu_addr
 .globalzp ppu_pos
 .globalzp scroll

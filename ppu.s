@@ -9,6 +9,7 @@
 ; store draw buffer here (see: buffer.s)
 .importzp draw_buffer
 
+.exportzp cur_tile
 .exportzp ppu_addr
 .exportzp scroll
 .exportzp base_nt
@@ -42,7 +43,7 @@ x_last_nt  = $24
 .segment "ZEROPAGE"
 
 tmp:            .res 1
-tmp2:           .res 1
+cur_tile:       .res 1
 ppu_addr:       .res 2 ; high byte, low byte
 scroll:         .res 2 ; x, y
 base_nt:        .res 1 ; mask for controller base NT bits
@@ -465,7 +466,6 @@ success:
 ; NOTE: should only happen once per update cycle
 .proc buffer_next_nt
     ; update old length to current loop index
-    cur_tile = tmp
     ldy buffer_start
     lda cur_tile
     sta draw_buffer, y
@@ -489,10 +489,10 @@ success:
     lda ppu_addr+1
     ldx #$20
     jsr mod
-    sta tmp2
+    sta tmp
     lda ppu_addr+1
     sec
-    sbc tmp2
+    sbc tmp
     sta ppu_addr+1
 
     ; write new ppu address
@@ -527,7 +527,6 @@ success:
 ; NOTE: should only happen once per update cycle
 .proc buffer_next_vertical_nt
     ; update old length to current loop index
-    cur_tile = tmp
     ldy buffer_start
     lda cur_tile
     sta draw_buffer, y
@@ -551,10 +550,10 @@ success:
     lda ppu_addr
     ldx #4
     jsr mod
-    sta tmp2
+    sta tmp
     lda ppu_addr
     sec
-    sbc tmp2
+    sbc tmp
     sta ppu_addr
     ; switch to start row of next nt
     lda ppu_addr + 1

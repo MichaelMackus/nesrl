@@ -12,7 +12,6 @@
 .segment "ZEROPAGE"
 
 tmp:            .res 1
-tmp2:           .res 1
 endy:           .res 1 ; for buffer seen loop
 endx:           .res 1 ; for buffer seen loop
 prevx:          .res 1 ; for buffer seen loop
@@ -77,8 +76,6 @@ start_seen_buffer:
     rts
 
 buffer_edge:
-    cur_tile = tmp
-
     ; update scroll metaxpos and metaypos depending on player dir
     jsr update_coords
 
@@ -403,7 +400,6 @@ loop_start_buffer:
     sty buffer_start
 
     ; initialize cur_tile for NT boundary check
-    cur_tile = tmp
     lda #0
     sta cur_tile
 
