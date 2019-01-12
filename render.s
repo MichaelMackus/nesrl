@@ -81,46 +81,13 @@ continue_y:
     lda startx
     sta metaxpos
     jmp y_repeat
-; todo render status messages
+; render status bar
 tiles_done:
-;    ; hp
-;    bit $2002
-;    lda #$23
-;    sta $2006
-;    lda #$21
-;    sta $2006
-;    lda #<txt_hp
-;    sta str_pointer
-;    lda #>txt_hp
-;    sta str_pointer+1
-;    jsr render_str
-;    ; spacing to line up with dlvl
-;    lda #$00
-;    sta $2007
-;    sta $2007
-;    ; render hp
-;    jsr buffer_hp
-;
-;    ; dlvl
-;    bit $2002
-;    lda #$23
-;    sta $2006
-;    lda #$61
-;    sta $2006
-;    lda #<txt_dlvl
-;    sta str_pointer
-;    lda #>txt_dlvl
-;    sta str_pointer+1
-;    jsr render_str
-;    ; render current dlevel
-;    lda dlevel
-;    jsr render_num
-;
-;    ; buffer our messages, todo this shouldn't be necessary
-;    jsr buffer_messages
-;
-;    ; render the buffer & update our sprites
-;    jsr render_buffer
+    ; initialize status
+    jsr buffer_status
+
+    ; render the buffer & update our sprites
+    jsr render_buffer
 
 render_done:
     jsr update_sprites
@@ -144,6 +111,7 @@ render_wait:
     ; tell PPU to render BG & sprites
     lda #%00011010 ; note: need second bit in order to show background on left side of screen
     sta $2001
+
     rts
 .endproc
 
