@@ -42,6 +42,11 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global calculate_ppu_row
 .global update_nt_boundary
 
+; status.s
+.globalzp need_buffer_status
+.global init_status
+.global buffer_status
+
 ; main.s
 .globalzp turn
 .globalzp controller1

@@ -55,6 +55,7 @@ init_memory:
     lda Messages::none
     jsr push_msg
     jsr init_buffer
+    jsr init_status
 
 clear_oam:
     lda #$FF

@@ -4,13 +4,11 @@
 .export rand_feature
 .export rand_drop
 
-.segment "ZEROPAGE"
+.segment "BSS"
 
 ; store map of item -> appearance
 potion_map: .res 5 ; amount of potions
 scroll_map: .res 5 ; amount of scrolls
-
-.segment "BSS"
 
 features:    .res .sizeof(Feature)*maxfeatures
 items:       .res .sizeof(ItemDrop)*maxdrops
