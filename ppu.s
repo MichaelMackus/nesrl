@@ -6,8 +6,9 @@
 ; out: remainder of modulus
 .import mod
 
-; store draw buffer here (see: buffer.s)
+; see: buffer.s
 .importzp draw_buffer
+.importzp buffer_index
 
 .exportzp cur_tile
 .exportzp ppu_addr
@@ -18,6 +19,7 @@
 .exportzp ppu_pos
 .exportzp ppu_ctrl
 .exportzp buffer_start
+.export init_buffer
 .export scroll_right
 .export scroll_left
 .export scroll_up
@@ -54,6 +56,20 @@ ppu_ctrl:       .res 1 ; for checking vram increment (next NT or next attribute?
 buffer_start:   .res 1 ; start index for draw buffer
 
 .segment "CODE"
+
+; initialize ppu vars
+.proc init_buffer
+    lda #0
+    sta buffer_index
+    sta draw_buffer
+    sta scroll
+    sta scroll+1
+    sta base_nt
+    sta ppu_addr+1
+    lda #$20
+    sta ppu_addr
+    rts
+.endproc
 
 ; scroll right by 1 column
 .proc scroll_right

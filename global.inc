@@ -24,6 +24,7 @@ min_bound   = 1  ; minimum number of spaces from edge
 .globalzp ppu_pos
 .globalzp ppu_ctrl
 .globalzp buffer_start
+.global init_buffer
 .global scroll_right
 .global scroll_left
 .global scroll_up
@@ -40,6 +41,12 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global calculate_ppu_col
 .global calculate_ppu_row
 .global update_nt_boundary
+
+; status.s
+.globalzp has_status
+.global init_status
+.global buffer_status
+.global buffer_status_end
 
 ; main.s
 .globalzp turn
@@ -149,7 +156,6 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global debug
 
 ; update.s
-.global init_buffer
 .global buffer_tiles
 .global buffer_seen
 .global buffer_messages

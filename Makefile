@@ -1,4 +1,4 @@
-objs = ppu.o math.o item.o lighting.o ai.o player.o buffer.o tile.o \
+objs = status.o ppu.o math.o item.o lighting.o ai.o player.o buffer.o tile.o \
 	message.o mob.o dungeon.o generate.o random.o \
 	sprite.o screen.o update.o render.o input.o main.o
 

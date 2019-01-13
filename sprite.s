@@ -16,73 +16,15 @@ mob:         .res 1 ; current mob index
 .proc update_sprites
     ldx #$00
 
-render_status:
-    ; render player HP with sprites (quick fix for status bar)
-    ; todo perhaps we can use color to denote *low*, *hurt*, and *max* HP status
-    lda #16
+; sprite zero for split-scrolling
+sprite_zero:
+    lda #$18
     sta $0200, x
-    lda txt_hp
-    jsr get_str_tile
+    lda #$0e
     sta $0201, x
     lda #$00
     sta $0202, x
-    lda #16
-    sta $0203, x
-    inx
-    inx
-    inx
-    inx
-    lda #16
-    sta $0200, x
-    lda txt_hp + 1
-    jsr get_str_tile
-    sta $0201, x
     lda #$00
-    sta $0202, x
-    lda #16 + 8
-    sta $0203, x
-    inx
-    inx
-    inx
-    inx
-    ; HP amount
-    lda #16
-    sta $0200, x
-    lda mobs + Mob::hp
-    ; divide by 10 to get tens place
-    stx tmp
-    ldx #10
-    jsr divide
-    txa
-    beq blank_tens
-    jsr get_num_tile
-    jmp write_tens
-blank_tens:
-    lda #$00
-write_tens:
-    ldx tmp
-    sta $0201, x
-    lda #$00
-    sta $0202, x
-    lda #16 + 24
-    sta $0203, x
-    inx
-    inx
-    inx
-    inx
-    lda #16
-    sta $0200, x
-    lda mobs + Mob::hp
-    ; mod by 10 to get ones place
-    stx tmp
-    ldx #10
-    jsr divide
-    jsr get_num_tile
-    ldx tmp
-    sta $0201, x
-    lda #$00
-    sta $0202, x
-    lda #16 + 32
     sta $0203, x
     inx
     inx
@@ -425,6 +367,9 @@ get_offset_ypos:
     asl
     asl
     asl
+    ; offset for statusbar
+    clc
+    adc #8*4 - 2
     rts
 .endproc
 

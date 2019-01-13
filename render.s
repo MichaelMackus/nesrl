@@ -6,7 +6,6 @@
 
 .segment "ZEROPAGE"
 
-tmp: .res 1
 startx: .res 1
 endx:   .res 1
 endy:   .res 1
@@ -31,96 +30,57 @@ generate_ppu:
     ; initialize scroll offsets
     jsr update_screen_offsets
 
-    ; update PPUADDR
+    ; update y-scroll to player Y offset
+    ldy #0
+scroll_loop:
+    cpy #vertical_bound
+    bcc skip_scroll
+    beq skip_scroll
+    cpy #(max_height*2) - (screen_height-vertical_bound)
+    beq update_scroll
+    bcs skip_scroll
+update_scroll:
+    jsr scroll_down ; scroll down 8 pixels
+    jsr scroll_down ; scroll down 8 pixels, 16 pixels total (1 metatile)
+    jsr iny_ppu ; increase top of PPUADDR 8 pixels
+    jsr iny_ppu ; increase top of PPUADDR 8 pixels, 16 pixels total (1 metatile)
+skip_scroll:
+    iny
+    iny
+    tya
+    lsr ; divide by 2 to compare to player y-pos
+    cmp mobs + Mob::coords + Coord::ycoord ; check that we're at the mob ycoord
+    ; end loop once y is *greater* than ycoord
+    bcc scroll_loop
+    beq scroll_loop
+    
+    ; clear previous nametable
     bit $2002
-    lda ppu_addr
+    lda #$20
     sta $2006
-    lda ppu_addr + 1
-    sta $2006
-
-draw_dungeon:
-    jsr get_first_col
-    sta startx
-    sta metaxpos
-    jsr get_last_col
-    sta endx
-    jsr get_first_row
-    sta metaypos
-    jsr get_last_row
-    sta endy
-; loop through x and y
-y_repeat:
-    lda metaypos
-    cmp endy
-    beq tiles_done ; greater than or equal
-x_repeat:
-    lda metaypos
-    lsr
-    sta ypos
-    lda metaxpos
-    lsr
-    sta xpos
-    jsr can_player_see
-    bne render_bg
-    jsr update_seen
-    jsr get_bg_metatile
-    sta $2007
-    jmp continue_loop
-render_bg:
     lda #$00
+    sta $2006
+    lda #$00
+    tax
+    tay
+clear_page:
     sta $2007
+    inx
+    cpx #$FF
+    bne clear_page
+    sta $2007
+    iny
+    cpy #16 ; 16 total pages in NT
+    bne clear_page
 
-continue_loop:
-    inc metaxpos
-    lda metaxpos
-    cmp endx
-    beq continue_y ; greater than or equal
-    jmp x_repeat
-continue_y:
-    inc metaypos
-    lda startx
-    sta metaxpos
-    jmp y_repeat
-; todo render status messages
-tiles_done:
-;    ; hp
-;    bit $2002
-;    lda #$23
-;    sta $2006
-;    lda #$21
-;    sta $2006
-;    lda #<txt_hp
-;    sta str_pointer
-;    lda #>txt_hp
-;    sta str_pointer+1
-;    jsr render_str
-;    ; spacing to line up with dlvl
-;    lda #$00
-;    sta $2007
-;    sta $2007
-;    ; render hp
-;    jsr buffer_hp
-;
-;    ; dlvl
-;    bit $2002
-;    lda #$23
-;    sta $2006
-;    lda #$61
-;    sta $2006
-;    lda #<txt_dlvl
-;    sta str_pointer
-;    lda #>txt_dlvl
-;    sta str_pointer+1
-;    jsr render_str
-;    ; render current dlevel
-;    lda dlevel
-;    jsr render_num
-;
-;    ; buffer our messages, todo this shouldn't be necessary
-;    jsr buffer_messages
-;
-;    ; render the buffer & update our sprites
-;    jsr render_buffer
+    ; render dungeon
+    jsr buffer_seen
+    jsr render_buffer
+
+    ; render statusbar
+    jsr buffer_status
+    jsr buffer_status_end
+    jsr render_buffer
 
 render_done:
     jsr update_sprites
@@ -130,20 +90,10 @@ render_wait:
     cmp nmis
     beq render_wait
 
-    ; update the NT page
-    lda #%10000000
-    ora base_nt
-    sta $2000
-    ; update scrolling
-    bit $2002
-    lda scroll
-    sta $2005
-    lda scroll + 1
-    sta $2005
-
     ; tell PPU to render BG & sprites
     lda #%00011010 ; note: need second bit in order to show background on left side of screen
     sta $2001
+
     rts
 .endproc
 
@@ -291,10 +241,6 @@ done:
 
 .segment "RODATA"
 
-; status
-txt_hp:     .asciiz "hp"
-txt_lvl:    .asciiz "lvl"
-txt_dlvl:   .asciiz "dlvl"
 ; end messages
 txt_win:      .asciiz "You win!"
 txt_escape:   .asciiz "You escaped!"
