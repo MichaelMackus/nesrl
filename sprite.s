@@ -18,7 +18,7 @@ mob:         .res 1 ; current mob index
 
 ; sprite zero for split-scrolling
 sprite_zero:
-    lda #$10
+    lda #$18
     sta $0200, x
     lda #$0e
     sta $0201, x

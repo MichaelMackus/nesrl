@@ -115,18 +115,6 @@ render_draw_buffer:
     lda #$00
     sta need_draw
 
-    ; update base ppu addr
-    lda base_nt
-    ora #%10000000 ; default
-    sta $2000
-
-    ; update scroll
-    bit $2002
-    lda scroll
-    sta $2005
-    lda scroll + 1
-    sta $2005
-
 continue_nmi:
     lda #$00
     sta $2003
@@ -134,6 +122,71 @@ continue_nmi:
     lda #$02
     sta $4014
 
+    lda has_status
+    bne continue_status
+    jmp finish_nmi
+
+continue_status:
+    ; update base ppu addr for statusbar
+    lda base_nt
+    ora #%10000010
+    sta $2000
+
+    ; update scroll for statusbar
+    bit $2002
+    lda #0
+    sta $2005
+    lda #240 - 8*4
+    sta $2005
+
+    ; detect sprite-zero hit
+sprite_zero_clear_wait:
+    bit $2002
+    bvs sprite_zero_clear_wait
+sprite_zero_wait:
+    bit $2002
+    bvc sprite_zero_wait
+
+    ; split scroll
+    ;Write nametable bits to t.
+    lda base_nt
+    asl
+    asl
+    sta $2006
+
+    ;Write y bits to t.
+    lda scroll + 1
+    sta $2005
+
+    ;The last write needs to occur during horizontal blanking
+    ;to avoid visual glitches.
+    ;HBlank is very short, so calculate the value to write now, before HBlank.
+    and #$F8
+    asl
+    asl
+    sta tmp
+
+    lda scroll
+    ;Write the X bits to t and x.
+    sta $2005
+
+    ;Finish calculating the fourth write.
+    lsr
+    lsr
+    lsr
+    ora tmp
+
+    ;Wait for HBlank
+    ldx #08     ;How long to wait. Play around with this value
+                ;until you don't have a visual glitch.
+loop:
+    dex
+    bne loop
+
+    ;Write to t and copy t to v.
+    sta $2006
+
+finish_nmi:
     pla
     sta tmp
     pla
@@ -234,6 +287,10 @@ regenerate:
     ; generate dungeon
     jsr generate
     jsr render
+    ; trigger drawing & rendering statusbar
+    lda #1
+    sta need_draw
+    sta has_status
     jmp done
 
 ; update state to end & render escape

@@ -78,6 +78,7 @@ clear_page:
 
     ; render statusbar
     jsr buffer_status
+    jsr buffer_status_end
     jsr render_buffer
 
 render_done:
@@ -87,17 +88,6 @@ render_done:
 render_wait:
     cmp nmis
     beq render_wait
-
-    ; update the NT page
-    lda #%10000000
-    ora base_nt
-    sta $2000
-    ; update scrolling
-    bit $2002
-    lda scroll
-    sta $2005
-    lda scroll + 1
-    sta $2005
 
     ; tell PPU to render BG & sprites
     lda #%00011010 ; note: need second bit in order to show background on left side of screen
@@ -250,10 +240,6 @@ done:
 
 .segment "RODATA"
 
-; status
-txt_hp:     .asciiz "hp"
-txt_lvl:    .asciiz "lvl"
-txt_dlvl:   .asciiz "dlvl"
 ; end messages
 txt_win:      .asciiz "You win!"
 txt_escape:   .asciiz "You escaped!"
