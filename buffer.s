@@ -51,7 +51,7 @@ max_buffer_size = 181
 draw_buffer:  .res max_buffer_size
 
 ; max amount of tiles before we end drawing this frame
-tiles_per_frame = 64
+tiles_per_frame = 32 ; todo figure out why this is bugging out with 64
 
 .segment "CODE"
 
