@@ -180,7 +180,7 @@ sprite_zero_wait:
     ora a1
 
     ;Wait for HBlank
-    ldx #08     ;How long to wait. Play around with this value
+    ldx #13     ;How long to wait. Play around with this value
                 ;until you don't have a visual glitch.
 loop:
     dex

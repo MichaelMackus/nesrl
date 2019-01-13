@@ -22,7 +22,7 @@ sprite_zero:
     sta $0201, x
     lda #$00
     sta $0202, x
-    lda #$00
+    lda #$FC
     sta $0203, x
     inx
     inx
