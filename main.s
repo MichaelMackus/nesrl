@@ -286,8 +286,9 @@ update:
     sta need_draw
 
     ; update sprite OAM data, only if not scrolling
-    lda need_scroll
-    bne done
+    ; todo not working on real NES, need a way to buffer this
+    ;lda need_scroll
+    ;bne done
     jsr update_sprites
 
 done:
