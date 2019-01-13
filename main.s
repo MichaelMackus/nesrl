@@ -280,6 +280,9 @@ wait_nmi:
 
 ; re-generate next dungeon level
 regenerate:
+    ; temporarily turn off statusbar
+    lda #0
+    sta has_status
     ; initialize & flip seed bits
     lda nmis
     eor #$32
