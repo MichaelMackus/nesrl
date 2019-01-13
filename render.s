@@ -52,6 +52,25 @@ skip_scroll:
     lsr ; divide by 2 to compare to player y-pos
     cmp mobs + Mob::coords + Coord::ycoord ; check that we're at the mob ycoord
     bne scroll_loop
+    
+    ; clear previous nametable
+    bit $2002
+    lda #$20
+    sta $2006
+    lda #$00
+    sta $2006
+    lda #$00
+    tax
+    tay
+clear_page:
+    sta $2007
+    inx
+    cpx #$FF
+    bne clear_page
+    sta $2007
+    iny
+    cpy #16 ; 16 total pages in NT
+    bne clear_page
 
     ; render dungeon
     jsr buffer_seen
