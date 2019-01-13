@@ -4,7 +4,6 @@
 
 .segment "ZEROPAGE"
 
-cur_tile:    .res 1 ; for drawing sprites
 tmp:         .res 1
 tmp2:        .res 1 ; todo used for can_player_see proc
 mob:         .res 1 ; current mob index
