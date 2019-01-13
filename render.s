@@ -78,6 +78,7 @@ clear_page:
     jsr render_buffer
 
     ; render statusbar
+    jsr buffer_status_text
     jsr buffer_status
     jsr buffer_status_end
     jsr render_buffer

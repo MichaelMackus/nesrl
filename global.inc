@@ -45,6 +45,7 @@ min_bound   = 1  ; minimum number of spaces from edge
 .globalzp has_status
 .global init_status
 .global buffer_status
+.global buffer_status_text
 .global buffer_status_end
 
 ; main.s

@@ -256,11 +256,14 @@ ai:
     jsr mob_spawner
     jsr player_regen
 
-update:
+update_buffer:
+    jsr buffer_status
+
     ; todo figure out better way to buffer messages, probably want to
     ; todo buffer them using draw loop, clearing on next action
     ;jsr buffer_messages
 
+update:
     ; notify nmi to draw the buffer
     lda #1
     sta need_draw

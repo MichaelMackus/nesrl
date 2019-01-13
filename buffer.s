@@ -47,7 +47,7 @@ tiles_drawn:  .res 1 ; amount of tiles drawn
 ; max_buffer_size = (2*8 + 2*32) + (6*8 + 6*6)
 ; NOTE: 8 bytes are for max buffer header when crossing NT boundary
 ; NOTE: normally this would be 4 (length, ppu, ppu+1, control)
-max_buffer_size = 164
+max_buffer_size = 181
 draw_buffer:  .res max_buffer_size
 
 ; max amount of tiles before we end drawing this frame
