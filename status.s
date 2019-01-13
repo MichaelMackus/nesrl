@@ -2,6 +2,8 @@
 
 .include "global.inc"
 
+status_ppuaddr = $2b60
+
 .segment "ZEROPAGE"
 
 need_buffer_status:  .res 1 ; set to 1 to flag for buffering status bar
@@ -32,24 +34,10 @@ tmp:                 .res 1
     lda ppu_addr + 1
     pha
 
-    ; update ppu addr (for statusbar) to next NT + half page (15 rows)
-    jsr iny_ppu_nt
-    ldy #0
-next_row_loop:
-    jsr iny_ppu
-    iny
-    cpy #15
-    bne next_row_loop
-
-    ; reset ppuaddr to origin from left edge
-    lda ppu_addr + 1
-    ldx #$20
-    jsr divide
-    sta tmp
-    ; subtract result of mod 32 from ppu to get origin row without col
-    lda ppu_addr + 1
-    sec
-    sbc tmp
+    ; update ppuaddr with status ppuaddr
+    lda #.hibyte(status_ppuaddr)
+    sta ppu_addr
+    lda #.lobyte(status_ppuaddr)
     sta ppu_addr + 1
 
     jsr calculate_ppu_row
