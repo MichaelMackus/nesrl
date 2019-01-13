@@ -37,7 +37,7 @@ sight: .res 1 ; used to set sight for mobs (mobs can see further in dungeon)
 ; y: mob index (modified)
 ;
 ; out: 0 if can see
-; clobbers: x and y register
+; clobbers: x, y, and a1 register
 .proc can_see
     ; load our destination
     lda xpos

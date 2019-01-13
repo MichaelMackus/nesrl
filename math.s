@@ -5,7 +5,7 @@
 
 .segment "ZEROPAGE"
 
-tmp:      .res 1
+tmp:      .res 1 ; todo remove
 
 .segment "CODE"
 

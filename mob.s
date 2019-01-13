@@ -11,7 +11,6 @@
 
 mob_size  = .sizeof(Mob)
 mobs_size = .sizeof(Mob)*maxmobs
-dmg:        .res 1 ; tmp var for damage calculation
 
 .segment "BSS"
 
@@ -57,10 +56,10 @@ mob_at_fail:
     cmp mobs+Mob::hp, y
     bcs kill_mob
     ; subtract damage from hp
-    sta dmg
+    sta a1
     lda mobs+Mob::hp, y
     sec
-    sbc dmg
+    sbc a1
     sta mobs+Mob::hp, y
     rts
 .endproc

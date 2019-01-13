@@ -7,7 +7,6 @@ status_ppuaddr = $2b80
 .segment "ZEROPAGE"
 
 has_status:  .res 1 ; set to 1 to flag for buffering status bar
-tmp:         .res 1
 
 .segment "CODE"
 

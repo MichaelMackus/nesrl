@@ -5,8 +5,6 @@
 .segment "ZEROPAGE"
 
 mob_tile:    .res 1
-tmp:         .res 1
-tmp2:        .res 1 ; todo used for can_player_see proc
 mob:         .res 1 ; current mob index
 
 .segment "CODE"
@@ -88,14 +86,14 @@ next_mob:
 
 .proc clear_mob
     ; dead - Y to 0, todo anything *but* zero doesn't work here...
-    ldy tmp
+    ldy a3
     lda #$00
     rts
 .endproc
 
 ; getters for mob x & y based on screen pos
 .proc get_mob_y
-    sty tmp
+    sty a3
     ldy mob
     ; ensure mob is within screen bounds
     jsr can_player_see_mob
@@ -104,7 +102,7 @@ next_mob:
     beq adjust_mob_y
 adjust_mob_y:
     lda mobs + Mob::direction, y
-    ldy tmp
+    ldy a3
     ; increment based on y value
     cmp #Direction::down
     beq adjust_mob_y_inverse
@@ -116,7 +114,7 @@ adjust_mob_y:
     ldy mob
     jsr get_mob_yoffset
     ; restore original y
-    ldy tmp
+    ldy a3
     rts
 increase_y:
     ; get offset
@@ -126,7 +124,7 @@ increase_y:
     clc
     adc #$08
     ; restore original y
-    ldy tmp
+    ldy a3
     rts
 adjust_mob_y_inverse:
     cpy #0
@@ -137,11 +135,11 @@ adjust_mob_y_inverse:
     ldy mob
     jsr get_mob_yoffset
     ; restore original y
-    ldy tmp
+    ldy a3
     rts
 .endproc
 .proc get_mob_x
-    sty tmp
+    sty a3
     ldy mob
     ; ensure mob is within screen bounds
     jsr can_player_see_mob
@@ -152,7 +150,7 @@ adjust_mob_y_inverse:
 adjust_mob_x:
     ; increment based on x value
     lda mobs + Mob::direction, y
-    ldy tmp
+    ldy a3
     cmp #Direction::left
     beq adjust_mob_x_inverse
     cpy #1
@@ -163,7 +161,7 @@ adjust_mob_x:
     ldy mob
     jsr get_mob_xoffset
     ; restore original y
-    ldy tmp
+    ldy a3
     rts
 increase_x:
     ; get offset unchanged
@@ -173,7 +171,7 @@ increase_x:
     clc
     adc #$08
     ; restore original y
-    ldy tmp
+    ldy a3
     rts
 adjust_mob_x_inverse:
     cpy #0
@@ -184,12 +182,12 @@ adjust_mob_x_inverse:
     ldy mob
     jsr get_mob_xoffset
     ; restore original y
-    ldy tmp
+    ldy a3
     rts
 .endproc
 
 .proc get_mob_attribute
-    sty tmp
+    sty a3
     ldy mob
     lda mobs + Mob::type, y
     cmp #Mobs::player
@@ -202,24 +200,24 @@ adjust_mob_x_inverse:
     beq dark
     ; dark + red
     lda #3
-    sta tmp2
+    sta a2
     jmp get_dir_attr
 normal:
     lda #0
-    sta tmp2
+    sta a2
     jmp get_dir_attr
 green:
     lda #1
-    sta tmp2
+    sta a2
     jmp get_dir_attr
 dark:
     lda #2
-    sta tmp2
+    sta a2
 
 get_dir_attr:
     ldy mob
     lda mobs + Mob::direction, y
-    ldy tmp
+    ldy a3
     cmp #Direction::up
     beq get_normal_attribute
     cmp #Direction::right
@@ -228,15 +226,15 @@ get_dir_attr:
     beq flip_vertical_attribute
     ; left - flip horizontal
     lda #%01000000
-    ora tmp2
+    ora a2
     rts
 get_normal_attribute:
     lda #%00000000
-    ora tmp2
+    ora a2
     rts
 flip_vertical_attribute:
     lda #%10000000
-    ora tmp2
+    ora a2
     rts
 .endproc
 .endproc
@@ -423,10 +421,10 @@ get_offset_ypos:
     lda yoffset
     clc
     adc #screen_height
-    sta tmp2
+    sta a2
     lda mobs + Mob::coords + Coord::ycoord, y
     asl
-    cmp tmp2
+    cmp a2
     bcs failure
 
     lda mobs + Mob::coords + Coord::xcoord, y
@@ -436,10 +434,10 @@ get_offset_ypos:
     lda xoffset
     clc
     adc #screen_width
-    sta tmp2
+    sta a2
     lda mobs + Mob::coords + Coord::xcoord, y
     asl
-    cmp tmp2
+    cmp a2
     bcs failure
 
     ; ensure player has seen tile before displaying mob

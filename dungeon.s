@@ -19,7 +19,6 @@ down_x:      .res 1 ; down stair x
 down_y:      .res 1 ; down stair y
 up_x:        .res 1 ; up stair x
 up_y:        .res 1 ; up stair y
-tmp:         .res 1
 
 .segment "BSS"
 
@@ -57,7 +56,7 @@ randx:
 
 ; check if tile is floor (doesn't check mobs)
 ; out: 0 if passable
-; clobbers: tmp, y, and x
+; clobbers: a1, y, and x
 .proc is_floor
     jsr get_byte_offset
     tay
@@ -76,7 +75,7 @@ fail:
 
 ; check if tile passable (checks mobs)
 ; out: 0 if passable
-; clobbers: tmp, y, and x
+; clobbers: a1, y, and x
 .proc is_passable
     jsr get_byte_offset
     tay
@@ -97,7 +96,7 @@ fail:
 .endproc
 
 ; update the seen tile at xpos and ypos
-; clobbers: tmp, x,  and y
+; clobbers: a1, x,  and y
 ; updates: seen
 .proc update_seen
     jsr get_byte_offset
@@ -108,7 +107,7 @@ fail:
 .endproc
 
 ; was the tile seen before?
-; clobbers: tmp, x,  and y
+; clobbers: a1, x,  and y
 ; out: 0 if seen
 .proc was_seen
     jsr get_byte_offset
@@ -125,7 +124,7 @@ success:
 .endproc
 
 ; rand passable xy
-; clobbers: tmp, x,  and y
+; clobbers: a1, x,  and y
 ; todo ensure we don't hit endless loop if out of x,y
 .proc rand_passable
     jsr randxy
@@ -135,7 +134,7 @@ success:
 .endproc
 
 ; rand floor xy
-; clobbers: tmp, x,  and y
+; clobbers: a1, x,  and y
 ; todo ensure we don't hit endless loop if out of x,y
 .proc rand_floor
     jsr randxy
@@ -170,35 +169,35 @@ within_bounds_fail:
 
 ; get byte offset for x,y
 ; out: offset to first byte in tiles (x/8 + y*4)
-; clobbers: tmp
+; clobbers: a1
 .proc get_byte_offset
     lda xpos
     lsr
     lsr
     lsr
-    sta tmp
+    sta a1
     lda ypos
     asl
     asl
     clc
-    adc tmp
+    adc a1
     rts
 .endproc
 
 ; get byte mask for x
 ; out: byte mask
-; clobbers: tmp and x
+; clobbers: a1 and x
 .proc get_byte_mask
     lda xpos
     ; get 3 lowest bits (number 0-7)
     and #%00000111
     ; now, we have the remainder (bit 0-7)
-    sta tmp
+    sta a1
     ldx #0
     sec
 get_byte_mask_loop:
     ror
-    cpx tmp
+    cpx a1
     beq get_byte_mask_done
     inx
     jmp get_byte_mask_loop

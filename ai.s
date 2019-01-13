@@ -3,10 +3,8 @@
 
 .export mob_ai
 
-.segment "ZEROPAGE"
-
-tmp:      .res 1
-tmp2:     .res 1
+mob_index = a2
+mob_dir   = a3
 
 .segment "CODE"
 
@@ -15,8 +13,6 @@ tmp2:     .res 1
 ; NOTE: mobs see further than player, so its a little challenging
 ; todo bug when moving out of mob range?
 .proc mob_ai
-    mob_index = tmp
-    mob_dir   = tmp2
     ldy #mob_size
 mob_ai_loop:
     sty mob_index
@@ -139,7 +135,7 @@ attack_player:
     tya
     pha
     ; use damage calc for mob
-    damage = tmp
+    damage = a1
     jsr mob_dmg
     ldy #0 ; player index
     sta damage
@@ -168,6 +164,7 @@ player_dead:
 ; in: direction
 ; clobbers: xpos, ypos, x, and y
 .proc try_move_dir
+    lda mob_dir
     cmp #Direction::left
     beq try_left
     cmp #Direction::right

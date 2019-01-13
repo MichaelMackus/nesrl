@@ -7,7 +7,6 @@
 
 .segment "ZEROPAGE"
 
-tmp:   .res 1
 stats: .res .sizeof(PlayerStats)
 
 .segment "BSS"

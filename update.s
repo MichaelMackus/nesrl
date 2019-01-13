@@ -11,7 +11,6 @@
 
 .segment "ZEROPAGE"
 
-tmp:            .res 1
 endy:           .res 1 ; for buffer seen loop
 endx:           .res 1 ; for buffer seen loop
 prevx:          .res 1 ; for buffer seen loop
@@ -512,15 +511,15 @@ write_message_str:
     tax
     ; update tmp_message using stack var
     txa
-    sta tmp
+    sta a1
     txa
     pha
-    ldx tmp
+    ldx a1
     jsr update_message_str
     jsr buffer_str
     sta draw_length
     ; add damage/amount
-    ldx tmp
+    ldx a1
     jsr buffer_amount
     ldx draw_length
 fill_loop:

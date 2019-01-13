@@ -9,7 +9,6 @@ maxfeatures = 20
 maxdrops    = 20
 min_bound   = 1  ; minimum number of spaces from edge
 
-
 ; math.s
 .global divide
 
@@ -53,6 +52,9 @@ min_bound   = 1  ; minimum number of spaces from edge
 .globalzp controller1
 .globalzp controller1release
 .globalzp nmis
+.globalzp a1
+.globalzp a2
+.globalzp a3
 
 ; message.s
 .globalzp max_messages

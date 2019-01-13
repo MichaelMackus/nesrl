@@ -19,7 +19,6 @@ tunnel_len:  .res 1
 direction:   .res 1 ; represents corridor direction
 prevdir:     .res 1 ; previous direction
 prevdlevel:  .res 1 ; previous dlevel
-tmp:         .res 1
 
 max_tunnels = 90 ; maximum tunnels
 max_length  = 6  ; maximum length for tunnel
@@ -27,6 +26,8 @@ max_length  = 6  ; maximum length for tunnel
 .segment "CODE"
 
 ; generate level
+;
+; clobbers: x, y, a1, and a2
 .proc generate
 
 initialize:
@@ -76,7 +77,7 @@ random_dir:
 random_dir_loop:
     ; pick random direction
     jsr d4
-    sta tmp
+    sta a2
     ; prevent picking same direction as previous loop
     cmp prevdir
     beq random_dir_loop
@@ -89,7 +90,7 @@ random_dir_loop:
     lda ypos
     pha
     ; update direction
-    lda tmp
+    lda a2
     sta direction
     ldx #$00
     txa
@@ -187,7 +188,7 @@ done_update_player:
     sta prevdlevel
     ; generate max mobs
     jsr d4
-    sta tmp
+    sta a2
     ldy #mob_size
     ldx #0
 ; generate mobs
@@ -204,7 +205,7 @@ generate_mobs:
     adc #mob_size
     tay
     inx
-    cpx tmp
+    cpx a2
     beq clear_mobs_loop
     jmp generate_mobs
 ; clear the rest of the mobs

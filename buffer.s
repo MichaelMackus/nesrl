@@ -25,6 +25,7 @@
 .import get_hex_tile
 .import get_num_tile
 .import get_str_tile
+.importzp a1 ; tmp var
 
 .exportzp buffer_index
 .exportzp str_pointer
@@ -41,7 +42,6 @@
 str_pointer:  .res 2 ; pointer for buffering of strings
 buffer_index: .res 1 ; current index for buffering, >0 if batch buffer mode
 tiles_drawn:  .res 1 ; amount of tiles drawn
-tmp:          .res 1
 
 ; this is the absolute max to be added to buffer per action
 ; max_buffer_size = (2*8 + 2*32) + (6*8 + 6*6)
@@ -68,7 +68,7 @@ loop:
     ; length is 0, so we're done drawing
     rts
 update_ppuaddr:
-    sta tmp
+    sta a1
     ; for length
     iny
     ; set ppu addr, high byte then low byte
@@ -76,10 +76,10 @@ update_ppuaddr:
     iny
     ; for PPUCTRL mask
     iny
-    ; add tmp to y for next index
+    ; add a1 to y for next index
     tya
     clc
-    adc tmp
+    adc a1
     tay
     jmp loop
 .endproc
@@ -107,10 +107,10 @@ str_loop:
     jmp str_loop
 done:
     ; restore y and return write length
-    sty tmp
+    sty a1
     txa
     tay
-    lda tmp
+    lda a1
     rts
 .endproc
 
@@ -122,18 +122,18 @@ done:
 .proc buffer_num
     ; first, render tens place for number
     ldx #0
-    stx tmp
-    inc tmp
+    stx a1
+    inc a1
     cmp #10
     bcc render_ones
     jsr buffer_num_tens
-    inc tmp
+    inc a1
 render_ones:
     jsr get_num_tile
     sta draw_buffer, y
     iny
     ; return length of written number
-    lda tmp
+    lda a1
     rts
 .endproc
 
@@ -221,7 +221,7 @@ render_ones_padded:
 ;
 ; clobbers: all registers
 .proc render_buffer
-    draw_length = tmp
+    draw_length = a1
     lda #0
     tax
     sta tiles_drawn

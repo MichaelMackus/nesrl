@@ -8,8 +8,10 @@ gamestate:   .res 1
 controller1: .res 1
 controller1release: .res 1
 nmis:        .res 1            ; how many nmis have passed
-tmp:         .res 1
 need_draw:   .res 1            ; do we need to draw draw buffer?
+a1:          .res 1            ; temp var
+a2:          .res 1            ; temp var
+a3:          .res 1            ; temp var
 
 .segment "HEADER"
 
@@ -102,7 +104,7 @@ nmi:
     pha
     tya
     pha
-    lda tmp
+    lda a1
     pha
 
     lda need_draw
@@ -164,7 +166,7 @@ sprite_zero_wait:
     and #$F8
     asl
     asl
-    sta tmp
+    sta a1
 
     lda scroll
     ;Write the X bits to t and x.
@@ -174,7 +176,7 @@ sprite_zero_wait:
     lsr
     lsr
     lsr
-    ora tmp
+    ora a1
 
     ;Wait for HBlank
     ldx #08     ;How long to wait. Play around with this value
@@ -188,7 +190,7 @@ loop:
 
 finish_nmi:
     pla
-    sta tmp
+    sta a1
     pla
     tay
     pla
