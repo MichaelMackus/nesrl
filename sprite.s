@@ -16,6 +16,21 @@ mob:         .res 1 ; current mob index
 .proc update_sprites
     ldx #$00
 
+; sprite zero for split-scrolling
+sprite_zero:
+    lda #$10
+    sta $0200, x
+    lda #$0e
+    sta $0201, x
+    lda #$00
+    sta $0202, x
+    lda #$00
+    sta $0203, x
+    inx
+    inx
+    inx
+    inx
+
 render_mobs:
     lda #$00
     sta mob
