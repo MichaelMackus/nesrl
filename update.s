@@ -35,11 +35,6 @@ start_scroll_buffer:
     ; buffer leading edges
     jsr buffer_edges
 
-    ; scroll twice
-    ; todo scroll *after* buffer updated?
-    jsr update_scroll
-    jsr update_scroll
-
 start_seen_buffer:
     jsr buffer_seen ; this is for tiles *on* screen not edges
 
@@ -581,6 +576,9 @@ update_buffer_amount:
 ; in: scroll dir
 ; clobbers: x register
 .proc update_scroll
+    ; disable scrolling if we're at edge
+    jsr can_scroll_dir
+    bne failure
     lda mobs + Mob::direction
     cmp #Direction::right
     beq update_right
@@ -601,6 +599,8 @@ update_left:
     rts
 update_right:
     jsr scroll_right
+    rts
+failure:
     rts
 .endproc
 

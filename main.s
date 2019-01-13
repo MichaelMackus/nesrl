@@ -9,6 +9,7 @@ controller1: .res 1
 controller1release: .res 1
 nmis:        .res 1            ; how many nmis have passed
 need_draw:   .res 1            ; do we need to draw draw buffer?
+need_scroll: .res 1
 a1:          .res 1            ; temp var
 a2:          .res 1            ; temp var
 a3:          .res 1            ; temp var
@@ -208,10 +209,22 @@ main:
     jsr clear_messages
     ; check if we're still in batch buffer mode
     lda buffer_index
-    beq check_state
+    beq check_scroll
     ; we're still in batch buffer mode, update tiles buffer
     jmp update
 
+check_scroll:
+    ; check if we need to scroll screen
+    lda need_scroll
+    beq check_state
+    ; scroll twice after buffer update
+    jsr update_scroll
+    jsr update_scroll
+    ; turn off scrolling
+    lda #0
+    sta need_scroll
+    ; done, update
+    jmp update
 check_state:
     jsr readcontroller
     lda gamestate
@@ -257,6 +270,10 @@ ai:
     jsr player_regen
 
 update_buffer:
+    ; skip buffering status if buffer full (scrolling)
+    lda need_scroll
+    bne update
+
     jsr buffer_status
 
     ; todo figure out better way to buffer messages, probably want to
@@ -268,7 +285,9 @@ update:
     lda #1
     sta need_draw
 
-    ; update sprite OAM data
+    ; update sprite OAM data, only if not scrolling
+    lda need_scroll
+    bne done
     jsr update_sprites
 
 done:
@@ -319,6 +338,8 @@ win_dungeon:
 player_moved:
     jsr update_screen_offsets
     jsr buffer_tiles
+    lda #1
+    sta need_scroll
     jmp ai
 
 ; ensure player alive, otherwise display Game Over screen

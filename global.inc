@@ -161,6 +161,7 @@ min_bound   = 1  ; minimum number of spaces from edge
 
 ; update.s
 .global buffer_tiles
+.global update_scroll
 .global buffer_seen
 .global buffer_messages
 
