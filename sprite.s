@@ -4,6 +4,7 @@
 
 .segment "ZEROPAGE"
 
+mob_tile:    .res 1
 tmp:         .res 1
 tmp2:        .res 1 ; todo used for can_player_see proc
 mob:         .res 1 ; current mob index
@@ -98,14 +99,14 @@ render_mob:
     ;bne next_mob
     ; get mob start tile
     jsr get_mob_tile
-    sta cur_tile
+    sta mob_tile
     ldy #$00
 render_mob_loop:
     ; update sprite y pos
     jsr get_mob_y
     sta $0200, x
 set_mob_tile:
-    lda cur_tile
+    lda mob_tile
     sta $0201, x
     jsr get_mob_attribute
     sta $0202, x
@@ -125,14 +126,14 @@ continue_loop:
     ; increment mob tile
     cpy #2
     beq next_tile_row
-    inc cur_tile
+    inc mob_tile
     jmp render_mob_loop
 next_tile_row:
     ; increment to next row
-    lda cur_tile
+    lda mob_tile
     clc
     adc #$F ; add 15 to get to next row
-    sta cur_tile
+    sta mob_tile
     jmp render_mob_loop
 next_mob:
     lda mob
