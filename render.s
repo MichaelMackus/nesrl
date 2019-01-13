@@ -45,13 +45,14 @@ update_scroll:
     jsr iny_ppu ; increase top of PPUADDR 8 pixels
     jsr iny_ppu ; increase top of PPUADDR 8 pixels, 16 pixels total (1 metatile)
 skip_scroll:
-    ; inc y twice for scroll amount (1 metatile)
     iny
     iny
     tya
     lsr ; divide by 2 to compare to player y-pos
     cmp mobs + Mob::coords + Coord::ycoord ; check that we're at the mob ycoord
-    bne scroll_loop
+    ; end loop once y is *greater* than ycoord
+    bcc scroll_loop
+    beq scroll_loop
     
     ; clear previous nametable
     bit $2002
