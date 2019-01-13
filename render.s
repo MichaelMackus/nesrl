@@ -82,8 +82,6 @@ clear_page:
     jsr buffer_status
     jsr buffer_status_end
     jsr render_buffer
-    jsr render_buffer
-    jsr render_buffer
 
 render_done:
     jsr update_sprites
