@@ -367,6 +367,9 @@ get_offset_ypos:
     asl
     asl
     asl
+    ; offset for statusbar
+    clc
+    adc #8*4 - 2
     rts
 .endproc
 
