@@ -154,6 +154,7 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global update_sprite_offsets
 .global update_sprites
 .global debug
+.global debug_ypos
 
 ; update.s
 .global buffer_tiles

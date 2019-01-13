@@ -336,6 +336,42 @@ flip_vertical_attribute:
     rts
 .endproc
 
+; display sprites on bottom of screen debugging current player y
+; y = offset from DEBUG_Y
+; x = offset from DEBUG_SPRITE
+.proc debug_ypos
+    DEBUG_Y = 200
+    DEBUG_X = 210
+    DEBUG_SPRITE = 100
+
+    tya
+    clc
+    adc #DEBUG_Y
+    tay
+    txa
+    clc
+    adc #DEBUG_SPRITE
+    tax
+
+    ; ppu high
+    lda mobs + Mob::coords + Coord::ycoord
+    jsr get_hex_tile
+    ; update sprite
+    sta $0201, x
+    tya
+    sta $0200, x
+    lda #0
+    sta $0202, x
+    lda #DEBUG_X
+    sta $0203, x
+    inx
+    inx
+    inx
+    inx
+
+    rts
+.endproc
+
 ; get mob offset from left edge
 ;
 ; y: mob index to calculate
