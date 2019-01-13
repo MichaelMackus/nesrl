@@ -152,6 +152,8 @@ flip_page:
 ;
 ; x: low byte
 ; y: high byte
+;
+; clobbers: x
 .proc iny_ppu
     lda ppu_addr
     ldx #4
@@ -186,6 +188,8 @@ finish:
 ;
 ; x: high byte
 ; y: low byte
+;
+; clobbers: x
 .proc dey_ppu
     lda ppu_addr+1
     cmp #$20
@@ -247,6 +251,8 @@ dec_nt:
 .endproc
 
 ; increment PPU high address by 1, updating address to next NT if appropriate
+;
+; clobbers: x
 .proc iny_ppu_high
     ; handle nametable wrapping, incrementing nt if we're on last page
     lda ppu_addr
@@ -280,6 +286,8 @@ inc_nt:
 .endproc
 
 ; decrement PPU high address by 1, updating address to previous NT if appropriate
+;
+; clobbers: x
 .proc dey_ppu_high
     ; handle nametable wrapping, decrementing nt if we're on first page
     lda ppu_addr
@@ -338,6 +346,8 @@ inc_nt:
 .endproc
 
 ; increment PPU nametable horizontally
+;
+; clobbers: x
 .proc inx_ppu_nt
     ; handle nametable wrapping
     lda ppu_addr
