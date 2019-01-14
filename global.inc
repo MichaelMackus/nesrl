@@ -40,6 +40,8 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global calculate_ppu_col
 .global calculate_ppu_row
 .global update_nt_boundary
+.global start_buffer
+.global append_buffer
 
 ; status.s
 .globalzp has_status

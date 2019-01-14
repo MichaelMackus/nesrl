@@ -10,6 +10,7 @@
 .importzp draw_buffer
 .importzp buffer_index
 .importzp a1 ; tmp var
+.import next_index
 
 .exportzp cur_tile
 .exportzp ppu_addr
@@ -37,6 +38,8 @@
 .export calculate_ppu_col
 .export calculate_ppu_row
 .export update_nt_boundary
+.export start_buffer
+.export append_buffer
 
 y_first_nt = $20
 y_last_nt  = $28
@@ -613,4 +616,60 @@ success:
     sty draw_y
     rts
 .endproc
+.endproc
+
+; helper function to start the buffer
+;
+; uses ppu_addr for ppuaddress
+; uses draw_length for length
+; uses ppu_ctrl for ppuctrl
+;
+; updates buffer_start with start index, cur_tile, and ppu_pos
+; updates y with position in buffer
+.proc start_buffer
+    jsr next_index
+    ; save buffer_start for NT boundary check
+    sty buffer_start
+    ; initialize cur_tile for NT boundary check
+    lda #0
+    sta cur_tile
+    lda draw_length
+    sta draw_buffer, y
+    iny
+    ; ppuaddr
+    lda ppu_addr
+    sta draw_buffer, y
+    iny
+    lda ppu_addr + 1
+    sta draw_buffer, y
+    iny
+    ; ppuctrl (vram increment)
+    lda ppu_ctrl
+    sta draw_buffer, y
+    iny
+    ; calculate the position in the PPU
+    jsr calculate_ppu_pos
+    rts
+.endproc
+
+; helper function to append to buffer
+;
+; a: tile to append
+; y: index in buffer
+;
+; updates y with position in buffer
+.proc append_buffer
+    pha
+    sty draw_y
+    ; update ppu page if at NT boundary
+    jsr update_nt_boundary
+    ; update buffer
+    ldy draw_y
+    pla
+    sta draw_buffer, y
+    iny
+    ; increment cur_tile & ppu_pos (for NT boundary check)
+    inc cur_tile
+    inc ppu_pos
+    rts
 .endproc
