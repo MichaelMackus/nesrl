@@ -3,10 +3,13 @@
 ; in: dividend
 ; x: divisor
 ; out: remainder of modulus
+; needs to be defined by user
 .import mod
+.import get_str_tile ; needs to be defined by user
 
 ; see: buffer.s
 .importzp draw_buffer ; see: buffer.s
+.importzp str_pointer ; see: buffer.s
 .importzp ppu_addr ; see: math.s
 .importzp a1 ; tmp var
 .import next_index ; see: buffer.s
@@ -16,6 +19,7 @@
 .export update_nt_boundary
 .export start_buffer
 .export append_buffer
+.export append_str
 .export calculate_ppu_pos
 .export calculate_ppu_col
 .export calculate_ppu_row
@@ -233,6 +237,45 @@ update_attribute:
     ; increment cur_tile & ppu_pos (for NT boundary check)
     inc cur_tile
     inc ppu_pos
+    rts
+.endproc
+
+; Append string at str_pointer to draw_buffer.
+;
+; y: index of current draw buffer pos
+; out: length of written string
+; clobbers: x and a1
+.proc append_str
+    ; index str with y, so we can use indirect indexed addressing mode
+    sty draw_y
+    ldy #0
+str_loop:
+    ; load first char of str
+    lda (str_pointer), y
+    beq done ; done?
+    ; load tile index for char & push to stack
+    jsr get_str_tile
+    pha
+    ; remember str index
+    tya
+    pha
+    ; update ppu page if at NT boundary
+    jsr update_nt_boundary
+    ; update buffer
+    ldx draw_y
+    pla
+    tay
+    pla
+    sta draw_buffer, x
+    inx
+    stx draw_y
+    iny
+    jmp str_loop
+done:
+    ; restore y and return write length
+    sty a1
+    ldy draw_y
+    lda a1
     rts
 .endproc
 

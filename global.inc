@@ -46,6 +46,7 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global update_nt_boundary
 .global start_buffer
 .global append_buffer
+.global append_str
 .global next_index
 .global buffer_str
 .global buffer_num
