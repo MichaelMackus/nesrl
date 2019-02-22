@@ -59,10 +59,6 @@ buffer_edge:
     ; update scroll metaxpos and metaypos depending on player dir
     jsr update_coords
 
-    ; get next y index
-    jsr next_index
-    sty buffer_start
-
     lda mobs + Mob::direction
     cmp #Direction::left
     beq len_30
@@ -70,19 +66,12 @@ buffer_edge:
     beq len_30
     ; going up or down, len = 32
     lda #32
-    jmp write_buffer
+    jmp update_draw_length
 len_30:
     lda #30
-write_buffer:
+update_draw_length:
     sta draw_length
-    sta draw_buffer, y
-    iny
-    lda ppu_addr
-    sta draw_buffer, y
-    iny
-    lda ppu_addr + 1
-    sta draw_buffer, y
-    iny
+
     ; write ppuctrl byte, updating increment depending on direction
     lda mobs + Mob::direction
     cmp #Direction::right
@@ -91,29 +80,18 @@ write_buffer:
     beq inc_vertically
     ; increment horizontally
     lda base_nt
-    sta draw_buffer, y
     sta ppu_ctrl
-    iny
     jmp buffer_tiles
 inc_vertically:
     lda base_nt
     ora #%00000100 ; increment going down
-    sta draw_buffer, y
     sta ppu_ctrl
-    iny
 
 buffer_tiles:
-    ; calculate the position in the PPU
-    jsr calculate_ppu_pos
-
+    jsr start_buffer
     ldx #$00
-    stx cur_tile
 buffer_tile_loop:
     sty draw_y
-
-    ; update ppu page if at NT boundary
-    jsr update_nt_boundary
-
     ; check if we can see or already seen tile
     lda metaxpos
     lsr
@@ -133,8 +111,7 @@ load_seen:
 
 update_buffer:
     ldy draw_y
-    sta draw_buffer, y
-    iny
+    jsr append_buffer
     ; increment xpos or ypos depending on player dir
     lda mobs + Mob::direction
     cmp #Direction::right
@@ -148,8 +125,6 @@ inc_metay:
     ; inc metay
     inc metaypos
 continue_loop:
-    inc ppu_pos
-    inc cur_tile
     ldx cur_tile
     ; check draw length
     cpx draw_length
@@ -367,7 +342,7 @@ loop_start:
     ; initialize draw_length
     lda #(sight_distance*2 + 1)*2 ; increment by 1 for player
     sta draw_length
-    jsr next_index
+    ;jsr next_index
 
 loop:
     ; end when endy hit
@@ -376,39 +351,15 @@ loop:
     bcc loop_start_buffer
     jmp done
 loop_start_buffer:
-    ; save buffer_start for NT boundary check
-    sty buffer_start
-
-    ; initialize cur_tile for NT boundary check
-    lda #0
-    sta cur_tile
-
-    ; write draw buffer length of sight distance
-    lda draw_length
-    sta draw_buffer, y
-    iny
-    ; store ppu addr to buffer
-    lda ppu_addr
-    sta draw_buffer, y
-    iny
-    lda ppu_addr+1
-    sta draw_buffer, y
-    iny
-    ; vram increment
+    ; set vram increment
     lda base_nt
-    sta draw_buffer, y
     sta ppu_ctrl
-    iny
-
-    ; calculate the position in the PPU
-    jsr calculate_ppu_pos
+    ; start buffer
+    jsr start_buffer
 
    ; now we're ready to draw tile data
 tile_loop:
     sty draw_y
-
-    ; update ppu page if at NT boundary
-    jsr update_nt_boundary
 
     ; update xpos and ypos with meta pos
     lda metaxpos
@@ -433,23 +384,18 @@ draw_seen:
     ; success, draw tile
     jsr get_bg_metatile
     ldy draw_y
-    sta draw_buffer, y
-    iny
+    jsr append_buffer
     jmp loop_nextx
 tile_bg:
     ldy draw_y
     lda #$00
-    sta draw_buffer, y
-    iny
+    jsr append_buffer
 
 loop_nextx:
     inc metaxpos
     lda metaxpos
     cmp endx
     beq loop_donex
-    ; increment cur_tile & ppu_pos (for NT boundary check)
-    inc cur_tile
-    inc ppu_pos
     ; redo loop
     jmp tile_loop
 

@@ -12,7 +12,7 @@ min_bound   = 1  ; minimum number of spaces from edge
 ; math.s
 .global divide
 
-; ppu.s
+; ppu exports
 .globalzp cur_tile
 .globalzp ppu_addr
 .globalzp ppu_pos
@@ -23,6 +23,10 @@ min_bound   = 1  ; minimum number of spaces from edge
 .globalzp ppu_pos
 .globalzp ppu_ctrl
 .globalzp buffer_start
+.globalzp max_buffer_size
+.globalzp draw_buffer
+.globalzp str_pointer
+.globalzp buffer_index
 .global init_buffer
 .global scroll_right
 .global scroll_left
@@ -40,6 +44,15 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global calculate_ppu_col
 .global calculate_ppu_row
 .global update_nt_boundary
+.global start_buffer
+.global append_buffer
+.global append_str
+.global next_index
+.global buffer_str
+.global buffer_num
+.global buffer_num_tens
+.global buffer_num_hex
+.global render_buffer
 
 ; status.s
 .globalzp has_status
@@ -170,18 +183,6 @@ min_bound   = 1  ; minimum number of spaces from edge
 .global render_escape
 .global render_death
 .global render_win
-
-; buffer.s
-.globalzp max_buffer_size
-.globalzp draw_buffer
-.globalzp str_pointer
-.globalzp buffer_index
-.global next_index
-.global buffer_str
-.global buffer_num
-.global buffer_num_tens
-.global buffer_num_hex
-.global render_buffer
 
 ; input.s
 .global readcontroller

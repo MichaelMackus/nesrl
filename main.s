@@ -264,8 +264,13 @@ playgame:
 
 ai:
     jsr mob_ai
-    jsr check_game_over
 
+    ; ensure player alive, otherwise display Game Over screen
+    lda mobs + Mob::hp
+    bne continue_ai
+    jmp game_over
+
+continue_ai:
     jsr mob_spawner
     jsr player_regen
 
@@ -325,14 +330,22 @@ escape_dungeon:
     lda #GameState::end
     sta gamestate
     jsr render_escape
-    jmp done
+    jmp update
 
 ; update state to win
 win_dungeon:
     lda #GameState::win
     sta gamestate
     jsr render_win
-    jmp done
+    jmp update
+
+; update state to game over
+game_over:
+    lda #GameState::end
+    sta gamestate
+    jsr render_death
+    jmp update
+
 
 ; ensure buffer is updated when new tiles seen
 player_moved:
@@ -341,18 +354,6 @@ player_moved:
     lda #1
     sta need_scroll
     jmp ai
-
-; ensure player alive, otherwise display Game Over screen
-check_game_over:
-    lda mobs + Mob::hp
-    beq game_over
-    rts
-game_over:
-    lda #GameState::end
-    sta gamestate
-    jsr render_death
-    rts
-
 
 .segment "RODATA"
 

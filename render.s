@@ -99,94 +99,116 @@ render_wait:
 .endproc
 
 .proc render_death
-    ; wait for nmi
-    lda nmis
-waitnmi:
-    cmp nmis
-    beq waitnmi
-    ; prep ppu for first nametable write
-    bit $2002
-    lda #$21
-    sta $2006
-    lda #$8B
-    sta $2006
-    ; You died
-    lda #<txt_death
-    sta str_pointer
-    lda #>txt_death
-    sta str_pointer+1
-    jsr render_str
-    ; Game Over
-    ; prep ppu for next nametable write
-    bit $2002
-    lda #$22
-    sta $2006
-    lda #$0B
-    sta $2006
-    ; You died
+    ; offset PPUADDR
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
     lda #<txt_gameover
     sta str_pointer
     lda #>txt_gameover
     sta str_pointer+1
-    jsr render_str
-    ; done
-    bit $2002
+    ; start buffer
+    lda #9 ; todo strlen func
+    sta draw_length
+    lda base_nt
+    sta ppu_ctrl
+    jsr start_buffer
+    jsr append_str
+    ; finish buffer
     lda #$00
-    sta $2005
-    sta $2005
+    sta draw_buffer, y
     rts
 .endproc
 
 .proc render_escape
-    ; wait for nmi
-    lda nmis
-waitnmi:
-    cmp nmis
-    beq waitnmi
-    ; prep ppu for first nametable write
-    bit $2002
-    lda #$21
-    sta $2006
-    lda #$CA
-    sta $2006
-render_escape_message:
-    ; You escaped!
+    ; offset PPUADDR
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
     lda #<txt_escape
     sta str_pointer
     lda #>txt_escape
     sta str_pointer+1
-    jsr render_str
-    ; done
-    bit $2002
+    ; start buffer
+    lda #12 ; todo strlen func
+    sta draw_length
+    lda base_nt
+    sta ppu_ctrl
+    jsr start_buffer
+    jsr append_str
+    ; finish buffer
     lda #$00
-    sta $2005
-    sta $2005
+    sta draw_buffer, y
     rts
 .endproc
 
 .proc render_win
-    ; wait for nmi
-    lda nmis
-waitnmi:
-    cmp nmis
-    beq waitnmi
-    ; prep ppu for first nametable write
-    bit $2002
-    lda #$21
-    sta $2006
-    lda #$CC
-    sta $2006
-    ; You win!
+    ; offset PPUADDR
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr iny_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
+    jsr inx_ppu
     lda #<txt_win
     sta str_pointer
     lda #>txt_win
     sta str_pointer+1
-    jsr render_str
-    ; done
-    bit $2002
+    ; start buffer
+    lda #8 ; todo strlen func
+    sta draw_length
+    lda base_nt
+    sta ppu_ctrl
+    jsr start_buffer
+    jsr append_str
+    ; finish buffer
     lda #$00
-    sta $2005
-    sta $2005
+    sta draw_buffer, y
     rts
 .endproc
 
