@@ -95,12 +95,10 @@ check_upstair:
     lda #InputResult::new_dlevel
     rts
 escape:
-    jsr render_escape
     ; escape dungeon
     lda #InputResult::escape
     rts
 win:
-    jsr render_win
     ; win dungeon
     lda #InputResult::win
     rts
