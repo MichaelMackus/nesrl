@@ -39,6 +39,9 @@ waitforppu:
     bpl waitforppu ; at this point, about 27384 cycles have passed
 
 init:
+    jsr init_memory
+    jmp clear_oam
+
 init_memory:
     ; initialize vars to zero
     lda #GameState::start
@@ -59,6 +62,7 @@ init_memory:
     jsr push_msg
     jsr init_buffer
     jsr init_status
+    rts
 
 clear_oam:
     lda #$FF
@@ -228,21 +232,14 @@ check_scroll:
 check_state:
     jsr readcontroller
     lda gamestate
-    cmp #1
+    cmp #GameState::playing
     beq playgame
-    bcs done
-    ; todo handle more gamestates (e.g. inventory, win, death, quit)
-start_screen:
+; wait for start press if we're not playing
+wait_for_start:
     lda controller1release
     and #%00010000 ; start
     beq done
-    lda #GameState::playing
-    sta gamestate
-    ; initialize *both* seed values
-    lda nmis
-    sta seed
-    sta seed + 1
-    jmp regenerate
+    jmp init_game
 
 playgame:
     ; update turn when input is made
@@ -306,6 +303,15 @@ wait_nmi:
 
 
 ; state updates
+
+init_game:
+    jsr init_memory
+    lda #GameState::playing
+    sta gamestate
+    ; initialize *both* seed values
+    lda nmis
+    sta seed
+    sta seed + 1
 
 ; re-generate next dungeon level
 regenerate:
