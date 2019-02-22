@@ -93,6 +93,14 @@ next_mob:
 
 ; getters for mob x & y based on screen pos
 .proc get_mob_y
+    ; clear mob if player and not playing
+    tya
+    bne continue
+    lda gamestate
+    cmp #GameState::playing
+    beq continue
+    jmp clear_mob
+continue:
     sty a3
     ldy mob
     ; ensure mob is within screen bounds
@@ -139,6 +147,14 @@ adjust_mob_y_inverse:
     rts
 .endproc
 .proc get_mob_x
+    ; clear mob if player and not playing
+    tya
+    bne continue
+    lda gamestate
+    cmp #GameState::playing
+    beq continue
+    jmp clear_mob
+continue:
     sty a3
     ldy mob
     ; ensure mob is within screen bounds

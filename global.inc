@@ -65,6 +65,7 @@ min_bound   = 1  ; minimum number of spaces from edge
 .globalzp turn
 .globalzp controller1
 .globalzp controller1release
+.globalzp gamestate
 .globalzp nmis
 .globalzp a1
 .globalzp a2
