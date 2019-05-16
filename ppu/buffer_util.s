@@ -270,6 +270,8 @@ str_loop:
     inx
     stx draw_y
     iny
+    inc cur_tile
+    inc ppu_pos
     jmp str_loop
 done:
     ; restore y and return write length
